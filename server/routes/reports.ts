@@ -1,0 +1,106 @@
+import { Router } from 'express';
+import { getOne, getAll } from '../db/database';
+
+const router = Router();
+
+router.get('/pnl', async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().substring(0, 7);
+
+    const purchases = await getOne(
+      `SELECT COALESCE(SUM(purchase_amount),0) as total FROM purchases WHERE to_char(date::date,'YYYY-MM')=$1`, [month]
+    );
+    const sales = await getOne(
+      `SELECT COALESCE(SUM(sale_amount),0) as total FROM sales WHERE to_char(date::date,'YYYY-MM')=$1`, [month]
+    );
+    const expenses = await getOne(
+      `SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE to_char(date::date,'YYYY-MM')=$1`, [month]
+    );
+
+    const grossProfit = Number(sales.total) - Number(purchases.total);
+    const netProfit = grossProfit - Number(expenses.total);
+
+    const monthlyTrend = await getAll(`
+      SELECT m.month,
+        COALESCE((SELECT SUM(sale_amount) FROM sales WHERE to_char(date::date,'YYYY-MM')=m.month),0) as sales,
+        COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE to_char(date::date,'YYYY-MM')=m.month),0) as purchases,
+        COALESCE((SELECT SUM(amount) FROM expenses WHERE to_char(date::date,'YYYY-MM')=m.month),0) as expenses
+      FROM (
+        SELECT DISTINCT to_char(date::date,'YYYY-MM') as month FROM sales
+        UNION SELECT DISTINCT to_char(date::date,'YYYY-MM') FROM purchases
+        ORDER BY month DESC LIMIT 6
+      ) m ORDER BY m.month
+    `);
+
+    res.json({
+      month,
+      totalPurchases: Number(purchases.total),
+      totalSales: Number(sales.total),
+      grossProfit,
+      totalExpenses: Number(expenses.total),
+      netProfit,
+      profitMargin: Number(sales.total) > 0 ? (netProfit / Number(sales.total)) * 100 : 0,
+      monthlyTrend,
+    });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/brands', async (_req, res) => {
+  try {
+    const brands = await getAll(`
+      SELECT cb.id, cb.name, cb.type,
+        COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id=cb.id),0) as bags_purchased,
+        COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id=cb.id),0) as bags_sold,
+        COALESCE((SELECT AVG(purchase_rate) FROM purchases WHERE brand_id=cb.id),0) as avg_purchase_rate,
+        COALESCE((SELECT AVG(sale_rate) FROM sales WHERE brand_id=cb.id),0) as avg_sale_rate,
+        COALESCE((SELECT AVG(sale_rate) FROM sales WHERE brand_id=cb.id),0)
+          - COALESCE((SELECT AVG(purchase_rate) FROM purchases WHERE brand_id=cb.id),0) as avg_margin,
+        COALESCE((SELECT SUM(sale_amount) FROM sales WHERE brand_id=cb.id),0)
+          - COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE brand_id=cb.id),0) as total_profit
+      FROM cement_brands cb WHERE cb.is_active=1 ORDER BY total_profit DESC
+    `);
+    res.json(brands);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/outstanding', async (_req, res) => {
+  try {
+    const parties = await getAll(`
+      SELECT p.id, p.name, p.location, p.district, p.phone,
+        (COALESCE(p.opening_balance,0)
+         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)) as outstanding,
+        (SELECT MAX(date) FROM sales WHERE party_id=p.id) as last_sale,
+        (SELECT MAX(date) FROM payments WHERE party_id=p.id) as last_payment
+      FROM parties p
+      WHERE (COALESCE(p.opening_balance,0)
+         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)) > 0
+      ORDER BY outstanding DESC
+    `);
+    res.json(parties);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/daily-register', async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().substring(0, 7);
+    const register = await getAll(`
+      SELECT s.id, s.date, cb.name as cement_name, s.cement_type, s.truck_number,
+        (SELECT pu.supplier_name FROM purchases pu WHERE pu.brand_id=s.brand_id ORDER BY pu.date DESC LIMIT 1) as purchase_from,
+        (SELECT pu.purchase_rate FROM purchases pu WHERE pu.brand_id=s.brand_id ORDER BY pu.date DESC LIMIT 1) as purchase_rate,
+        s.bags as quantity,
+        s.bags * COALESCE((SELECT pu.purchase_rate FROM purchases pu WHERE pu.brand_id=s.brand_id ORDER BY pu.date DESC LIMIT 1),0) as purchase_amount,
+        p.name as sale_to, s.sale_rate, s.destination, s.sale_amount,
+        COALESCE(s.billed_party, p.name) as party_receiving
+      FROM sales s
+      JOIN parties p ON s.party_id=p.id
+      JOIN cement_brands cb ON s.brand_id=cb.id
+      WHERE to_char(s.date::date,'YYYY-MM')=$1
+      ORDER BY s.date, s.id
+    `, [month]);
+    res.json(register);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+export default router;
