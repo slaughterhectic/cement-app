@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCi
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useToastStore } from '../lib/store';
+import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 
 interface CapitalSummary {
   cash: { handler: string; opening: number; total_received: number; total_spent: number; balance: number }[];
@@ -29,10 +30,13 @@ function ImprestSection() {
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
-  const [selectedHandler, setSelectedHandler] = useState('Akash');
+  const [selectedHandler, setSelectedHandler] = useState('');
   const [showForm, setShowForm] = useState(false);
   const [editRow, setEditRow] = useState<any | null>(null);
   const [openingEdit, setOpeningEdit] = useState<{ [k: string]: string }>({});
+  const [showAddHandler, setShowAddHandler] = useState(false);
+  const [newHandlerName, setNewHandlerName] = useState('');
+  const [newHandlerBalance, setNewHandlerBalance] = useState('');
 
   const [form, setForm] = useState({
     date: new Date().toISOString().split('T')[0],
@@ -46,8 +50,11 @@ function ImprestSection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.imprest.list({ handler: selectedHandler });
+      const res = await api.imprest.list({});
       setData(res as any[]);
+      if (!selectedHandler && (res as any[]).length > 0) {
+        setSelectedHandler((res as any[])[0].handler_name);
+      }
     } catch {
       addToast('Failed to load cash book', 'error');
     } finally {
@@ -110,6 +117,8 @@ function ImprestSection() {
     }
   };
 
+  const txPg = usePagination(handlerData?.transactions ?? [], 20);
+
   // Category-wise breakdown
   const categoryTotals: Record<string, number> = {};
   handlerData?.transactions?.forEach((t: any) => {
@@ -133,6 +142,13 @@ function ImprestSection() {
               <option key={d.handler_name} value={d.handler_name}>{d.handler_name}</option>
             ))}
           </select>
+          <button
+            type="button"
+            onClick={() => setShowAddHandler(true)}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add Handler
+          </button>
         </div>
         <button
           type="button"
@@ -211,6 +227,7 @@ function ImprestSection() {
             ) : handlerData.transactions.length === 0 ? (
               <p className="px-4 py-6 text-center text-sm text-gray-500">No transactions yet.</p>
             ) : (
+              <>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
@@ -231,7 +248,7 @@ function ImprestSection() {
                       <td className="px-4 py-2 text-right tabular-nums font-semibold text-blue-800">{formatINR(handlerData.opening_balance)}</td>
                       <td colSpan={2} />
                     </tr>
-                    {handlerData.transactions.map((t: any) => (
+                    {txPg.pageData.map((t: any) => (
                       <tr key={t.id} className={t.credit > 0 ? 'bg-green-50/30 hover:bg-green-50' : 'hover:bg-gray-50'}>
                         <td className="px-4 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
                         <td className="px-4 py-2 max-w-[140px] truncate">{t.particulars || '—'}</td>
@@ -251,6 +268,8 @@ function ImprestSection() {
                   </tbody>
                 </table>
               </div>
+              <PaginationBar pg={txPg} />
+              </>
             )}
           </div>
         </>
@@ -291,6 +310,60 @@ function ImprestSection() {
             <div className="mt-4 flex justify-end gap-2">
               <button type="button" onClick={() => { setShowForm(false); setEditRow(null); }} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
               <button type="button" onClick={handleSave} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showAddHandler && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+            <h3 className="mb-4 text-base font-semibold text-heading">Add Cash Handler</h3>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Handler Name *</label>
+                <input
+                  type="text"
+                  className="input-field w-full"
+                  placeholder="e.g. Rahul, Vijay"
+                  value={newHandlerName}
+                  onChange={(e) => setNewHandlerName(e.target.value)}
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-gray-600">Opening Balance (₹)</label>
+                <input
+                  type="number"
+                  step="0.01"
+                  className="input-field w-full"
+                  placeholder="0"
+                  value={newHandlerBalance}
+                  onChange={(e) => setNewHandlerBalance(e.target.value)}
+                />
+              </div>
+            </div>
+            <div className="mt-4 flex justify-end gap-2">
+              <button type="button" onClick={() => { setShowAddHandler(false); setNewHandlerName(''); setNewHandlerBalance(''); }} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button
+                type="button"
+                disabled={!newHandlerName.trim()}
+                onClick={async () => {
+                  try {
+                    await api.imprest.upsertHandler({ handler_name: newHandlerName.trim(), opening_balance: parseFloat(newHandlerBalance) || 0 });
+                    addToast(`Handler "${newHandlerName.trim()}" added`, 'success');
+                    setShowAddHandler(false);
+                    setNewHandlerName('');
+                    setNewHandlerBalance('');
+                    setSelectedHandler(newHandlerName.trim());
+                    load();
+                  } catch {
+                    addToast('Failed to add handler', 'error');
+                  }
+                }}
+                className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50"
+              >
+                Add
+              </button>
             </div>
           </div>
         </div>

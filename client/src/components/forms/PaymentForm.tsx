@@ -7,7 +7,7 @@ import { api } from '../../lib/api';
 import { formatDateInput, formatINR } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
 
-const BANKS = ['ARMTECH', 'KOTAK', 'HDFC', 'BOB', 'AXIS', 'Other'] as const;
+const BANKS = ['ARMTECH', 'KOTAK', 'HDFC', 'BOB', 'AXIS', 'OK', 'ICICI', 'Other'] as const;
 
 const amountField = z.preprocess(
   (v) => {
@@ -54,6 +54,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   const [partyMenuOpen, setPartyMenuOpen] = useState(false);
   const partyWrapRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
 
   const defaultValues = useMemo(
     () => ({
@@ -110,6 +111,9 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   useEffect(() => {
     if (!isOpen) return;
     loadParties();
+    api.imprest.handlers().then((rows: any[]) => {
+      setCashHandlers(rows.map((r: any) => r.handler_name));
+    }).catch(() => {});
   }, [isOpen, loadParties]);
 
   useEffect(() => {
@@ -150,10 +154,8 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   }, []);
 
   useEffect(() => {
-    if (mode === 'cash') {
-      setValue('bank_name', '');
-      clearErrors('bank_name');
-    }
+    setValue('bank_name', '');
+    clearErrors('bank_name');
   }, [mode, setValue, clearErrors]);
 
   const filteredParties = useMemo(() => {
@@ -180,7 +182,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         party_id: values.party_id,
         amount: values.amount,
         mode: values.mode,
-        bank_name: values.mode === 'bank' ? values.bank_name : null,
+        bank_name: values.bank_name || null,
         remarks: values.remarks?.trim() || null,
       });
       addToast('Payment recorded', 'success');
@@ -308,6 +310,21 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               ))}
             </select>
             {errors.bank_name && <p className="mt-1 text-xs text-red-600">{errors.bank_name.message}</p>}
+          </div>
+        )}
+
+        {mode === 'cash' && cashHandlers.length > 0 && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Cash Handler</label>
+            <select className="input-field w-full" {...register('bank_name')}>
+              <option value="">Select handler (optional)</option>
+              {cashHandlers.map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Who received this cash payment?</p>
           </div>
         )}
 

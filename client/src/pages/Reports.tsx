@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatINR, formatDate, formatNumber } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
+import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 import { BarChart3, TrendingUp, Users, FileSpreadsheet, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
@@ -104,6 +105,7 @@ export default function Reports() {
   const [collectionMonth, setCollectionMonth] = useState(currentMonth);
   const [collectionData, setCollectionData] = useState<{ rows: any[]; daily: any[] } | null>(null);
   const [collectionLoading, setCollectionLoading] = useState(false);
+  const collPg = usePagination(collectionData?.rows ?? [], 20);
 
   useEffect(() => {
     if (tab !== 'pnl') return;
@@ -703,7 +705,7 @@ export default function Reports() {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-gray-100">
-                      {collectionData.rows.map((r: any) => (
+                      {collPg.pageData.map((r: any) => (
                         <tr key={r.id} className="hover:bg-gray-50">
                           <td className="px-4 py-3">{formatDate(r.date)}</td>
                           <td className="px-4 py-3 font-medium">{r.party_name}</td>
@@ -720,6 +722,7 @@ export default function Reports() {
                     </tbody>
                   </table>
                 </div>
+                <PaginationBar pg={collPg} />
               </div>
             </>
           )}

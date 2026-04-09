@@ -3,6 +3,7 @@ import { Pencil, Plus, Trash2, Calculator } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useToastStore } from '../lib/store';
+import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 
 interface Loan {
   id: number;
@@ -187,6 +188,7 @@ export default function Finance() {
   const totalPrincipal = loans.reduce((s, l) => s + l.principal, 0);
   const totalOutstanding = loans.reduce((s, l) => s + (l.outstanding_principal ?? l.principal), 0);
   const totalMonthlyEMI = loans.reduce((s, l) => s + (l.emi_amount ?? 0), 0);
+  const loanPg = usePagination(loans, 20);
 
   return (
     <div className="space-y-8">
@@ -232,6 +234,7 @@ export default function Finance() {
           ) : loans.length === 0 ? (
             <p className="px-4 py-10 text-center text-sm text-gray-500">No loans recorded yet. Click "Add Loan" to start.</p>
           ) : (
+            <>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
@@ -248,7 +251,7 @@ export default function Finance() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {loans.map((loan) => {
+                  {loanPg.pageData.map((loan) => {
                     const outstanding = loan.outstanding_principal ?? loan.principal;
                     const pct = loan.principal > 0 ? (outstanding / loan.principal) * 100 : 0;
                     return (
@@ -282,6 +285,8 @@ export default function Finance() {
                 </tbody>
               </table>
             </div>
+            <PaginationBar pg={loanPg} />
+            </>
           )}
         </div>
       </div>

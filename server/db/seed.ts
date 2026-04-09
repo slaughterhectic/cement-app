@@ -267,6 +267,22 @@ async function run() {
       return parseFloat(s) || 0;
     }
 
+    // Normalize bank_name: known banks → standard name, others → null
+    function normalizeBankName(raw: string | null): string | null {
+      if (!raw) return null;
+      const s = raw.trim().toLowerCase();
+      if (/^(bob|bob\s|bank of baroda)/i.test(s)) return 'BOB';
+      if (/^arm(tech|ech)/i.test(s)) return 'ARMTECH';
+      if (/^ko(tak|kat)/i.test(s)) return 'KOTAK';
+      if (/^axis/i.test(s)) return 'AXIS';
+      if (/^hdfc/i.test(s)) return 'HDFC';
+      if (/^icici/i.test(s)) return 'ICICI';
+      if (/^(ok|obc|oriental)/i.test(s)) return 'OK';
+      if (/^sbi/i.test(s)) return 'SBI';
+      if (/cash/i.test(s)) return null;
+      return null;
+    }
+
     // Party name alias map: variant → canonical name
     // Resolves name mismatches between Sale Ledger and Daily Sale Report
     const partyAliases: Record<string, string> = {};
@@ -460,10 +476,13 @@ async function run() {
           const totalCredit = creditAc + creditCash;
           if (totalCredit > 0) {
             if (creditAc > 0) {
-              const bankName = (row.length > 9 ? String(row[9] || '').trim() : '') || remarks || null;
+              const rawBankName = (row.length > 9 ? String(row[9] || '').trim() : '') || remarks || null;
+              const bankName = normalizeBankName(rawBankName);
+              const senderInfo = bankName !== rawBankName && rawBankName ? rawBankName : null;
+              const fullRemarks = [remarks, senderInfo ? 'Sender: ' + senderInfo : null].filter(Boolean).join(' | ') || null;
               await client.query(
                 'INSERT INTO payments (date, party_id, amount, mode, bank_name, remarks) VALUES ($1, $2, $3, $4, $5, $6)',
-                [date, partyId, creditAc, 'bank', bankName, remarks || null]
+                [date, partyId, creditAc, 'bank', bankName, fullRemarks]
               );
               importedPayments++;
             }
@@ -672,6 +691,57 @@ async function run() {
       }
     }
     console.log(`  Created ${openingStockEntries} opening stock entries`);
+
+    // ============================================================
+    // 5) IMPORT ARMTECH IMPREST-AKASH FROM ARMTECH EXCEL
+    // ============================================================
+    const armtechPath = path.join(excelDir, 'armtech new 26-27.xlsx');
+    if (fs.existsSync(armtechPath)) {
+      console.log('\nImporting Armtech Imprest-Akash...');
+      const wbA = XLSX.readFile(armtechPath);
+      const impSheet = wbA.Sheets['Imprest-akash'];
+      if (impSheet) {
+        const impData = XLSX.utils.sheet_to_json(impSheet, { header: 1 }) as any[][];
+        // Row 3 has opening balance in column 5
+        const openingBal = parseFloat(impData[3]?.[5]) || 0;
+        await client.query(`
+          INSERT INTO imprest_handlers (handler_name, opening_balance)
+          VALUES ('Akash', $1)
+          ON CONFLICT (handler_name) DO UPDATE SET opening_balance = $1
+        `, [openingBal]);
+
+        let impCount = 0;
+        for (let i = 4; i < impData.length; i++) {
+          const row = impData[i];
+          if (!row || !row[0]) continue;
+          const date = parseDate(row[0]);
+          if (!date) continue;
+          const particulars = row[1] ? String(row[1]).trim() : '';
+          const narration = row[2] ? String(row[2]).trim() : '';
+          const debit = parseFloat(row[3]) || 0;
+          const credit = parseFloat(row[4]) || 0;
+          const remark = row[6] ? String(row[6]).trim() : null;
+
+          if (debit > 0) {
+            await client.query(
+              'INSERT INTO imprest_transactions (date, handler_name, particulars, narration, debit, credit, remark) VALUES ($1, $2, $3, $4, $5, 0, $6)',
+              [date, 'Akash', particulars, narration, debit, remark]
+            );
+            impCount++;
+          }
+          if (credit > 0) {
+            await client.query(
+              'INSERT INTO imprest_transactions (date, handler_name, particulars, narration, debit, credit, remark) VALUES ($1, $2, $3, $4, 0, $5, $6)',
+              [date, 'Akash', particulars, narration, credit, remark]
+            );
+            impCount++;
+          }
+        }
+        console.log(`  Imported ${impCount} imprest transactions for Akash (opening: ₹${openingBal})`);
+      }
+    } else {
+      console.log('armtech new 26-27.xlsx not found, skipping imprest import');
+    }
 
     // ============================================================
     // Summary

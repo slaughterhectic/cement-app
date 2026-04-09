@@ -7,7 +7,7 @@ import { api } from '../../lib/api';
 import { formatDateInput } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
 
-const BANKS = ['ARMTECH', 'KOTAK', 'HDFC', 'BOB', 'AXIS', 'Other'] as const;
+const BANKS = ['ARMTECH', 'KOTAK', 'HDFC', 'BOB', 'AXIS', 'OK', 'ICICI', 'Other'] as const;
 
 const EXPENSE_CATEGORIES = ['Office', 'Bank charges', 'Freight', 'Salary', 'Misc'] as const;
 
@@ -47,6 +47,7 @@ export interface ExpenseFormProps {
 export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
   const addToast = useToastStore((s) => s.addToast);
   const [submitting, setSubmitting] = useState(false);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
 
   const defaultValues = useMemo(
     () => ({
@@ -82,13 +83,14 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
       date: formatDateInput(),
     });
     clearErrors();
+    api.imprest.handlers().then((rows: any[]) => {
+      setCashHandlers(rows.map((r: any) => r.handler_name));
+    }).catch(() => {});
   }, [isOpen, reset, defaultValues, clearErrors]);
 
   useEffect(() => {
-    if (mode === 'cash') {
-      setValue('bank_name', '');
-      clearErrors('bank_name');
-    }
+    setValue('bank_name', '');
+    clearErrors('bank_name');
   }, [mode, setValue, clearErrors]);
 
   const onSubmit = async (values: ExpenseFormValues) => {
@@ -100,7 +102,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
         amount: values.amount,
         category: values.category,
         mode: values.mode,
-        bank_name: values.mode === 'bank' ? values.bank_name : null,
+        bank_name: values.bank_name || null,
       });
       addToast('Expense recorded', 'success');
       onSuccess();
@@ -186,6 +188,21 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
               ))}
             </select>
             {errors.bank_name && <p className="mt-1 text-xs text-red-600">{errors.bank_name.message}</p>}
+          </div>
+        )}
+
+        {mode === 'cash' && cashHandlers.length > 0 && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Cash Handler</label>
+            <select className="input-field w-full" {...register('bank_name')}>
+              <option value="">Select handler (optional)</option>
+              {cashHandlers.map((h) => (
+                <option key={h} value={h}>
+                  {h}
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-gray-500">Who paid this expense from their cash?</p>
           </div>
         )}
 

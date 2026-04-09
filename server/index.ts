@@ -83,10 +83,12 @@ app.get('/api/dashboard/stats', async (_req, res) => {
         + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='bank')
         - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='bank') as total
     `);
-    // Cash = imprest opening + credits - debits; plus cash payments received - cash expenses
+    // Cash = cash payments received - cash expenses + imprest net balance
     const cashCalc = await getOne(`
       SELECT
-        (SELECT COALESCE(SUM(opening_balance),0) FROM imprest_handlers)
+        (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash')
+        - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='cash')
+        + (SELECT COALESCE(SUM(opening_balance),0) FROM imprest_handlers)
         + (SELECT COALESCE(SUM(credit),0) FROM imprest_transactions)
         - (SELECT COALESCE(SUM(debit),0) FROM imprest_transactions) as total
     `);

@@ -19,7 +19,12 @@ router.get('/summary', async (_req, res) => {
       total_spent: Number(h.total_spent),
       balance: Number(h.opening_balance) + Number(h.total_received) - Number(h.total_spent),
     }));
-    const totalCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
+    const imprestCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
+
+    // Cash from party payments (mode=cash) minus cash expenses
+    const cashPaymentsTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash'`))?.t ?? 0);
+    const cashExpensesTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash'`))?.t ?? 0);
+    const totalCash = imprestCash + cashPaymentsTotal - cashExpensesTotal;
 
     // Banks: auto-compute from payments/expenses grouped by bank_name
     // Also include opening balances from bank_balances table for configured banks
