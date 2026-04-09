@@ -44,6 +44,8 @@ export type DataTableProps<T> = {
   getRowId?: (row: T) => number;
   pageSize?: number;
   exportFileName?: string;
+  /** Optional extra CSS classes per row. When provided, overrides the default alternating row background. */
+  getRowClassName?: (row: T) => string | undefined;
 };
 
 export function DataTable<T>({
@@ -57,6 +59,7 @@ export function DataTable<T>({
   getRowId: getRowIdProp,
   pageSize: pageSizeProp = DEFAULT_PAGE_SIZE,
   exportFileName = 'export',
+  getRowClassName,
 }: DataTableProps<T>) {
   const getRowId = getRowIdProp ?? ((row: T) => (row as { id: number }).id);
 
@@ -364,12 +367,13 @@ export function DataTable<T>({
               ))}
             </thead>
             <tbody>
-              {table.getRowModel().rows.map((row, index) => (
+              {table.getRowModel().rows.map((row, index) => {
+                const customCls = getRowClassName ? getRowClassName(row.original) : undefined;
+                const bgCls = customCls ?? (index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50');
+                return (
                 <tr
                   key={row.id}
-                  className={`border-b border-gray-100 transition-colors ${
-                    index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'
-                  } hover:bg-brand-50`}
+                  className={`border-b border-gray-100 transition-colors ${bgCls} hover:brightness-95`}
                 >
                   {row.getVisibleCells().map((cell) => (
                     <td key={cell.id} className="px-4 py-3 text-sm text-gray-900">
@@ -377,7 +381,8 @@ export function DataTable<T>({
                     </td>
                   ))}
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         )}

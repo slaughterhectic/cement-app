@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, IndianRupee, Package, TrendingUp } from 'lucide-react';
+import { AlertCircle, IndianRupee, Package, TrendingUp, Wallet } from 'lucide-react';
 import { BrandPieChart } from '../components/charts/BrandPieChart';
 import { OutstandingBarChart } from '../components/charts/OutstandingBarChart';
 import { ProfitLineChart } from '../components/charts/ProfitLineChart';
@@ -14,6 +14,7 @@ interface DashboardStats {
   monthProfit: number;
   outstanding: number;
   stockValue: { bags: number; value: number };
+  totalCapital: number;
 }
 
 interface DashboardCharts {
@@ -104,9 +105,10 @@ export default function Dashboard() {
         <p className="mt-1 text-sm text-heading/60">Welcome back. Here&apos;s your business overview.</p>
       </header>
 
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {loading || !stats ? (
           <>
+            <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
             <SkeletonCard />
@@ -141,6 +143,13 @@ export default function Dashboard() {
               subtitle={`${formatNumber(stats.stockValue.bags)} bags × avg purchase rate`}
               icon={Package}
               color="purchase"
+            />
+            <KPICard
+              title="Total Capital"
+              value={formatINR(stats.totalCapital)}
+              subtitle="Cash in hand + bank balances"
+              icon={Wallet}
+              color="profit"
             />
           </>
         )}

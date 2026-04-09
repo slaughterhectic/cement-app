@@ -103,4 +103,55 @@ router.get('/daily-register', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.get('/daily-pnl', async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().substring(0, 7);
+    const rows = await getAll(`
+      SELECT d.date,
+        COALESCE(s.sales, 0) as sales,
+        COALESCE(p.purchases, 0) as purchases,
+        COALESCE(e.expenses, 0) as expenses,
+        COALESCE(s.sales, 0) - COALESCE(p.purchases, 0) as gross_profit,
+        COALESCE(s.sales, 0) - COALESCE(p.purchases, 0) - COALESCE(e.expenses, 0) as net_profit,
+        COALESCE(s.bags, 0) as bags_sold
+      FROM (
+        SELECT DISTINCT date FROM sales WHERE to_char(date::date,'YYYY-MM')=$1
+        UNION SELECT DISTINCT date FROM purchases WHERE to_char(date::date,'YYYY-MM')=$1
+        UNION SELECT DISTINCT date FROM expenses WHERE to_char(date::date,'YYYY-MM')=$1
+      ) d
+      LEFT JOIN (SELECT date, SUM(sale_amount) as sales, SUM(bags) as bags FROM sales WHERE to_char(date::date,'YYYY-MM')=$1 GROUP BY date) s ON d.date=s.date
+      LEFT JOIN (SELECT date, SUM(purchase_amount) as purchases FROM purchases WHERE to_char(date::date,'YYYY-MM')=$1 GROUP BY date) p ON d.date=p.date
+      LEFT JOIN (SELECT date, SUM(amount) as expenses FROM expenses WHERE to_char(date::date,'YYYY-MM')=$1 GROUP BY date) e ON d.date=e.date
+      ORDER BY d.date
+    `, [month]);
+    res.json(rows);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/daily-collection', async (req, res) => {
+  try {
+    const month = (req.query.month as string) || new Date().toISOString().substring(0, 7);
+    const rows = await getAll(`
+      SELECT py.id, py.date, pt.name as party_name, py.amount, py.mode, py.bank_name, py.remarks
+      FROM payments py
+      JOIN parties pt ON py.party_id = pt.id
+      WHERE to_char(py.date::date,'YYYY-MM')=$1
+      ORDER BY py.date, py.id
+    `, [month]);
+
+    const daily = await getAll(`
+      SELECT date,
+        COALESCE(SUM(amount),0) as total,
+        COALESCE(SUM(CASE WHEN mode='bank' THEN amount ELSE 0 END),0) as bank,
+        COALESCE(SUM(CASE WHEN mode='cash' THEN amount ELSE 0 END),0) as cash,
+        COUNT(*) as count
+      FROM payments
+      WHERE to_char(date::date,'YYYY-MM')=$1
+      GROUP BY date ORDER BY date
+    `, [month]);
+
+    res.json({ rows, daily });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

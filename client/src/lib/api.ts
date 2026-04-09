@@ -77,6 +77,31 @@ export const api = {
     brands: () => request<any[]>('/reports/brands'),
     outstanding: () => request<any[]>('/reports/outstanding'),
     dailyRegister: (month?: string) => request<any[]>(`/reports/daily-register${month ? `?month=${month}` : ''}`),
+    dailyPnl: (month?: string) => request<any[]>(`/reports/daily-pnl${month ? `?month=${month}` : ''}`),
+    dailyCollection: (month?: string) => request<any>(`/reports/daily-collection${month ? `?month=${month}` : ''}`),
+  },
+  capital: {
+    summary: () => request<any>('/capital/summary'),
+    banks: () => request<any[]>('/capital/banks'),
+    upsertBank: (data: { bank_name: string; opening_balance: number }) => request<any>('/capital/banks', { method: 'POST', body: JSON.stringify(data) }),
+    deleteBank: (name: string) => request<any>(`/capital/banks/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+  },
+  imprest: {
+    list: (params?: Record<string, string>) => {
+      const q = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<any[]>(`/imprest${q}`);
+    },
+    handlers: () => request<any[]>('/imprest/handlers'),
+    upsertHandler: (data: { handler_name: string; opening_balance: number }) => request<any>('/imprest/handlers', { method: 'POST', body: JSON.stringify(data) }),
+    create: (data: any) => request<any>('/imprest', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/imprest/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/imprest/${id}`, { method: 'DELETE' }),
+  },
+  loans: {
+    list: () => request<any[]>('/loans'),
+    create: (data: any) => request<any>('/loans', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/loans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/loans/${id}`, { method: 'DELETE' }),
   },
   brands: () => request<any[]>('/brands'),
   godowns: () => request<any[]>('/godowns'),

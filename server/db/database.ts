@@ -102,6 +102,63 @@ export async function initializeDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    // Migrations
+    await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS loans (
+        id SERIAL PRIMARY KEY,
+        lender_name TEXT NOT NULL,
+        principal REAL NOT NULL,
+        interest_rate REAL NOT NULL,
+        emi_amount REAL,
+        start_date TEXT NOT NULL,
+        tenure_months INTEGER,
+        outstanding_principal REAL,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS imprest_transactions (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        handler_name TEXT NOT NULL DEFAULT 'Akash',
+        particulars TEXT,
+        narration TEXT,
+        debit REAL DEFAULT 0,
+        credit REAL DEFAULT 0,
+        remark TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS imprest_handlers (
+        id SERIAL PRIMARY KEY,
+        handler_name TEXT NOT NULL UNIQUE,
+        opening_balance REAL DEFAULT 0
+      );
+    `);
+
+    await client.query(`
+      INSERT INTO imprest_handlers (handler_name, opening_balance)
+      VALUES ('Akash', 0)
+      ON CONFLICT (handler_name) DO NOTHING;
+    `);
+
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS bank_balances (
+        id SERIAL PRIMARY KEY,
+        bank_name TEXT NOT NULL UNIQUE,
+        opening_balance REAL DEFAULT 0
+      );
+    `);
+
+    // Rename "Main Office" godown to "Plant"
+    await client.query(`UPDATE godowns SET name = 'Plant' WHERE name = 'Main Office';`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

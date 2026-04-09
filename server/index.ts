@@ -10,6 +10,9 @@ import expensesRouter from './routes/expenses';
 import reportsRouter from './routes/reports';
 import importRouter from './routes/import';
 import brandsRouter from './routes/brands';
+import capitalRouter from './routes/capital';
+import imprestRouter from './routes/imprest';
+import loansRouter from './routes/loans';
 
 const app = express();
 const PORT = 3001;
@@ -26,6 +29,9 @@ app.use('/api/expenses', expensesRouter);
 app.use('/api/reports', reportsRouter);
 app.use('/api/import', importRouter);
 app.use('/api/brands', brandsRouter);
+app.use('/api/capital', capitalRouter);
+app.use('/api/imprest', imprestRouter);
+app.use('/api/loans', loansRouter);
 
 app.get('/api/godowns', async (_req, res) => {
   try {
@@ -67,11 +73,26 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
+    // Capital: cash (imprest) + bank balances
+    const cashCalc = await getOne(`
+      SELECT COALESCE(SUM(ih.opening_balance),0)
+        + COALESCE((SELECT SUM(credit) FROM imprest_transactions),0)
+        - COALESCE((SELECT SUM(debit) FROM imprest_transactions),0) as total
+      FROM imprest_handlers ih
+    `);
+    const bankCalc = await getOne(`
+      SELECT COALESCE(SUM(bb.opening_balance),0)
+        + COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank'),0)
+        - COALESCE((SELECT SUM(amount) FROM expenses WHERE mode='bank'),0) as total
+      FROM bank_balances bb
+    `);
+
     res.json({
       todaySales: { bags: Number(todaySales.bags), amount: Number(todaySales.amount) },
       monthProfit: Number(monthSales.amount) - Number(monthPurchases.amount),
       outstanding: Math.max(0, Number(outstandingCalc.total)),
       stockValue: { bags: Number(stockCalc.bags), value: Number(stockCalc.value) },
+      totalCapital: Math.max(0, Number(cashCalc?.total ?? 0) + Number(bankCalc?.total ?? 0)),
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

@@ -12,6 +12,8 @@ import {
   TrendingUp,
   Upload,
   Users,
+  Wallet,
+  Landmark,
 } from 'lucide-react';
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
@@ -25,6 +27,8 @@ const navItems = [
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
+  { to: '/capital', label: 'Capital', icon: Wallet },
+  { to: '/finance', label: 'Finance', icon: Landmark },
   { to: '/import', label: 'Import', icon: Upload },
 ] as const;
 

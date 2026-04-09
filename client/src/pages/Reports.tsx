@@ -3,10 +3,10 @@ import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatINR, formatDate, formatNumber } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
-import { BarChart3, TrendingUp, Users, FileSpreadsheet } from 'lucide-react';
+import { BarChart3, TrendingUp, Users, FileSpreadsheet, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
 
-type TabId = 'pnl' | 'brands' | 'outstanding' | 'daily';
+type TabId = 'pnl' | 'brands' | 'outstanding' | 'daily' | 'collection';
 
 function currentMonth(): string {
   return new Date().toISOString().slice(0, 7);
@@ -77,6 +77,7 @@ const tabs: { id: TabId; label: string; icon: typeof BarChart3 }[] = [
   { id: 'brands', label: 'Brand Performance', icon: TrendingUp },
   { id: 'outstanding', label: 'Outstanding', icon: Users },
   { id: 'daily', label: 'Daily Sale Register', icon: FileSpreadsheet },
+  { id: 'collection', label: 'Daily Collection', icon: Banknote },
 ];
 
 export default function Reports() {
@@ -95,6 +96,14 @@ export default function Reports() {
 
   const [dailyRows, setDailyRows] = useState<DailyRegisterRow[]>([]);
   const [dailyLoading, setDailyLoading] = useState(false);
+
+  const [dailyPnlRows, setDailyPnlRows] = useState<any[]>([]);
+  const [dailyPnlLoading, setDailyPnlLoading] = useState(false);
+  const [showDailyPnl, setShowDailyPnl] = useState(false);
+
+  const [collectionMonth, setCollectionMonth] = useState(currentMonth);
+  const [collectionData, setCollectionData] = useState<{ rows: any[]; daily: any[] } | null>(null);
+  const [collectionLoading, setCollectionLoading] = useState(false);
 
   useEffect(() => {
     if (tab !== 'pnl') return;
@@ -175,6 +184,28 @@ export default function Reports() {
       cancelled = true;
     };
   }, [tab, dailyMonth]);
+
+  useEffect(() => {
+    if (tab !== 'pnl' || !showDailyPnl) return;
+    let cancelled = false;
+    setDailyPnlLoading(true);
+    api.reports.dailyPnl(pnlMonth)
+      .then((r) => { if (!cancelled) setDailyPnlRows(r); })
+      .catch(() => { if (!cancelled) setDailyPnlRows([]); })
+      .finally(() => { if (!cancelled) setDailyPnlLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, pnlMonth, showDailyPnl]);
+
+  useEffect(() => {
+    if (tab !== 'collection') return;
+    let cancelled = false;
+    setCollectionLoading(true);
+    api.reports.dailyCollection(collectionMonth)
+      .then((r) => { if (!cancelled) setCollectionData(r as any); })
+      .catch(() => { if (!cancelled) setCollectionData(null); })
+      .finally(() => { if (!cancelled) setCollectionLoading(false); });
+    return () => { cancelled = true; };
+  }, [tab, collectionMonth]);
 
   const chartData =
     pnl?.monthlyTrend?.map((row) => ({
@@ -437,7 +468,17 @@ export default function Reports() {
               </div>
 
               <div className="card p-4">
-                <h2 className="mb-4 text-sm font-semibold text-heading">Monthly trend</h2>
+                <div className="mb-4 flex items-center justify-between">
+                  <h2 className="text-sm font-semibold text-heading">Monthly trend</h2>
+                  <button
+                    type="button"
+                    onClick={() => setShowDailyPnl((v) => !v)}
+                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                  >
+                    {showDailyPnl ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                    Daily breakdown for {pnlMonth}
+                  </button>
+                </div>
                 <div className="h-[320px] w-full min-w-0">
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={chartData} margin={{ top: 8, right: 8, left: 8, bottom: 8 }}>
@@ -455,6 +496,63 @@ export default function Reports() {
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
+              {showDailyPnl && (
+                <div className="mt-4 border-t border-card-border pt-4">
+                  <h3 className="mb-3 text-sm font-semibold text-heading">Daily P&amp;L — {pnlMonth}</h3>
+                  {dailyPnlLoading ? (
+                    <p className="text-sm text-gray-500">Loading…</p>
+                  ) : dailyPnlRows.length === 0 ? (
+                    <p className="text-sm text-gray-500">No data for this month.</p>
+                  ) : (
+                    <div className="overflow-x-auto">
+                      <table className="min-w-full text-sm">
+                        <thead>
+                          <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                            <th className="px-3 py-2">Date</th>
+                            <th className="px-3 py-2 text-right">Bags</th>
+                            <th className="px-3 py-2 text-right">Sales (₹)</th>
+                            <th className="px-3 py-2 text-right">Purchases (₹)</th>
+                            <th className="px-3 py-2 text-right">Expenses (₹)</th>
+                            <th className="px-3 py-2 text-right">Gross Profit (₹)</th>
+                            <th className="px-3 py-2 text-right">Net Profit (₹)</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-gray-100">
+                          {dailyPnlRows.map((r: any) => {
+                            const net = Number(r.net_profit);
+                            return (
+                              <tr key={r.date} className={net >= 0 ? 'bg-white hover:bg-emerald-50' : 'bg-white hover:bg-red-50'}>
+                                <td className="px-3 py-2 font-medium">{formatDate(r.date)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{formatNumber(Number(r.bags_sold) || 0)}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-green-700">{formatINR(Number(r.sales))}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-blue-700">{formatINR(Number(r.purchases))}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-amber-700">{formatINR(Number(r.expenses))}</td>
+                                <td className="px-3 py-2 text-right tabular-nums">{formatINR(Number(r.gross_profit))}</td>
+                                <td className={`px-3 py-2 text-right tabular-nums font-semibold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                                  {formatINR(net)}
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </tbody>
+                        <tfoot>
+                          <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                            <td className="px-3 py-2">Total</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{formatNumber(dailyPnlRows.reduce((s: number, r: any) => s + (Number(r.bags_sold) || 0), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-green-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.sales), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-blue-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.purchases), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-amber-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.expenses), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.gross_profit), 0))}</td>
+                            <td className={`px-3 py-2 text-right tabular-nums ${dailyPnlRows.reduce((s: number, r: any) => s + Number(r.net_profit), 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                              {formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.net_profit), 0))}
+                            </td>
+                          </tr>
+                        </tfoot>
+                      </table>
+                    </div>
+                  )}
+                </div>
+              )}
               </div>
             </>
           ) : (
@@ -514,6 +612,117 @@ export default function Reports() {
             getRowId={(r) => r.id}
             pageSize={50}
           />
+        </section>
+      )}
+
+      {tab === 'collection' && (
+        <section className="space-y-4">
+          <div className="flex flex-wrap items-center gap-3">
+            <label className="text-sm font-medium text-gray-700">
+              Month
+              <input
+                type="month"
+                value={collectionMonth}
+                onChange={(e) => setCollectionMonth(e.target.value)}
+                className="ml-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
+              />
+            </label>
+          </div>
+
+          {collectionLoading ? (
+            <p className="text-sm text-gray-500">Loading…</p>
+          ) : !collectionData ? (
+            <p className="text-sm text-gray-500">Could not load collection data.</p>
+          ) : (
+            <>
+              <div className="grid gap-3 sm:grid-cols-3">
+                <div className="rounded-lg border border-green-100 bg-green-50/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-green-800/80">Total Collected</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-green-900">
+                    {formatINR(collectionData.daily.reduce((s: number, d: any) => s + Number(d.total), 0))}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-blue-800/80">Via Bank</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-blue-900">
+                    {formatINR(collectionData.daily.reduce((s: number, d: any) => s + Number(d.bank), 0))}
+                  </p>
+                </div>
+                <div className="rounded-lg border border-amber-100 bg-amber-50/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-amber-800/80">Via Cash</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-amber-900">
+                    {formatINR(collectionData.daily.reduce((s: number, d: any) => s + Number(d.cash), 0))}
+                  </p>
+                </div>
+              </div>
+
+              <div className="card overflow-hidden p-0">
+                <h3 className="border-b border-card-border px-4 py-3 text-sm font-semibold text-heading">
+                  Day-wise summary
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3 text-right">Transactions</th>
+                        <th className="px-4 py-3 text-right">Bank (₹)</th>
+                        <th className="px-4 py-3 text-right">Cash (₹)</th>
+                        <th className="px-4 py-3 text-right">Total (₹)</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {collectionData.daily.map((d: any) => (
+                        <tr key={d.date} className="hover:bg-gray-50">
+                          <td className="px-4 py-3 font-medium">{formatDate(d.date)}</td>
+                          <td className="px-4 py-3 text-right tabular-nums">{d.count}</td>
+                          <td className="px-4 py-3 text-right tabular-nums text-blue-700">{formatINR(Number(d.bank))}</td>
+                          <td className="px-4 py-3 text-right tabular-nums text-amber-700">{formatINR(Number(d.cash))}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(d.total))}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+
+              <div className="card overflow-hidden p-0">
+                <h3 className="border-b border-card-border px-4 py-3 text-sm font-semibold text-heading">
+                  Detailed transactions
+                </h3>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full text-sm">
+                    <thead>
+                      <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                        <th className="px-4 py-3">Date</th>
+                        <th className="px-4 py-3">Party</th>
+                        <th className="px-4 py-3 text-right">Amount (₹)</th>
+                        <th className="px-4 py-3">Mode</th>
+                        <th className="px-4 py-3">Bank</th>
+                        <th className="px-4 py-3">Remarks</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-100">
+                      {collectionData.rows.map((r: any) => (
+                        <tr key={r.id} className="hover:bg-gray-50">
+                          <td className="px-4 py-3">{formatDate(r.date)}</td>
+                          <td className="px-4 py-3 font-medium">{r.party_name}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(r.amount))}</td>
+                          <td className="px-4 py-3">
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${r.mode === 'bank' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
+                              {r.mode}
+                            </span>
+                          </td>
+                          <td className="px-4 py-3 text-gray-600">{r.bank_name || '—'}</td>
+                          <td className="px-4 py-3 text-gray-600">{r.remarks || '—'}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            </>
+          )}
         </section>
       )}
     </div>

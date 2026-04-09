@@ -12,6 +12,8 @@ import PartyLedger from './pages/PartyLedger';
 import Payments from './pages/Payments';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
+import Capital from './pages/Capital';
+import Finance from './pages/Finance';
 import ImportPage from './pages/Import';
 import { useAuthStore } from './lib/store';
 
@@ -43,6 +45,8 @@ export default function App() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/reports" element={<Reports />} />
+          <Route path="/capital" element={<Capital />} />
+          <Route path="/finance" element={<Finance />} />
           <Route path="/import" element={<ImportPage />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />

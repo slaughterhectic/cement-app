@@ -17,6 +17,7 @@ const schema = z.object({
   godown_id: z.number().int().positive().optional(),
   truck_number: z.string().optional(),
   source_location: z.string().optional(),
+  invoice_number: z.string().optional(),
   remarks: z.string().optional(),
 });
 
@@ -54,6 +55,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
       godown_id: undefined as number | undefined,
       truck_number: '',
       source_location: '',
+      invoice_number: '',
       remarks: '',
     }),
     []
@@ -114,6 +116,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         godown_id: editData.godown_id ?? undefined,
         truck_number: editData.truck_number ?? '',
         source_location: editData.source_location ?? '',
+        invoice_number: (editData as any).invoice_number ?? '',
         remarks: editData.remarks ?? '',
       });
     } else {
@@ -143,6 +146,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         godown_id: values.godown_id && !Number.isNaN(values.godown_id) ? values.godown_id : null,
         truck_number: values.truck_number?.trim() || null,
         source_location: values.source_location?.trim() || null,
+        invoice_number: values.invoice_number?.trim() || null,
         remarks: values.remarks?.trim() || null,
       };
       if (editData?.id) {
@@ -268,6 +272,11 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Source location</label>
             <input type="text" className="input-field w-full" {...register('source_location')} />
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
+            <input type="text" className="input-field w-full" placeholder="Enter invoice number when goods received" {...register('invoice_number')} />
+            <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms goods received.</p>
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Remarks</label>
