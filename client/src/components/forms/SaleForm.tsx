@@ -484,7 +484,8 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
-            <input type="text" className="input-field w-full" {...register('invoice_number')} />
+            <input type="text" className="input-field w-full" placeholder="e.g. APL/2026-27/001" {...register('invoice_number')} />
+            <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms sale is billed.</p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Billed party</label>

@@ -275,8 +275,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
-            <input type="text" className="input-field w-full" placeholder="Enter invoice number when goods received" {...register('invoice_number')} />
-            <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms goods received.</p>
+            <input type="text" className="input-field w-full" placeholder="Supplier invoice / GRN number" {...register('invoice_number')} />
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Remarks</label>

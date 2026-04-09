@@ -23,23 +23,22 @@ router.get('/summary', async (_req, res) => {
     }));
     const totalCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
 
-    // Banks: opening + payments received - expenses paid
-    const bankNames = await getAll(`
-      SELECT DISTINCT bank_name FROM (
-        SELECT bank_name FROM payments WHERE bank_name IS NOT NULL AND bank_name <> ''
-        UNION
-        SELECT bank_name FROM expenses WHERE bank_name IS NOT NULL AND bank_name <> ''
-        UNION
-        SELECT bank_name FROM bank_balances WHERE bank_name IS NOT NULL
-      ) b ORDER BY bank_name
-    `);
+    // Banks: ONLY explicitly configured banks from bank_balances table.
+    // Balance = opening + customer payments received via that bank - expenses paid via that bank.
+    // Note: bank_name in payments may store various labels; match case-insensitively.
+    const bankRows = await getAll(`SELECT * FROM bank_balances ORDER BY bank_name`);
 
-    const banks = await Promise.all(bankNames.map(async (b: any) => {
+    const banks = await Promise.all(bankRows.map(async (b: any) => {
       const name = b.bank_name;
-      const opening = await getOne(`SELECT COALESCE(opening_balance,0) as ob FROM bank_balances WHERE bank_name=$1`, [name]);
-      const received = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank' AND bank_name=$1`, [name]);
-      const paid = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='bank' AND bank_name=$1`, [name]);
-      const ob = Number(opening?.ob ?? 0);
+      const received = await getOne(
+        `SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank' AND LOWER(bank_name)=LOWER($1)`,
+        [name]
+      );
+      const paid = await getOne(
+        `SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='bank' AND LOWER(bank_name)=LOWER($1)`,
+        [name]
+      );
+      const ob = Number(b.opening_balance ?? 0);
       const rc = Number(received?.total ?? 0);
       const pd = Number(paid?.total ?? 0);
       return { bank_name: name, opening: ob, total_received: rc, total_paid: pd, balance: ob + rc - pd };

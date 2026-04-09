@@ -168,14 +168,12 @@ export default function Purchases() {
       },
       {
         accessorKey: 'invoice_number',
-        header: 'Invoice No.',
+        header: 'GRN / Invoice',
         cell: ({ getValue }) => {
           const v = getValue() as string | null;
-          return v ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
-              ✓ {v}
-            </span>
-          ) : <span className="text-gray-400 text-xs">Pending</span>;
+          return v
+            ? <span className="text-sm text-gray-800">{v}</span>
+            : <span className="text-gray-400 text-xs">—</span>;
         },
       },
       {
@@ -295,9 +293,6 @@ export default function Purchases() {
         emptyAction={{ label: 'New Purchase', onClick: openCreate }}
         enableSelection
         exportFileName="purchases"
-        getRowClassName={(row) =>
-          row.invoice_number ? 'bg-emerald-50' : undefined
-        }
       />
 
       <PurchaseForm

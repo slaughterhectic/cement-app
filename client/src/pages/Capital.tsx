@@ -330,40 +330,76 @@ function BankSection({ summary, onRefresh }: { summary: CapitalSummary; onRefres
   return (
     <div className="space-y-3">
       <div className="flex items-center justify-between">
-        <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
-        <button type="button" onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 px-3 py-1.5 text-xs font-medium hover:bg-gray-50"><Plus className="h-3.5 w-3.5" /> Add/Edit Bank</button>
+        <div>
+          <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
+          <p className="text-xs text-gray-500 mt-0.5">
+            Add bank accounts (e.g. Kotak, BOB, HDFC) and set their opening balance.
+            Running balance = Opening + receipts tagged to that bank − expenses paid via that bank.
+          </p>
+        </div>
+        <button type="button" onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-gray-50 shrink-0">
+          <Plus className="h-3.5 w-3.5" /> Add Bank
+        </button>
       </div>
-      <p className="text-xs text-gray-500">Balance = Opening + Payments received (bank) − Expenses paid (bank)</p>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
-        {summary.banks.map((b) => (
-          <div key={b.bank_name} className="relative rounded-lg border border-card-border bg-white p-4 shadow-sm">
-            <button type="button" onClick={() => handleDelete(b.bank_name)} className="absolute right-2 top-2 rounded p-1 text-gray-400 hover:text-red-500"><Trash2 className="h-3.5 w-3.5" /></button>
-            <p className="text-sm font-semibold text-heading">{b.bank_name}</p>
-            <p className="mt-2 text-xl font-bold tabular-nums text-blue-700">{formatINR(b.balance)}</p>
-            <div className="mt-2 space-y-1 text-xs text-gray-500">
-              <div className="flex justify-between"><span>Opening</span><span>{formatINR(b.opening)}</span></div>
-              <div className="flex justify-between text-green-700"><span>+ Received</span><span>{formatINR(b.total_received)}</span></div>
-              <div className="flex justify-between text-red-700"><span>− Paid out</span><span>{formatINR(b.total_paid)}</span></div>
-            </div>
-          </div>
-        ))}
-        {summary.banks.length === 0 && (
-          <p className="col-span-full text-sm text-gray-500">No banks configured. Add bank opening balances to track bank-wise funds.</p>
-        )}
-      </div>
+
+      {summary.banks.length === 0 ? (
+        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+          No banks configured yet. Click "Add Bank" to add Kotak, BOB, HDFC etc. with their opening balances.
+        </div>
+      ) : (
+        <div className="card overflow-hidden p-0">
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                <th className="px-4 py-3">Bank</th>
+                <th className="px-4 py-3 text-right">Opening (₹)</th>
+                <th className="px-4 py-3 text-right">+ Received (₹)</th>
+                <th className="px-4 py-3 text-right">− Paid Out (₹)</th>
+                <th className="px-4 py-3 text-right font-semibold text-blue-700">Balance (₹)</th>
+                <th className="px-4 py-3" />
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {summary.banks.map((b) => (
+                <tr key={b.bank_name} className="hover:bg-gray-50">
+                  <td className="px-4 py-3 font-semibold text-heading">{b.bank_name}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-600">{formatINR(b.opening)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(b.total_received)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(b.total_paid)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700">{formatINR(b.balance)}</td>
+                  <td className="px-4 py-3">
+                    <button type="button" onClick={() => handleDelete(b.bank_name)} className="rounded p-1 text-gray-400 hover:text-red-500">
+                      <Trash2 className="h-3.5 w-3.5" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              <tr className="border-t-2 border-gray-300 bg-blue-50/60 font-semibold">
+                <td className="px-4 py-3 text-blue-800">Total</td>
+                <td className="px-4 py-3 text-right tabular-nums text-gray-600">{formatINR(summary.banks.reduce((s, b) => s + b.opening, 0))}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_received, 0))}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_paid, 0))}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-800">{formatINR(summary.totalBank)}</td>
+                <td />
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      )}
 
       {showAdd && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-base font-semibold">Add / Update Bank Opening Balance</h3>
+            <h3 className="mb-4 text-base font-semibold">Add / Update Bank</h3>
             <div className="space-y-3">
               <div>
                 <label className="mb-1 block text-xs font-medium">Bank Name</label>
                 <input type="text" className="input-field w-full" placeholder="e.g. Kotak, BOB, HDFC" value={form.bank_name} onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))} />
+                <p className="mt-1 text-xs text-gray-500">Must match the bank name used in Payments and Expenses.</p>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium">Opening Balance (₹)</label>
-                <input type="number" step={0.01} className="input-field w-full" value={form.opening_balance} onChange={(e) => setForm((p) => ({ ...p, opening_balance: e.target.value }))} />
+                <input type="number" step={0.01} className="input-field w-full" placeholder="Balance at the start of tracking" value={form.opening_balance} onChange={(e) => setForm((p) => ({ ...p, opening_balance: e.target.value }))} />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">

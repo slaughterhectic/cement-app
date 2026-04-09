@@ -80,10 +80,13 @@ app.get('/api/dashboard/stats', async (_req, res) => {
         - COALESCE((SELECT SUM(debit) FROM imprest_transactions),0) as total
       FROM imprest_handlers ih
     `);
+    // Bank balance: sum over each configured bank (opening + received - paid for that bank)
     const bankCalc = await getOne(`
-      SELECT COALESCE(SUM(bb.opening_balance),0)
-        + COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank'),0)
-        - COALESCE((SELECT SUM(amount) FROM expenses WHERE mode='bank'),0) as total
+      SELECT COALESCE(SUM(
+        COALESCE(bb.opening_balance,0)
+        + COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank' AND LOWER(bank_name)=LOWER(bb.bank_name)),0)
+        - COALESCE((SELECT SUM(amount) FROM expenses WHERE mode='bank' AND LOWER(bank_name)=LOWER(bb.bank_name)),0)
+      ),0) as total
       FROM bank_balances bb
     `);
 
