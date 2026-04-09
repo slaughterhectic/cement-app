@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, IndianRupee, Package, TrendingUp, Wallet } from 'lucide-react';
-import { BrandPieChart } from '../components/charts/BrandPieChart';
+import { AlertCircle, Building2, IndianRupee, Package, TrendingUp, Wallet } from 'lucide-react';
 import { OutstandingBarChart } from '../components/charts/OutstandingBarChart';
 import { ProfitLineChart } from '../components/charts/ProfitLineChart';
 import { SalesBarChart } from '../components/charts/SalesBarChart';
 import { KPICard } from '../components/ui/KPICard';
-import { SkeletonCard, TableSkeleton } from '../components/ui/Skeleton';
+import { SkeletonCard } from '../components/ui/Skeleton';
 import { api } from '../lib/api';
 import { formatDate, formatINR, formatNumber } from '../lib/format';
+import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface DashboardStats {
   todaySales: { bags: number; amount: number };
@@ -15,6 +15,12 @@ interface DashboardStats {
   outstanding: number;
   stockValue: { bags: number; value: number };
   totalCapital: number;
+  bankBalance: number;
+  cashBalance: number;
+  bankReceived: number;
+  cashReceived: number;
+  bankPaid: number;
+  cashPaid: number;
 }
 
 interface DashboardCharts {
@@ -44,25 +50,72 @@ function ChartSkeleton({ tall }: { tall?: boolean }) {
   return (
     <div className="card flex flex-col gap-4">
       <div className="h-5 w-48 animate-pulse rounded-md bg-card-border/70" />
-      <div
-        className={`w-full animate-pulse rounded-lg bg-card-border/40 ${tall ? 'min-h-[350px]' : 'min-h-[300px]'}`}
-      />
+      <div className={`w-full animate-pulse rounded-lg bg-card-border/40 ${tall ? 'min-h-[350px]' : 'min-h-[300px]'}`} />
     </div>
   );
 }
 
-function StockBadge({ stock }: { stock: number }) {
-  if (stock < 100) {
+const DONUT_COLORS = ['#E8580A', '#1E6FC0', '#2D7A1F', '#B8620A', '#0F7A4B', '#7C3AED'];
+
+function BrandDonutChart({ data, title }: { data: { name: string; bags: number }[]; title: string }) {
+  const sorted = [...data].sort((a, b) => b.bags - a.bags).slice(0, 6).filter((d) => d.bags > 0);
+  const total = sorted.reduce((s, d) => s + d.bags, 0);
+
+  if (sorted.length === 0) {
     return (
-      <span className="inline-flex rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-800">
-        Critical
-      </span>
+      <div className="card flex items-center justify-center min-h-[320px]">
+        <p className="text-sm text-gray-400">No data for this month</p>
+      </div>
     );
   }
+
   return (
-    <span className="inline-flex rounded-full bg-amber-100 px-2 py-0.5 text-xs font-semibold text-amber-900">
-      Low
-    </span>
+    <div className="card flex flex-col gap-3">
+      <h3 className="text-base font-semibold text-heading">{title}</h3>
+      <div className="flex flex-col gap-4">
+        <ResponsiveContainer width="100%" height={200}>
+          <PieChart>
+            <Pie
+              data={sorted}
+              dataKey="bags"
+              nameKey="name"
+              cx="50%"
+              cy="50%"
+              innerRadius={55}
+              outerRadius={85}
+              paddingAngle={3}
+            >
+              {sorted.map((_, i) => (
+                <Cell key={i} fill={DONUT_COLORS[i % DONUT_COLORS.length]} />
+              ))}
+            </Pie>
+            <Tooltip
+              formatter={(value: number) => [`${formatNumber(value)} bags`, 'Volume']}
+              contentStyle={{ borderRadius: '0.5rem', border: '1px solid #e5e7eb', fontSize: '12px' }}
+            />
+          </PieChart>
+        </ResponsiveContainer>
+        {/* Legend as rows with percentage bar */}
+        <div className="space-y-2">
+          {sorted.map((d, i) => {
+            const pct = total > 0 ? (d.bags / total) * 100 : 0;
+            return (
+              <div key={d.name} className="flex items-center gap-2 text-xs">
+                <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                <span className="min-w-0 flex-1 truncate font-medium text-gray-700">{d.name}</span>
+                <span className="tabular-nums text-gray-500">{formatNumber(d.bags)}</span>
+                <div className="w-16 shrink-0">
+                  <div className="h-1.5 rounded-full bg-gray-200">
+                    <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
+                  </div>
+                </div>
+                <span className="w-8 text-right tabular-nums text-gray-400">{pct.toFixed(0)}%</span>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </div>
   );
 }
 
@@ -82,17 +135,10 @@ export default function Dashboard() {
         }
       })
       .catch(() => {
-        if (!cancelled) {
-          setStats(null);
-          setCharts(null);
-        }
+        if (!cancelled) { setStats(null); setCharts(null); }
       })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
-    return () => {
-      cancelled = true;
-    };
+      .finally(() => { if (!cancelled) setLoading(false); });
+    return () => { cancelled = true; };
   }, []);
 
   const revenue = charts?.dailyRevenue?.map((r) => ({ date: r.date, revenue: Number(r.revenue) })) ?? [];
@@ -105,98 +151,116 @@ export default function Dashboard() {
         <p className="mt-1 text-sm text-heading/60">Welcome back. Here&apos;s your business overview.</p>
       </header>
 
+      {/* KPI Cards */}
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
         {loading || !stats ? (
-          <>
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-            <SkeletonCard />
-          </>
+          <>{Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}</>
         ) : (
           <>
-            <KPICard
-              title="Today's Sales"
-              value={formatINR(stats.todaySales.amount)}
-              subtitle={`${formatNumber(stats.todaySales.bags)} bags sold`}
-              icon={TrendingUp}
-              color="sale"
-            />
-            <KPICard
-              title="This Month's Profit"
-              value={formatINR(stats.monthProfit)}
-              subtitle="Sale amount − purchase amount"
-              icon={IndianRupee}
-              color="profit"
-            />
-            <KPICard
-              title="Outstanding Dues"
-              value={formatINR(stats.outstanding)}
-              subtitle="Total owed by all parties"
-              icon={AlertCircle}
-              color="outstanding"
-            />
-            <KPICard
-              title="Current Stock Value"
-              value={formatINR(stats.stockValue.value)}
-              subtitle={`${formatNumber(stats.stockValue.bags)} bags × avg purchase rate`}
-              icon={Package}
-              color="purchase"
-            />
-            <KPICard
-              title="Total Capital"
-              value={formatINR(stats.totalCapital)}
-              subtitle="Cash in hand + bank balances"
-              icon={Wallet}
-              color="profit"
-            />
+            <KPICard title="Today's Sales" value={formatINR(stats.todaySales.amount)} subtitle={`${formatNumber(stats.todaySales.bags)} bags sold`} icon={TrendingUp} color="sale" />
+            <KPICard title="This Month's Profit" value={formatINR(stats.monthProfit)} subtitle="Sales − purchases" icon={IndianRupee} color="profit" />
+            <KPICard title="Outstanding Dues" value={formatINR(stats.outstanding)} subtitle="Total owed by all parties" icon={AlertCircle} color="outstanding" />
+            <KPICard title="Stock Value" value={formatINR(stats.stockValue.value)} subtitle={`${formatNumber(stats.stockValue.bags)} bags`} icon={Package} color="purchase" />
+            <KPICard title="Total Capital" value={formatINR(stats.totalCapital)} subtitle="Cash + bank" icon={Wallet} color="profit" />
           </>
         )}
       </section>
 
+      {/* Bank & Cash Breakdown */}
+      {!loading && stats && (
+        <section className="grid gap-4 sm:grid-cols-2">
+          {/* Bank summary */}
+          <div className="card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Building2 className="h-5 w-5 text-blue-600" />
+              <h3 className="text-sm font-semibold text-heading">Bank Balance</h3>
+              <span className="ml-auto text-xl font-bold tabular-nums text-blue-700">{formatINR(stats.bankBalance)}</span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Total received (bank)</span>
+                <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.bankReceived)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Total expenses (bank)</span>
+                <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.bankPaid)}</span>
+              </div>
+              <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
+                <span className="text-gray-700">Net bank</span>
+                <span className={`tabular-nums ${stats.bankBalance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{formatINR(stats.bankBalance)}</span>
+              </div>
+            </div>
+          </div>
+          {/* Cash summary */}
+          <div className="card p-5">
+            <div className="flex items-center gap-2 mb-4">
+              <Wallet className="h-5 w-5 text-amber-600" />
+              <h3 className="text-sm font-semibold text-heading">Cash in Hand</h3>
+              <span className="ml-auto text-xl font-bold tabular-nums text-amber-700">{formatINR(stats.cashBalance)}</span>
+            </div>
+            <div className="space-y-2 text-sm">
+              <div className="flex justify-between text-gray-600">
+                <span>Total received (cash)</span>
+                <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.cashReceived)}</span>
+              </div>
+              <div className="flex justify-between text-gray-600">
+                <span>Imprest debits</span>
+                <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.cashPaid)}</span>
+              </div>
+              <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
+                <span className="text-gray-700">Net cash</span>
+                <span className={`tabular-nums ${stats.cashBalance >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{formatINR(stats.cashBalance)}</span>
+              </div>
+            </div>
+          </div>
+        </section>
+      )}
+
+      {/* Charts row 1 */}
       <section className="grid gap-4 lg:grid-cols-5">
         <div className="lg:col-span-3">
-          {loading || !charts ? (
-            <ChartSkeleton />
-          ) : (
+          {loading || !charts ? <ChartSkeleton /> : (
             <SalesBarChart data={charts.monthlySales} title="Monthly sales by cement type" />
           )}
         </div>
         <div className="lg:col-span-2">
-          {loading || !charts ? (
-            <ChartSkeleton />
-          ) : (
-            <BrandPieChart data={charts.topBrands} title="Top cement brands by volume" />
+          {loading || !charts ? <ChartSkeleton /> : (
+            <BrandDonutChart data={charts.topBrands} title="Top brands this month" />
           )}
         </div>
       </section>
 
+      {/* Charts row 2 */}
       <section className="grid gap-4 lg:grid-cols-2">
         <div>
-          {loading || !charts ? (
-            <ChartSkeleton />
-          ) : (
+          {loading || !charts ? <ChartSkeleton /> : (
             <ProfitLineChart revenue={revenue} cost={cost} title="Daily revenue vs cost" />
           )}
         </div>
         <div>
-          {loading || !charts ? (
-            <ChartSkeleton tall />
-          ) : (
+          {loading || !charts ? <ChartSkeleton tall /> : (
             <OutstandingBarChart data={charts.topOutstanding} title="Top parties by outstanding balance" />
           )}
         </div>
       </section>
 
-      <section className="grid gap-4 lg:grid-cols-2">
+      {/* Recent Sales */}
+      <section>
         <div className="card overflow-hidden p-0">
           <h3 className="border-b border-card-border px-4 py-3 text-base font-semibold text-heading">
             Recent sales
           </h3>
           {loading || !charts ? (
             <div className="p-4">
-              <TableSkeleton rows={6} columns={6} />
+              <div className="space-y-3">
+                {Array.from({ length: 6 }).map((_, i) => (
+                  <div key={i} className="flex animate-pulse gap-4">
+                    <div className="h-4 flex-1 rounded bg-gray-200" />
+                    <div className="h-4 w-24 rounded bg-gray-200" />
+                    <div className="h-4 w-32 rounded bg-gray-200" />
+                  </div>
+                ))}
+              </div>
             </div>
           ) : charts.recentSales.length === 0 ? (
             <p className="px-4 py-8 text-center text-sm text-heading/50">No sales recorded yet.</p>
@@ -219,58 +283,14 @@ export default function Dashboard() {
                       <td className="whitespace-nowrap px-4 py-3 text-heading/80">{formatDate(row.date)}</td>
                       <td className="max-w-[140px] truncate px-4 py-3">{row.party_name}</td>
                       <td className="max-w-[120px] truncate px-4 py-3">{row.brand_name}</td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                        {formatNumber(row.bags)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">
-                        {formatINR(row.sale_rate)}
-                      </td>
-                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums">
-                        {formatINR(row.sale_amount)}
-                      </td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatNumber(row.bags)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right tabular-nums">{formatINR(row.sale_rate)}</td>
+                      <td className="whitespace-nowrap px-4 py-3 text-right font-medium tabular-nums">{formatINR(row.sale_amount)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-          )}
-        </div>
-
-        <div className="card overflow-hidden p-0">
-          <h3 className="border-b border-card-border px-4 py-3 text-base font-semibold text-heading">
-            Low stock alerts
-          </h3>
-          {loading || !charts ? (
-            <div className="space-y-3 p-4">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="flex animate-pulse gap-3 rounded-lg border border-card-border p-3">
-                  <div className="h-4 flex-1 rounded bg-card-border/70" />
-                  <div className="h-4 w-16 rounded bg-card-border/70" />
-                  <div className="h-4 w-24 rounded bg-card-border/70" />
-                </div>
-              ))}
-            </div>
-          ) : charts.lowStock.length === 0 ? (
-            <p className="px-4 py-8 text-center text-sm text-heading/50">
-              All active brands are at 200 bags or above.
-            </p>
-          ) : (
-            <ul className="divide-y divide-card-border">
-              {charts.lowStock.map((row) => (
-                <li
-                  key={row.id}
-                  className="flex flex-wrap items-center gap-3 px-4 py-3 text-sm sm:flex-nowrap"
-                >
-                  <span className="min-w-0 flex-1 font-medium text-heading">{row.name}</span>
-                  <span className="tabular-nums text-heading/70">{formatNumber(row.stock)} bags</span>
-                  <span className="text-heading/60">
-                    Last purchase:{' '}
-                    {row.last_purchase ? formatDate(row.last_purchase) : '—'}
-                  </span>
-                  <StockBadge stock={row.stock} />
-                </li>
-              ))}
-            </ul>
           )}
         </div>
       </section>

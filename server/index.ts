@@ -57,10 +57,13 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date >= $1`, [monthStart]
     );
 
+    // Outstanding = sum of POSITIVE individual party balances only (don't let overpaid parties cancel others)
     const outstandingCalc = await getOne(`
-      SELECT (COALESCE((SELECT SUM(sale_amount) FROM sales), 0)
-             + COALESCE((SELECT SUM(opening_balance) FROM parties), 0)
-             - COALESCE((SELECT SUM(amount) FROM payments), 0)) as total
+      SELECT COALESCE(SUM(GREATEST(0,
+        COALESCE(p.opening_balance,0)
+        + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
+        - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)
+      )),0) as total FROM parties p
     `);
 
     const stockCalc = await getOne(`
@@ -73,29 +76,38 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
-    // Capital: cash (imprest) + bank balances
-    const cashCalc = await getOne(`
-      SELECT COALESCE(SUM(ih.opening_balance),0)
-        + COALESCE((SELECT SUM(credit) FROM imprest_transactions),0)
-        - COALESCE((SELECT SUM(debit) FROM imprest_transactions),0) as total
-      FROM imprest_handlers ih
-    `);
-    // Bank balance: sum over each configured bank (opening + received - paid for that bank)
+    // Capital: bank = all payments received (mode=bank) - expenses (mode=bank) + opening balances
     const bankCalc = await getOne(`
-      SELECT COALESCE(SUM(
-        COALESCE(bb.opening_balance,0)
-        + COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank' AND LOWER(bank_name)=LOWER(bb.bank_name)),0)
-        - COALESCE((SELECT SUM(amount) FROM expenses WHERE mode='bank' AND LOWER(bank_name)=LOWER(bb.bank_name)),0)
-      ),0) as total
-      FROM bank_balances bb
+      SELECT
+        (SELECT COALESCE(SUM(opening_balance),0) FROM bank_balances)
+        + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='bank')
+        - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='bank') as total
     `);
+    // Cash = imprest opening + credits - debits; plus cash payments received - cash expenses
+    const cashCalc = await getOne(`
+      SELECT
+        (SELECT COALESCE(SUM(opening_balance),0) FROM imprest_handlers)
+        + (SELECT COALESCE(SUM(credit),0) FROM imprest_transactions)
+        - (SELECT COALESCE(SUM(debit),0) FROM imprest_transactions) as total
+    `);
+    // Bank/cash breakdown for dashboard
+    const bankReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank'`);
+    const cashReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='cash'`);
+    const bankPaid = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='bank'`);
+    const cashPaid = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='cash'`);
 
     res.json({
       todaySales: { bags: Number(todaySales.bags), amount: Number(todaySales.amount) },
       monthProfit: Number(monthSales.amount) - Number(monthPurchases.amount),
-      outstanding: Math.max(0, Number(outstandingCalc.total)),
+      outstanding: Number(outstandingCalc.total),
       stockValue: { bags: Number(stockCalc.bags), value: Number(stockCalc.value) },
-      totalCapital: Math.max(0, Number(cashCalc?.total ?? 0) + Number(bankCalc?.total ?? 0)),
+      totalCapital: Number(bankCalc?.total ?? 0) + Number(cashCalc?.total ?? 0),
+      bankBalance: Number(bankCalc?.total ?? 0),
+      cashBalance: Number(cashCalc?.total ?? 0),
+      bankReceived: Number(bankReceived?.total ?? 0),
+      cashReceived: Number(cashReceived?.total ?? 0),
+      bankPaid: Number(bankPaid?.total ?? 0),
+      cashPaid: Number(cashPaid?.total ?? 0),
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });

@@ -5,14 +5,12 @@ const router = Router();
 
 router.get('/summary', async (_req, res) => {
   try {
-    // Cash: imprest handlers with opening + transactions
+    // Cash: imprest handlers
     const handlers = await getAll(`
-      SELECT ih.handler_name,
-        ih.opening_balance,
+      SELECT ih.handler_name, ih.opening_balance,
         COALESCE((SELECT SUM(credit) FROM imprest_transactions WHERE handler_name=ih.handler_name),0) as total_received,
         COALESCE((SELECT SUM(debit) FROM imprest_transactions WHERE handler_name=ih.handler_name),0) as total_spent
-      FROM imprest_handlers ih
-      ORDER BY ih.handler_name
+      FROM imprest_handlers ih ORDER BY ih.handler_name
     `);
     const cash = handlers.map((h: any) => ({
       handler: h.handler_name,
@@ -23,27 +21,43 @@ router.get('/summary', async (_req, res) => {
     }));
     const totalCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
 
-    // Banks: ONLY explicitly configured banks from bank_balances table.
-    // Balance = opening + customer payments received via that bank - expenses paid via that bank.
-    // Note: bank_name in payments may store various labels; match case-insensitively.
-    const bankRows = await getAll(`SELECT * FROM bank_balances ORDER BY bank_name`);
+    // Banks: auto-compute from payments/expenses grouped by bank_name
+    // Also include opening balances from bank_balances table for configured banks
+    const bankPaymentsRows = await getAll(`
+      SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
+        COALESCE(SUM(amount),0) as received
+      FROM payments WHERE mode='bank'
+      GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
+    `);
+    const bankExpenseRows = await getAll(`
+      SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
+        COALESCE(SUM(amount),0) as paid
+      FROM expenses WHERE mode='bank'
+      GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
+    `);
+    const bankOpeningRows = await getAll(`SELECT bank_name, opening_balance FROM bank_balances`);
 
-    const banks = await Promise.all(bankRows.map(async (b: any) => {
-      const name = b.bank_name;
-      const received = await getOne(
-        `SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank' AND LOWER(bank_name)=LOWER($1)`,
-        [name]
-      );
-      const paid = await getOne(
-        `SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='bank' AND LOWER(bank_name)=LOWER($1)`,
-        [name]
-      );
-      const ob = Number(b.opening_balance ?? 0);
-      const rc = Number(received?.total ?? 0);
-      const pd = Number(paid?.total ?? 0);
-      return { bank_name: name, opening: ob, total_received: rc, total_paid: pd, balance: ob + rc - pd };
-    }));
-    const totalBank = banks.reduce((s: number, b: any) => s + b.balance, 0);
+    // Merge all distinct bank names
+    const allNames = new Set<string>([
+      ...bankPaymentsRows.map((r: any) => r.bank_name),
+      ...bankExpenseRows.map((r: any) => r.bank_name),
+      ...bankOpeningRows.map((r: any) => r.bank_name),
+    ]);
+
+    const banks = Array.from(allNames).map((name: string) => {
+      const received = Number(bankPaymentsRows.find((r: any) => r.bank_name === name)?.received ?? 0);
+      const paid = Number(bankExpenseRows.find((r: any) => r.bank_name === name)?.paid ?? 0);
+      const ob = Number(bankOpeningRows.find((r: any) =>
+        r.bank_name?.toLowerCase() === name.toLowerCase()
+      )?.opening_balance ?? 0);
+      return { bank_name: name, opening: ob, total_received: received, total_paid: paid, balance: ob + received - paid };
+    }).sort((a: any, b: any) => b.balance - a.balance);
+
+    // Total bank = opening balances + all bank payments received - all bank expenses
+    const totalBank =
+      Number((await getOne(`SELECT COALESCE(SUM(opening_balance),0) as t FROM bank_balances`))?.t ?? 0) +
+      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank'`))?.t ?? 0) -
+      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0);
 
     // Stock value
     const stockCalc = await getOne(`
@@ -56,13 +70,13 @@ router.get('/summary', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
-    // Outstanding receivables
+    // Outstanding (sum of positive individual party balances only)
     const outstandingCalc = await getOne(`
-      SELECT COALESCE(SUM(
+      SELECT COALESCE(SUM(GREATEST(0,
         COALESCE(p.opening_balance,0)
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)
-      ),0) as total FROM parties p
+      )),0) as total FROM parties p
     `);
 
     // Loans outstanding
