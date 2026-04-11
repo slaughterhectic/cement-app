@@ -180,7 +180,7 @@ export default function UserManagement() {
       </div>
 
       {/* Add User Modal */}
-      <Modal open={showAddModal} onClose={() => setShowAddModal(false)} title="Add User">
+      <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add User">
         <div className="space-y-4">
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Username</label>
