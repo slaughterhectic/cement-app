@@ -87,7 +87,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    Promise.all([api.purchases.suppliers(), api.brands(), api.godowns()])
+    Promise.all([api.purchases.suppliers(), api.brands.list(), api.godowns.list()])
       .then(([sup, br, gd]) => {
         if (!cancelled) {
           setSuppliers(sup as string[]);

@@ -153,7 +153,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    Promise.all([api.parties.list(), api.brands(), api.godowns()])
+    Promise.all([api.parties.list(), api.brands.list(), api.godowns.list()])
       .then(([pt, br, gd]) => {
         if (!cancelled) {
           setParties(pt as Party[]);

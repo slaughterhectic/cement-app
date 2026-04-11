@@ -2,7 +2,7 @@ import express from 'express';
 import cors from 'cors';
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { initializeDatabase, getOne, getAll } from './db/database';
+import { initializeDatabase, getOne, getAll, query } from './db/database';
 import { authMiddleware } from './middleware/auth';
 import authRouter from './routes/auth';
 import purchasesRouter from './routes/purchases';
@@ -47,10 +47,42 @@ app.use('/api/capital', capitalRouter);
 app.use('/api/imprest', imprestRouter);
 app.use('/api/loans', loansRouter);
 
+// Godown CRUD
 app.get('/api/godowns', async (_req, res) => {
+  try { res.json(await getAll('SELECT * FROM godowns ORDER BY name')); }
+  catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+app.post('/api/godowns', async (req, res) => {
   try {
-    const rows = await getAll('SELECT * FROM godowns');
-    res.json(rows);
+    const { name, location } = req.body;
+    if (!name) return res.status(400).json({ error: 'name is required' });
+    const row = await getOne(
+      'INSERT INTO godowns (name, location) VALUES ($1, $2) RETURNING *',
+      [name.trim(), location?.trim() || null]
+    );
+    res.json(row);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+app.put('/api/godowns/:id', async (req, res) => {
+  try {
+    const { name, location } = req.body;
+    const row = await getOne(
+      'UPDATE godowns SET name=$1, location=$2 WHERE id=$3 RETURNING *',
+      [name.trim(), location?.trim() || null, req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Godown not found' });
+    res.json(row);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+app.delete('/api/godowns/:id', async (req, res) => {
+  try {
+    const used = await getOne(
+      'SELECT 1 FROM purchases WHERE godown_id=$1 UNION SELECT 1 FROM sales WHERE godown_id=$1 LIMIT 1',
+      [req.params.id]
+    );
+    if (used) return res.status(400).json({ error: 'Godown is used in purchases/sales and cannot be deleted' });
+    await query('DELETE FROM godowns WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

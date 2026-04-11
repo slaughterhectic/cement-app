@@ -8,6 +8,7 @@ import {
   LogOut,
   Package,
   Receipt,
+  Settings,
   Shield,
   ShoppingCart,
   TrendingUp,
@@ -31,6 +32,7 @@ const navItems = [
   { to: '/capital', label: 'Capital', icon: Wallet, permission: 'view_capital' },
   { to: '/finance', label: 'Finance', icon: Landmark, permission: 'view_finance' },
   { to: '/import', label: 'Import', icon: Upload },
+  { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
   { to: '/users', label: 'Users', icon: Shield, adminOnly: true },
 ];
 

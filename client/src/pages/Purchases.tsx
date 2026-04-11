@@ -77,7 +77,7 @@ export default function Purchases() {
   }, [startDate, endDate, brandFilter, supplierFilter]);
 
   useEffect(() => {
-    api.brands().then((b) => setBrands(b as { id: number; name: string }[])).catch(() => {});
+    api.brands.list().then((b) => setBrands(b as { id: number; name: string }[])).catch(() => {});
   }, []);
 
   const totals = useMemo(() => {

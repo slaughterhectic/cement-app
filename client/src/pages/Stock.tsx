@@ -178,7 +178,7 @@ export default function Stock() {
   }, [loadMovement]);
 
   useEffect(() => {
-    Promise.all([api.brands(), api.godowns()])
+    Promise.all([api.brands.list(), api.godowns.list()])
       .then(([b, g]) => {
         setBrands(b as { id: number; name: string }[]);
         setGodowns(g as { id: number; name: string; location?: string | null }[]);

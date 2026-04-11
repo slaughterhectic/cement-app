@@ -128,8 +128,23 @@ export const api = {
     update: (id: number, data: any) => request<any>(`/loans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/loans/${id}`, { method: 'DELETE' }),
   },
-  brands: () => request<any[]>('/brands'),
-  godowns: () => request<any[]>('/godowns'),
+  brands: {
+    list: () => request<any[]>('/brands'),
+    all: () => request<any[]>('/brands/all'),
+    create: (data: { name: string; type: string; manufacturer: string }) =>
+      request<any>('/brands', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      request<any>(`/brands/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/brands/${id}`, { method: 'DELETE' }),
+  },
+  godowns: {
+    list: () => request<any[]>('/godowns'),
+    create: (data: { name: string; location: string }) =>
+      request<any>('/godowns', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      request<any>(`/godowns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/godowns/${id}`, { method: 'DELETE' }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();

@@ -94,7 +94,7 @@ export default function Sales() {
   }, [startDate, endDate, partyFilter, brandFilter, monthFilter]);
 
   useEffect(() => {
-    Promise.all([api.parties.list(), api.brands()])
+    Promise.all([api.parties.list(), api.brands.list()])
       .then(([p, b]) => {
         setParties(p as { id: number; name: string }[]);
         setBrands(b as { id: number; name: string }[]);

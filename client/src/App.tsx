@@ -16,6 +16,7 @@ import Capital from './pages/Capital';
 import Finance from './pages/Finance';
 import ImportPage from './pages/Import';
 import UserManagement from './pages/UserManagement';
+import Settings from './pages/Settings';
 import { useAuthStore } from './lib/store';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -61,6 +62,7 @@ export default function App() {
           <Route path="/capital" element={<HasAccess permission="view_capital"><Capital /></HasAccess>} />
           <Route path="/finance" element={<HasAccess permission="view_finance"><Finance /></HasAccess>} />
           <Route path="/import" element={<ImportPage />} />
+          <Route path="/settings" element={<AdminOnly><Settings /></AdminOnly>} />
           <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
