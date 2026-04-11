@@ -1,5 +1,7 @@
 import express from 'express';
 import cors from 'cors';
+import path from 'path';
+import { fileURLToPath } from 'url';
 import { initializeDatabase, getOne, getAll } from './db/database';
 import { authMiddleware } from './middleware/auth';
 import authRouter from './routes/auth';
@@ -186,6 +188,14 @@ app.get('/api/dashboard/charts', async (_req, res) => {
 
     res.json({ monthlySales, topBrands, dailyRevenue, dailyCost, topOutstanding, recentSales, lowStock });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// Serve built frontend in production
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const distPath = path.join(__dirname, '../client/dist');
+app.use(express.static(distPath));
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'));
 });
 
 async function start() {
