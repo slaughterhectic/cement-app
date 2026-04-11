@@ -6,11 +6,11 @@
   "scripts": {
     "dev": "concurrently \"npm run dev:server\" \"npm run dev:client\"",
     "dev:client": "cd client && npx vite --port 5173",
-    "dev:server": "npx tsx watch server/index.ts",
+    "dev:server": "node --env-file=.env node_modules/.bin/tsx watch server/index.ts",
     "start": "npx tsx server/index.ts",
     "build": "cd client && npx vite build",
-    "db:init": "npx tsx server/db/seed.ts",
-    "db:truncate": "npx tsx server/db/truncate.ts"
+    "db:init": "node --env-file=.env node_modules/.bin/tsx server/db/init_only.ts",
+    "db:truncate": "node --env-file=.env node_modules/.bin/tsx server/db/truncate.ts"
   },
   "dependencies": {
     "@types/bcryptjs": "^2.4.6",

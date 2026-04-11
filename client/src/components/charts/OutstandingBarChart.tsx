@@ -31,8 +31,8 @@ export function OutstandingBarChart({
   return (
     <div className="card flex flex-col gap-4">
       <h3 className="text-base font-semibold text-heading">{title}</h3>
-      <div className="min-h-[350px] w-full">
-        <ResponsiveContainer width="100%" height={350}>
+      <div className="min-h-[300px] w-full">
+        <ResponsiveContainer width="100%" height={300}>
           <BarChart
             layout="vertical"
             data={chartData}

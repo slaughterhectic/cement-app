@@ -3,13 +3,17 @@ import XLSX from 'xlsx';
 import path from 'path';
 import fs from 'fs';
 
-const pool = new pg.Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5433'),
-  database: process.env.DB_NAME || 'cementbook',
-  user: process.env.DB_USER || 'cementbook',
-  password: process.env.DB_PASS || 'cement123',
-});
+const pool = new pg.Pool(
+  process.env.DATABASE_URL
+    ? { connectionString: process.env.DATABASE_URL, ssl: { rejectUnauthorized: false } }
+    : {
+        host: process.env.DB_HOST || 'localhost',
+        port: parseInt(process.env.DB_PORT || '5433'),
+        database: process.env.DB_NAME || 'cementbook',
+        user: process.env.DB_USER || 'cementbook',
+        password: process.env.DB_PASS || 'cement123',
+      }
+);
 
 async function run() {
   const client = await pool.connect();

@@ -70,10 +70,10 @@ function BrandDonutChart({ data, title }: { data: { name: string; bags: number }
   }
 
   return (
-    <div className="card flex flex-col gap-3">
+    <div className="card flex flex-col gap-3 min-h-[380px]">
       <h3 className="text-base font-semibold text-heading">{title}</h3>
       <div className="flex flex-col gap-4">
-        <ResponsiveContainer width="100%" height={200}>
+        <ResponsiveContainer width="100%" height={220}>
           <PieChart>
             <Pie
               data={sorted}
@@ -217,13 +217,13 @@ export default function Dashboard() {
       )}
 
       {/* Charts row 1 */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div>
+      <section className="grid gap-4 lg:grid-cols-2 items-stretch">
+        <div className="h-full">
           {loading || !charts ? <ChartSkeleton /> : (
             <SalesBarChart data={charts.monthlySales} title="Monthly sales by cement type" />
           )}
         </div>
-        <div>
+        <div className="h-full">
           {loading || !charts ? <ChartSkeleton /> : (
             <BrandDonutChart data={charts.topBrands} title="Top brands this month" />
           )}
@@ -231,14 +231,14 @@ export default function Dashboard() {
       </section>
 
       {/* Charts row 2 */}
-      <section className="grid gap-4 lg:grid-cols-2">
-        <div>
+      <section className="grid gap-4 lg:grid-cols-2 items-stretch">
+        <div className="h-full">
           {loading || !charts ? <ChartSkeleton /> : (
             <ProfitLineChart revenue={revenue} cost={cost} title="Daily revenue vs cost" />
           )}
         </div>
-        <div>
-          {loading || !charts ? <ChartSkeleton tall /> : (
+        <div className="h-full">
+          {loading || !charts ? <ChartSkeleton /> : (
             <OutstandingBarChart data={charts.topOutstanding} title="Top parties by outstanding balance" />
           )}
         </div>
