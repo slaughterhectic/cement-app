@@ -1,14 +1,23 @@
 import pg from 'pg';
 
-const pool = new pg.Pool({
-  host: process.env.DB_HOST || 'localhost',
-  port: parseInt(process.env.DB_PORT || '5433'),
-  database: process.env.DB_NAME || 'cementbook',
-  user: process.env.DB_USER || 'cementbook',
-  password: process.env.DB_PASS || 'cement123',
-  max: 20,
-  idleTimeoutMillis: 30000,
-});
+const poolConfig: pg.PoolConfig = process.env.DATABASE_URL
+  ? {
+      connectionString: process.env.DATABASE_URL,
+      ssl: { rejectUnauthorized: false },
+      max: 20,
+      idleTimeoutMillis: 30000,
+    }
+  : {
+      host: process.env.DB_HOST || 'localhost',
+      port: parseInt(process.env.DB_PORT || '5433'),
+      database: process.env.DB_NAME || 'cementbook',
+      user: process.env.DB_USER || 'cementbook',
+      password: process.env.DB_PASS || 'cement123',
+      max: 20,
+      idleTimeoutMillis: 30000,
+    };
+
+const pool = new pg.Pool(poolConfig);
 
 pool.on('error', (err) => {
   console.error('Unexpected PG pool error', err);

@@ -1,0 +1,13 @@
+services:
+  - type: web
+    name: cementbook-api
+    runtime: node
+    buildCommand: npm install
+    startCommand: npx tsx server/index.ts
+    envVars:
+      - key: DATABASE_URL
+        sync: false
+      - key: FRONTEND_URL
+        sync: false
+      - key: NODE_ENV
+        value: production
