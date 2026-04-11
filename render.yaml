@@ -2,7 +2,7 @@ services:
   - type: web
     name: cementbook-api
     runtime: node
-    buildCommand: npm install && cd client && npm install && npx vite build
+    buildCommand: npm install && npm --prefix client install && npm --prefix client run build
     startCommand: npx tsx server/index.ts
     envVars:
       - key: DATABASE_URL
