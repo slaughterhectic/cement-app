@@ -5,7 +5,7 @@ import { DataTable } from '../components/tables/DataTable';
 import { SaleForm, type SaleEditData } from '../components/forms/SaleForm';
 import { api } from '../lib/api';
 import { formatDate, formatINR } from '../lib/format';
-import { useToastStore } from '../lib/store';
+import { useAuthStore, useToastStore } from '../lib/store';
 
 export type SaleRow = {
   id: number;
@@ -39,6 +39,7 @@ function marginClass(marginPerBag: number) {
 
 export default function Sales() {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -238,14 +239,16 @@ export default function Sales() {
             >
               <Pencil className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              className="rounded p-1.5 text-red-600 hover:bg-red-50"
-              aria-label="Delete"
-              onClick={() => handleDelete(row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {hasPermission('delete_sales') && (
+              <button
+                type="button"
+                className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                aria-label="Delete"
+                onClick={() => handleDelete(row.original)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ),
       },
@@ -361,6 +364,8 @@ export default function Sales() {
         getRowClassName={(row) =>
           row.invoice_number ? 'bg-emerald-50' : undefined
         }
+        canDelete={hasPermission('delete_sales')}
+        canDownload={hasPermission('download')}
       />
 
       <SaleForm

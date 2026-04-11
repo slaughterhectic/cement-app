@@ -1,20 +1,29 @@
 import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
+import { api } from '../lib/api';
 
 export default function Login() {
   const navigate = useNavigate();
-  const login = useAuthStore((s) => s.login);
+  const setAuth = useAuthStore((s) => s.setAuth);
   const [username, setUsername] = useState('');
   const [password, setPassword] = useState('');
-  const [error, setError] = useState(false);
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
 
-  function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: FormEvent) {
     e.preventDefault();
-    setError(false);
-    const ok = login(username.trim(), password);
-    if (ok) navigate('/dashboard');
-    else setError(true);
+    setError('');
+    setLoading(true);
+    try {
+      const { token, user, permissions } = await api.auth.login(username.trim(), password);
+      setAuth(token, user, permissions);
+      navigate(user.role === 'admin' ? '/dashboard' : '/purchases');
+    } catch (err: any) {
+      setError(err.message || 'Invalid credentials');
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (
@@ -57,12 +66,12 @@ export default function Login() {
 
           {error && (
             <p className="text-sm text-red-600" role="alert">
-              Invalid credentials. Try admin / cement123
+              {error}
             </p>
           )}
 
-          <button type="submit" className="btn-primary w-full justify-center py-2.5">
-            Sign in
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center py-2.5 disabled:opacity-50">
+            {loading ? 'Signing in...' : 'Sign in'}
           </button>
         </form>
       </div>

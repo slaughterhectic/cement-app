@@ -1,10 +1,22 @@
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
+function getToken() {
+  return localStorage.getItem('cb_token');
+}
+
 async function request<T>(url: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(`${BASE}${url}`, {
-    headers: { 'Content-Type': 'application/json' },
-    ...options,
-  });
+  const token = getToken();
+  const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+  if (token) headers['Authorization'] = `Bearer ${token}`;
+
+  const res = await fetch(`${BASE}${url}`, { headers, ...options });
+  if (res.status === 401) {
+    localStorage.removeItem('cb_token');
+    localStorage.removeItem('cb_user');
+    localStorage.removeItem('cb_perms');
+    window.location.href = '/login';
+    throw new Error('Session expired');
+  }
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: res.statusText }));
     throw new Error(err.error || 'Request failed');
@@ -13,6 +25,19 @@ async function request<T>(url: string, options?: RequestInit): Promise<T> {
 }
 
 export const api = {
+  auth: {
+    login: (username: string, password: string) =>
+      request<{ token: string; user: any; permissions: string[] }>('/auth/login', {
+        method: 'POST', body: JSON.stringify({ username, password }),
+      }),
+    me: () => request<{ user: any; permissions: string[] }>('/auth/me'),
+    listUsers: () => request<any[]>('/auth/users'),
+    createUser: (data: { username: string; password: string; display_name: string; role: string }) =>
+      request<any>('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
+    deleteUser: (id: number) => request<any>(`/auth/users/${id}`, { method: 'DELETE' }),
+    updatePermissions: (id: number, permissions: string[]) =>
+      request<any>(`/auth/users/${id}/permissions`, { method: 'PUT', body: JSON.stringify({ permissions }) }),
+  },
   dashboard: {
     stats: () => request<any>('/dashboard/stats'),
     charts: () => request<any>('/dashboard/charts'),
@@ -110,7 +135,10 @@ export const api = {
       const form = new FormData();
       form.append('file', file);
       form.append('file_type', fileType);
-      const res = await fetch(`${BASE}/import/parse`, { method: 'POST', body: form });
+      const token = getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${BASE}/import/parse`, { method: 'POST', body: form, headers });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error((data as { error?: string }).error || 'Parse failed');
       return data;

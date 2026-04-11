@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback } from 'react';
 import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
-import { useToastStore } from '../lib/store';
+import { useAuthStore, useToastStore } from '../lib/store';
 import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 
 interface CapitalSummary {
@@ -28,6 +28,7 @@ const EXPENSE_CATEGORIES = [
 
 function ImprestSection() {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
   const [selectedHandler, setSelectedHandler] = useState('');
@@ -260,7 +261,9 @@ function ImprestSection() {
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-1">
                             <button type="button" onClick={() => { setEditRow(t); setForm({ date: t.date, particulars: t.particulars || '', narration: t.narration || '', debit: t.debit > 0 ? String(t.debit) : '', credit: t.credit > 0 ? String(t.credit) : '', remark: t.remark || '' }); setShowForm(true); }} className="rounded p-1 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
-                            <button type="button" onClick={() => handleDelete(t.id)} className="rounded p-1 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                            {hasPermission('delete_imprest') && (
+                              <button type="button" onClick={() => handleDelete(t.id)} className="rounded p-1 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                            )}
                           </div>
                         </td>
                       </tr>
@@ -374,6 +377,7 @@ function ImprestSection() {
 
 function BankSection({ summary, onRefresh }: { summary: CapitalSummary; onRefresh: () => void }) {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [showAdd, setShowAdd] = useState(false);
   const [form, setForm] = useState({ bank_name: '', opening_balance: '' });
 
@@ -441,9 +445,11 @@ function BankSection({ summary, onRefresh }: { summary: CapitalSummary; onRefres
                   <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(b.total_paid)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700">{formatINR(b.balance)}</td>
                   <td className="px-4 py-3">
-                    <button type="button" onClick={() => handleDelete(b.bank_name)} className="rounded p-1 text-gray-400 hover:text-red-500">
-                      <Trash2 className="h-3.5 w-3.5" />
-                    </button>
+                    {hasPermission('delete_capital_banks') && (
+                      <button type="button" onClick={() => handleDelete(b.bank_name)} className="rounded p-1 text-gray-400 hover:text-red-500">
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    )}
                   </td>
                 </tr>
               ))}
@@ -490,6 +496,7 @@ export default function Capital() {
   const [summary, setSummary] = useState<CapitalSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
 
   const load = useCallback(async () => {
     setLoading(true);

@@ -5,7 +5,7 @@ import { DataTable } from '../components/tables/DataTable';
 import { ExpenseForm } from '../components/forms/ExpenseForm';
 import { api } from '../lib/api';
 import { formatDate, formatINR } from '../lib/format';
-import { useToastStore } from '../lib/store';
+import { useAuthStore, useToastStore } from '../lib/store';
 
 export type ExpenseRow = {
   id: number;
@@ -45,6 +45,7 @@ function categoryBadge(category: string | null) {
 
 export default function Expenses() {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [monthTotal, setMonthTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -117,14 +118,16 @@ export default function Expenses() {
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
-          <button
-            type="button"
-            className="rounded p-1.5 text-red-600 hover:bg-red-50"
-            aria-label="Delete"
-            onClick={() => handleDelete(row.original)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          hasPermission('delete_expenses') ? (
+            <button
+              type="button"
+              className="rounded p-1.5 text-red-600 hover:bg-red-50"
+              aria-label="Delete"
+              onClick={() => handleDelete(row.original)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : null
         ),
       },
     ],
@@ -158,6 +161,8 @@ export default function Expenses() {
         emptyMessage="No expenses yet."
         emptyAction={{ label: 'Add Expense', onClick: () => setModalOpen(true) }}
         exportFileName="expenses"
+        canDelete={hasPermission('delete_expenses')}
+        canDownload={hasPermission('download')}
       />
 
       <ExpenseForm isOpen={modalOpen} onClose={() => setModalOpen(false)} onSuccess={load} />

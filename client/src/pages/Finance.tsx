@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Pencil, Plus, Trash2, Calculator } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
-import { useToastStore } from '../lib/store';
+import { useAuthStore, useToastStore } from '../lib/store';
 import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 
 interface Loan {
@@ -92,6 +92,7 @@ const emptyForm = {
 
 export default function Finance() {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [loans, setLoans] = useState<Loan[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
@@ -276,7 +277,9 @@ export default function Finance() {
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <button type="button" onClick={() => openEdit(loan)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
-                            <button type="button" onClick={() => handleDelete(loan.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                            {hasPermission('delete_loans') && (
+                              <button type="button" onClick={() => handleDelete(loan.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                            )}
                           </div>
                         </td>
                       </tr>

@@ -1,4 +1,5 @@
 import pg from 'pg';
+import bcrypt from 'bcryptjs';
 
 const poolConfig: pg.PoolConfig = process.env.DATABASE_URL
   ? {
@@ -167,6 +168,39 @@ export async function initializeDatabase() {
 
     // Rename "Main Office" godown to "Plant"
     await client.query(`UPDATE godowns SET name = 'Plant' WHERE name = 'Main Office';`);
+
+    // Auth tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS users (
+        id SERIAL PRIMARY KEY,
+        username TEXT NOT NULL UNIQUE,
+        password_hash TEXT NOT NULL,
+        role TEXT NOT NULL CHECK(role IN ('admin', 'user')) DEFAULT 'user',
+        display_name TEXT NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+
+      CREATE TABLE IF NOT EXISTS user_permissions (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        permission_name TEXT NOT NULL,
+        UNIQUE(user_id, permission_name)
+      );
+    `);
+
+    // Seed default users
+    const defaultUsers = [
+      { username: 'admin', password: 'cement@123', role: 'admin', display_name: 'Admin' },
+      { username: 'gourav', password: 'gourav@123', role: 'user', display_name: 'Gourav' },
+      { username: 'akash', password: 'akash@123', role: 'user', display_name: 'Akash' },
+    ];
+    for (const u of defaultUsers) {
+      const hash = await bcrypt.hash(u.password, 10);
+      await client.query(
+        `INSERT INTO users (username, password_hash, role, display_name) VALUES ($1, $2, $3, $4) ON CONFLICT (username) DO NOTHING`,
+        [u.username, hash, u.role, u.display_name]
+      );
+    }
 
     console.log('Database schema initialized');
   } finally {

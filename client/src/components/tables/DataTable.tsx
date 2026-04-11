@@ -46,6 +46,8 @@ export type DataTableProps<T> = {
   exportFileName?: string;
   /** Optional extra CSS classes per row. When provided, overrides the default alternating row background. */
   getRowClassName?: (row: T) => string | undefined;
+  canDelete?: boolean;
+  canDownload?: boolean;
 };
 
 export function DataTable<T>({
@@ -60,6 +62,8 @@ export function DataTable<T>({
   pageSize: pageSizeProp = DEFAULT_PAGE_SIZE,
   exportFileName = 'export',
   getRowClassName,
+  canDelete = true,
+  canDownload = true,
 }: DataTableProps<T>) {
   const getRowId = getRowIdProp ?? ((row: T) => (row as { id: number }).id);
 
@@ -247,16 +251,18 @@ export function DataTable<T>({
           )}
         </div>
 
-        <button
-          type="button"
-          onClick={handleExportExcel}
-          className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
-        >
-          <Download className="h-4 w-4" />
-          Export Excel
-        </button>
+        {canDownload && (
+          <button
+            type="button"
+            onClick={handleExportExcel}
+            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+          >
+            <Download className="h-4 w-4" />
+            Export Excel
+          </button>
+        )}
 
-        {enableSelection && (
+        {enableSelection && canDelete && (
           <button
             type="button"
             onClick={handleDeleteSelected}

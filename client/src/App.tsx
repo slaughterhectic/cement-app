@@ -15,11 +15,24 @@ import Reports from './pages/Reports';
 import Capital from './pages/Capital';
 import Finance from './pages/Finance';
 import ImportPage from './pages/Import';
+import UserManagement from './pages/UserManagement';
 import { useAuthStore } from './lib/store';
 
 function Protected({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.isAuthenticated);
   if (!ok) return <Navigate to="/login" replace />;
+  return <>{children}</>;
+}
+
+function HasAccess({ permission, children }: { permission: string; children: ReactNode }) {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  if (!hasPermission(permission)) return <Navigate to="/purchases" replace />;
+  return <>{children}</>;
+}
+
+function AdminOnly({ children }: { children: ReactNode }) {
+  const isAdmin = useAuthStore((s) => s.isAdmin);
+  if (!isAdmin()) return <Navigate to="/purchases" replace />;
   return <>{children}</>;
 }
 
@@ -36,7 +49,7 @@ export default function App() {
             </Protected>
           }
         >
-          <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/dashboard" element={<HasAccess permission="view_dashboard"><Dashboard /></HasAccess>} />
           <Route path="/purchases" element={<Purchases />} />
           <Route path="/sales" element={<Sales />} />
           <Route path="/stock" element={<Stock />} />
@@ -45,9 +58,10 @@ export default function App() {
           <Route path="/payments" element={<Payments />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/reports" element={<Reports />} />
-          <Route path="/capital" element={<Capital />} />
-          <Route path="/finance" element={<Finance />} />
+          <Route path="/capital" element={<HasAccess permission="view_capital"><Capital /></HasAccess>} />
+          <Route path="/finance" element={<HasAccess permission="view_finance"><Finance /></HasAccess>} />
           <Route path="/import" element={<ImportPage />} />
+          <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

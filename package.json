@@ -9,11 +9,16 @@
     "dev:server": "npx tsx watch server/index.ts",
     "start": "npx tsx server/index.ts",
     "build": "cd client && npx vite build",
-    "db:init": "npx tsx server/db/seed.ts"
+    "db:init": "npx tsx server/db/seed.ts",
+    "db:truncate": "npx tsx server/db/truncate.ts"
   },
   "dependencies": {
+    "@types/bcryptjs": "^2.4.6",
+    "@types/jsonwebtoken": "^9.0.10",
+    "bcryptjs": "^3.0.3",
     "cors": "^2.8.5",
     "express": "^4.21.0",
+    "jsonwebtoken": "^9.0.3",
     "multer": "^1.4.5-lts.1",
     "pg": "^8.20.0",
     "tsx": "^4.19.0",

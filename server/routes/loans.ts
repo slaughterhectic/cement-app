@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { requirePermission } from '../middleware/auth';
 
 const router = Router();
 
@@ -34,7 +35,7 @@ router.put('/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-router.delete('/:id', async (req, res) => {
+router.delete('/:id', requirePermission('delete_loans'), async (req, res) => {
   try {
     await query('DELETE FROM loans WHERE id=$1', [req.params.id]);
     res.json({ success: true });

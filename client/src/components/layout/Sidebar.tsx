@@ -8,6 +8,7 @@ import {
   LogOut,
   Package,
   Receipt,
+  Shield,
   ShoppingCart,
   TrendingUp,
   Upload,
@@ -19,7 +20,7 @@ import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
 
 const navItems = [
-  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'view_dashboard' },
   { to: '/purchases', label: 'Purchases', icon: ShoppingCart },
   { to: '/sales', label: 'Sales', icon: TrendingUp },
   { to: '/stock', label: 'Stock', icon: Package },
@@ -27,21 +28,33 @@ const navItems = [
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/capital', label: 'Capital', icon: Wallet },
-  { to: '/finance', label: 'Finance', icon: Landmark },
+  { to: '/capital', label: 'Capital', icon: Wallet, permission: 'view_capital' },
+  { to: '/finance', label: 'Finance', icon: Landmark, permission: 'view_finance' },
   { to: '/import', label: 'Import', icon: Upload },
-] as const;
+  { to: '/users', label: 'Users', icon: Shield, adminOnly: true },
+];
 
 export function Sidebar() {
   const navigate = useNavigate();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const logout = useAuthStore((s) => s.logout);
+  const user = useAuthStore((s) => s.user);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
+
+  const visibleItems = navItems.filter((item) => {
+    if (item.adminOnly) return user?.role === 'admin';
+    if (item.permission) return hasPermission(item.permission);
+    return true;
+  });
+
+  const displayName = user?.display_name || 'User';
+  const initial = displayName.charAt(0).toUpperCase();
 
   return (
     <aside
@@ -63,7 +76,7 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {visibleItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -112,20 +125,19 @@ export function Sidebar() {
             className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-brand-500 text-sm font-semibold text-white"
             aria-hidden
           >
-            A
+            {initial}
           </div>
           {!collapsed && (
             <div className="min-w-0 flex-1">
-              <p className="truncate text-sm font-medium text-heading">Admin</p>
+              <p className="truncate text-sm font-medium text-heading">{displayName}</p>
+              <p className="truncate text-xs text-gray-500">{user?.role === 'admin' ? 'Admin' : 'User'}</p>
             </div>
           )}
           <button
             type="button"
             onClick={handleLogout}
             title="Log out"
-            className={`flex shrink-0 items-center justify-center rounded-lg p-2 text-heading/60 transition-colors hover:bg-white hover:text-outstanding ${
-              collapsed ? '' : ''
-            }`}
+            className="flex shrink-0 items-center justify-center rounded-lg p-2 text-heading/60 transition-colors hover:bg-white hover:text-outstanding"
             aria-label="Log out"
           >
             <LogOut className="h-4 w-4" />

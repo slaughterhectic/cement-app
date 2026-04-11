@@ -5,7 +5,7 @@ import { DataTable } from '../components/tables/DataTable';
 import PaymentForm from '../components/forms/PaymentForm';
 import { api } from '../lib/api';
 import { formatDate, formatINR } from '../lib/format';
-import { useToastStore } from '../lib/store';
+import { useAuthStore, useToastStore } from '../lib/store';
 
 export type PaymentRow = {
   id: number;
@@ -36,6 +36,7 @@ function modeBadge(mode: string) {
 
 export default function Payments() {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [rows, setRows] = useState<PaymentRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -111,14 +112,16 @@ export default function Payments() {
         enableSorting: false,
         enableHiding: false,
         cell: ({ row }) => (
-          <button
-            type="button"
-            className="rounded p-1.5 text-red-600 hover:bg-red-50"
-            aria-label="Delete"
-            onClick={() => handleDelete(row.original)}
-          >
-            <Trash2 className="h-4 w-4" />
-          </button>
+          hasPermission('delete_payments') ? (
+            <button
+              type="button"
+              className="rounded p-1.5 text-red-600 hover:bg-red-50"
+              aria-label="Delete"
+              onClick={() => handleDelete(row.original)}
+            >
+              <Trash2 className="h-4 w-4" />
+            </button>
+          ) : null
         ),
       },
     ],
@@ -146,6 +149,8 @@ export default function Payments() {
         emptyMessage="No payments yet."
         emptyAction={{ label: 'Record Payment', onClick: () => setModalOpen(true) }}
         exportFileName="payments"
+        canDelete={hasPermission('delete_payments')}
+        canDownload={hasPermission('download')}
       />
 
       <PaymentForm

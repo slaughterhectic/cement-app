@@ -217,13 +217,13 @@ export default function Dashboard() {
       )}
 
       {/* Charts row 1 */}
-      <section className="grid gap-4 lg:grid-cols-5">
-        <div className="lg:col-span-3">
+      <section className="grid gap-4 lg:grid-cols-2">
+        <div>
           {loading || !charts ? <ChartSkeleton /> : (
             <SalesBarChart data={charts.monthlySales} title="Monthly sales by cement type" />
           )}
         </div>
-        <div className="lg:col-span-2">
+        <div>
           {loading || !charts ? <ChartSkeleton /> : (
             <BrandDonutChart data={charts.topBrands} title="Top brands this month" />
           )}

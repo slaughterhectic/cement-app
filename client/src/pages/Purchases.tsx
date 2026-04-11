@@ -5,7 +5,7 @@ import { DataTable } from '../components/tables/DataTable';
 import { PurchaseForm, type PurchaseEditData } from '../components/forms/PurchaseForm';
 import { api } from '../lib/api';
 import { formatDate, formatINR } from '../lib/format';
-import { useToastStore } from '../lib/store';
+import { useAuthStore, useToastStore } from '../lib/store';
 
 export type PurchaseRow = {
   id: number;
@@ -27,6 +27,7 @@ export type PurchaseRow = {
 
 export default function Purchases() {
   const addToast = useToastStore((s) => s.addToast);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
   const [rows, setRows] = useState<PurchaseRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -191,14 +192,16 @@ export default function Purchases() {
             >
               <Pencil className="h-4 w-4" />
             </button>
-            <button
-              type="button"
-              className="rounded p-1.5 text-red-600 hover:bg-red-50"
-              aria-label="Delete"
-              onClick={() => handleDelete(row.original)}
-            >
-              <Trash2 className="h-4 w-4" />
-            </button>
+            {hasPermission('delete_purchases') && (
+              <button
+                type="button"
+                className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                aria-label="Delete"
+                onClick={() => handleDelete(row.original)}
+              >
+                <Trash2 className="h-4 w-4" />
+              </button>
+            )}
           </div>
         ),
       },
@@ -293,6 +296,8 @@ export default function Purchases() {
         emptyAction={{ label: 'New Purchase', onClick: openCreate }}
         enableSelection
         exportFileName="purchases"
+        canDelete={hasPermission('delete_purchases')}
+        canDownload={hasPermission('download')}
       />
 
       <PurchaseForm
