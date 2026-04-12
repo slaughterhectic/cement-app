@@ -51,7 +51,7 @@ export interface SaleFormProps {
 }
 
 type Brand = { id: number; name: string; type?: string; stock: number };
-type Party = { id: number; name: string };
+type Party = { id: number; name: string; type?: string };
 type Godown = { id: number; name: string };
 
 export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId }: SaleFormProps) {
@@ -99,6 +99,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     watch,
     reset,
     setValue,
+    setError,
     formState: { errors },
   } = useForm<SaleFormValues>({
     resolver: zodResolver(schema),
@@ -112,6 +113,15 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const partyId = watch('party_id');
   const cementType = watch('cement_type');
   const invoiceNumber = watch('invoice_number');
+
+  const selectedParty = useMemo(() => parties.find((p) => p.id === Number(partyId)), [parties, partyId]);
+  const isDealer = selectedParty?.type === 'dealer';
+
+  const [subParties, setSubParties] = useState<{ id: number; name: string }[]>([]);
+  useEffect(() => {
+    if (!isDealer || !partyId) { setSubParties([]); return; }
+    api.dealers.subParties(Number(partyId)).then((r) => setSubParties(r as any[])).catch(() => {});
+  }, [isDealer, partyId]);
 
   const saleAmount = useMemo(() => {
     const b = Number(bags) || 0;
@@ -311,6 +321,14 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     if (values.bags > effectiveMaxStock) {
       addToast(`Only ${effectiveMaxStock} bags available`, 'error');
       return;
+    }
+    if (isDealer) {
+      let hasError = false;
+      if (!values.billed_party?.trim()) { setError('billed_party', { message: 'Required for dealer' }); hasError = true; }
+      if (!values.billed_quantity) { setError('billed_quantity', { message: 'Required for dealer' }); hasError = true; }
+      if (!values.billed_rate) { setError('billed_rate', { message: 'Required for dealer' }); hasError = true; }
+      if (!values.billed_amount) { setError('billed_amount', { message: 'Required for dealer' }); hasError = true; }
+      if (hasError) return;
     }
     setSubmitting(true);
     try {
@@ -577,38 +595,77 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             <label className="mb-1 block text-sm font-medium text-heading">Truck number</label>
             <input type="text" className="input-field w-full" {...register('truck_number')} />
           </div>
-          {/* Invoice / Billing section — turns green when invoice number is filled */}
-          <div className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${invoiceNumber?.trim() ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 bg-gray-50'}`}>
-            <p className={`mb-3 text-xs font-semibold uppercase tracking-wide ${invoiceNumber?.trim() ? 'text-emerald-700' : 'text-gray-500'}`}>
-              {invoiceNumber?.trim() ? '✓ Billed — Invoice details' : 'Invoice & Billing (fill to mark as billed)'}
+          {/* Invoice / Billing section */}
+          <div className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${
+            isDealer
+              ? 'border-amber-300 bg-amber-50'
+              : invoiceNumber?.trim()
+                ? 'border-emerald-300 bg-emerald-50'
+                : 'border-gray-200 bg-gray-50'
+          }`}>
+            <p className={`mb-3 text-xs font-semibold uppercase tracking-wide ${
+              isDealer
+                ? 'text-amber-700'
+                : invoiceNumber?.trim()
+                  ? 'text-emerald-700'
+                  : 'text-gray-500'
+            }`}>
+              {isDealer
+                ? 'Dealer billing — all fields required'
+                : invoiceNumber?.trim()
+                  ? '✓ Billed — Invoice details'
+                  : 'Invoice & Billing (fill to mark as billed)'}
             </p>
             <div className="grid gap-3 sm:grid-cols-2">
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
                 <input type="text" className="input-field w-full" placeholder="e.g. APL/2026-27/001" {...register('invoice_number')} />
-                <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms sale is billed.</p>
+                {!isDealer && (
+                  <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms sale is billed.</p>
+                )}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-heading">Billed party</label>
-                <input type="text" className="input-field w-full" {...register('billed_party')} />
+                <label className="mb-1 block text-sm font-medium text-heading">
+                  Billed party{isDealer ? ' *' : ''}
+                </label>
+                {isDealer && subParties.length > 0 ? (
+                  <select className="input-field w-full" {...register('billed_party')}>
+                    <option value="">Select sub-party *</option>
+                    {subParties.map((sp) => (
+                      <option key={sp.id} value={sp.name}>{sp.name}</option>
+                    ))}
+                  </select>
+                ) : (
+                  <input type="text" className="input-field w-full" {...register('billed_party')} />
+                )}
+                {errors.billed_party && <p className="mt-1 text-xs text-red-600">{errors.billed_party.message}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-heading">Billed quantity</label>
+                <label className="mb-1 block text-sm font-medium text-heading">
+                  Billed quantity{isDealer ? ' *' : ''}
+                </label>
                 <input type="number" min={0} step={1} className="input-field w-full" {...register('billed_quantity', { valueAsNumber: true })} />
+                {errors.billed_quantity && <p className="mt-1 text-xs text-red-600">{errors.billed_quantity.message}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-heading">Billed rate</label>
+                <label className="mb-1 block text-sm font-medium text-heading">
+                  Billed rate{isDealer ? ' *' : ''}
+                </label>
                 <input type="number" min={0} step={0.01} className="input-field w-full" {...register('billed_rate', { valueAsNumber: true })} />
+                {errors.billed_rate && <p className="mt-1 text-xs text-red-600">{errors.billed_rate.message}</p>}
               </div>
               <div>
-                <label className="mb-1 block text-sm font-medium text-heading">Billed amount</label>
+                <label className="mb-1 block text-sm font-medium text-heading">
+                  Billed amount{isDealer ? ' *' : ''}
+                </label>
                 <input
                   type="number"
                   min={0}
-              step={0.01}
-              className="input-field w-full"
-              {...register('billed_amount', { valueAsNumber: true })}
-            />
+                  step={0.01}
+                  className="input-field w-full"
+                  {...register('billed_amount', { valueAsNumber: true })}
+                />
+                {errors.billed_amount && <p className="mt-1 text-xs text-red-600">{errors.billed_amount.message}</p>}
               </div>
             </div>
           </div>

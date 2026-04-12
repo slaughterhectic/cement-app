@@ -146,6 +146,14 @@ export const api = {
     update: (id: number, data: any) => request<any>(`/loans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/loans/${id}`, { method: 'DELETE' }),
   },
+  dealers: {
+    list: () => request<any[]>('/dealers'),
+    create: (data: any) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/dealers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    subParties: (id: number) => request<any[]>(`/dealers/${id}/sub-parties`),
+    addSubParty: (id: number, data: any) => request<any>(`/dealers/${id}/sub-parties`, { method: 'POST', body: JSON.stringify(data) }),
+    ledger: (id: number) => request<any>(`/dealers/${id}/ledger`),
+  },
   brands: {
     list: () => request<any[]>('/brands'),
     all: () => request<any[]>('/brands/all'),

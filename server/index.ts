@@ -16,6 +16,7 @@ import brandsRouter from './routes/brands';
 import capitalRouter from './routes/capital';
 import imprestRouter from './routes/imprest';
 import loansRouter from './routes/loans';
+import dealersRouter from './routes/dealers';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -48,6 +49,7 @@ app.use('/api/brands', brandsRouter);
 app.use('/api/capital', capitalRouter);
 app.use('/api/imprest', imprestRouter);
 app.use('/api/loans', loansRouter);
+app.use('/api/dealers', dealersRouter);
 
 // Godown CRUD
 app.get('/api/godowns', async (_req, res) => {

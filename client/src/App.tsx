@@ -9,6 +9,8 @@ import Sales from './pages/Sales';
 import Stock from './pages/Stock';
 import Parties from './pages/Parties';
 import PartyLedger from './pages/PartyLedger';
+import Dealers from './pages/Dealers';
+import DealerDetail from './pages/DealerDetail';
 import Payments from './pages/Payments';
 import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
@@ -56,6 +58,8 @@ export default function App() {
           <Route path="/stock" element={<Stock />} />
           <Route path="/parties" element={<Parties />} />
           <Route path="/parties/:id" element={<PartyLedger />} />
+          <Route path="/dealers" element={<Dealers />} />
+          <Route path="/dealers/:id" element={<DealerDetail />} />
           <Route path="/payments" element={<Payments />} />
           <Route path="/expenses" element={<Expenses />} />
           <Route path="/reports" element={<Reports />} />

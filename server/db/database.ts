@@ -116,6 +116,7 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS freight_rate REAL DEFAULT 0;`);
     await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS cost_rate REAL DEFAULT 0;`);
+    await client.query(`ALTER TABLE parties ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES parties(id);`);
     await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS received BOOLEAN NOT NULL DEFAULT FALSE;`);
 
     // Add 'supplier' to parties type check
