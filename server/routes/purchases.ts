@@ -74,4 +74,20 @@ router.get('/suppliers', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /api/purchases/rates/:brandId — distinct landed rates for a brand
+router.get('/rates/:brandId', async (req, res) => {
+  try {
+    const rows = await getAll(`
+      SELECT DISTINCT purchase_rate + COALESCE(freight_rate, 0) as landed_rate,
+        purchase_rate, COALESCE(freight_rate, 0) as freight_rate,
+        SUM(bags) as total_bags,
+        MAX(date) as last_date
+      FROM purchases WHERE brand_id = $1
+      GROUP BY purchase_rate, freight_rate
+      ORDER BY landed_rate DESC
+    `, [req.params.brandId]);
+    res.json(rows);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 export default router;

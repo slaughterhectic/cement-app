@@ -66,6 +66,8 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const [liveStock, setLiveStock] = useState<number | null>(null);
   const [loadingStock, setLoadingStock] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [purchaseRates, setPurchaseRates] = useState<{ landed_rate: number; purchase_rate: number; freight_rate: number; total_bags: number; last_date: string }[]>([]);
+  const [selectedCostRate, setSelectedCostRate] = useState<number>(0);
 
   const defaultValues = useMemo(
     () => ({
@@ -211,6 +213,20 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     refreshStock(Number(brandId), godownId);
   }, [isOpen, brandId, godownId, refreshStock]);
 
+  // Load available purchase rates when brand changes
+  useEffect(() => {
+    if (!isOpen || !brandId || brandId === 0) {
+      setPurchaseRates([]);
+      setSelectedCostRate(0);
+      return;
+    }
+    api.purchases.rates(Number(brandId)).then((rates) => {
+      setPurchaseRates(rates);
+      // Auto-select if only one rate exists
+      if (rates.length === 1) setSelectedCostRate(Number(rates[0].landed_rate));
+    }).catch(() => setPurchaseRates([]));
+  }, [isOpen, brandId]);
+
   useEffect(() => {
     if (!isOpen) return;
     if (editData) {
@@ -233,6 +249,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
       });
       const p = parties.find((x) => x.id === editData.party_id);
       setPartyQuery(p?.name ?? '');
+      setSelectedCostRate((editData as any).cost_rate ?? 0);
     } else {
       const pid =
         defaultPartyId != null && defaultPartyId > 0 ? defaultPartyId : 0;
@@ -300,6 +317,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
         cement_type: values.cement_type?.trim() || null,
         bags: values.bags,
         sale_rate: values.sale_rate,
+        cost_rate: selectedCostRate,
         destination: values.destination?.trim() || null,
         godown_id: values.godown_id ?? null,
         truck_number: values.truck_number?.trim() || null,
@@ -435,6 +453,38 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
           </div>
 
           <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Purchase cost (₹ / bag) *</label>
+            {purchaseRates.length > 0 ? (
+              <select
+                className="input-field w-full"
+                value={selectedCostRate}
+                onChange={(e) => setSelectedCostRate(Number(e.target.value))}
+              >
+                <option value={0}>Select purchase rate</option>
+                {purchaseRates.map((r, i) => (
+                  <option key={i} value={Number(r.landed_rate)}>
+                    ₹{Number(r.landed_rate).toFixed(0)}/bag
+                    {Number(r.freight_rate) > 0 ? ` (₹${Number(r.purchase_rate)} + ₹${Number(r.freight_rate)} freight)` : ''}
+                    {' — '}{r.total_bags} bags purchased
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="number"
+                min={0}
+                step={0.01}
+                className="input-field w-full"
+                placeholder="No purchases found"
+                value={selectedCostRate || ''}
+                onChange={(e) => setSelectedCostRate(Number(e.target.value))}
+              />
+            )}
+            {selectedCostRate > 0 && (
+              <p className="mt-1 text-xs text-gray-500">Landed cost: {formatINR(selectedCostRate)}/bag</p>
+            )}
+          </div>
+          <div>
             <label className="mb-1 block text-sm font-medium text-heading">Sale rate (₹ / bag) *</label>
             <input
               type="number"
@@ -445,6 +495,11 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             />
             {errors.sale_rate && (
               <p className="mt-1 text-xs text-red-600">{errors.sale_rate.message}</p>
+            )}
+            {selectedCostRate > 0 && Number(saleRate) > 0 && (
+              <p className={`mt-1 text-xs font-medium ${Number(saleRate) > selectedCostRate ? 'text-green-600' : 'text-red-600'}`}>
+                Margin: {formatINR(Number(saleRate) - selectedCostRate)}/bag
+              </p>
             )}
           </div>
 

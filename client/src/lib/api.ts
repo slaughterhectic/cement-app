@@ -67,6 +67,7 @@ export const api = {
     update: (id: number, data: any) => request<any>(`/purchases/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/purchases/${id}`, { method: 'DELETE' }),
     suppliers: () => request<string[]>('/purchases/suppliers'),
+    rates: (brandId: number) => request<any[]>(`/purchases/rates/${brandId}`),
   },
   sales: {
     list: (params?: Record<string, string>) => {

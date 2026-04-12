@@ -115,6 +115,7 @@ export async function initializeDatabase() {
     // Migrations
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS invoice_number TEXT;`);
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS freight_rate REAL DEFAULT 0;`);
+    await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS cost_rate REAL DEFAULT 0;`);
 
     await client.query(`
       CREATE TABLE IF NOT EXISTS loans (

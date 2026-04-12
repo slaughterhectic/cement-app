@@ -18,7 +18,8 @@ export type SaleRow = {
   bags: number;
   sale_rate: number;
   sale_amount: number;
-  avg_purchase_rate: number | null;
+  purchase_cost: number | null;
+  cost_rate: number;
   destination: string | null;
   invoice_number: string | null;
   godown_id: number | null;
@@ -125,7 +126,7 @@ export default function Sales() {
         ? rows.reduce(
             (s, r) =>
               s +
-              (Number(r.sale_rate) - Number(r.avg_purchase_rate ?? 0)) * (r.bags || 0),
+              (Number(r.sale_rate) - Number(r.purchase_cost ?? 0)) * (r.bags || 0),
             0
           ) / totalBags
         : 0;
@@ -146,6 +147,7 @@ export default function Sales() {
       cement_type: row.cement_type ?? '',
       bags: row.bags,
       sale_rate: row.sale_rate,
+      cost_rate: row.cost_rate ?? 0,
       destination: row.destination ?? '',
       godown_id: row.godown_id ?? undefined,
       truck_number: row.truck_number ?? '',
@@ -198,7 +200,7 @@ export default function Sales() {
       },
       { accessorKey: 'bags', header: 'Bags' },
       {
-        accessorKey: 'avg_purchase_rate',
+        accessorKey: 'purchase_cost',
         header: 'Purchase Rate',
         cell: ({ getValue }) => formatINR(Number(getValue() ?? 0)),
       },
@@ -211,7 +213,7 @@ export default function Sales() {
         id: 'margin',
         header: 'Margin/bag',
         cell: ({ row }) => {
-          const pr = Number(row.original.avg_purchase_rate ?? 0);
+          const pr = Number(row.original.purchase_cost ?? 0);
           const sr = Number(row.original.sale_rate);
           const m = sr - pr;
           return <span className={marginClass(m)}>{formatINR(m)}</span>;

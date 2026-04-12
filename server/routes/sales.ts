@@ -24,7 +24,9 @@ router.get('/', async (req, res) => {
     const { start_date, end_date, party_id, brand_id, month } = req.query;
     let sql = `
       SELECT s.*, p.name as party_name, cb.name as brand_name, g.name as godown_name,
-        (SELECT CASE WHEN SUM(pu.bags) > 0 THEN SUM((pu.purchase_rate + COALESCE(pu.freight_rate, 0)) * pu.bags) / SUM(pu.bags) ELSE 0 END FROM purchases pu WHERE pu.brand_id = s.brand_id) as avg_purchase_rate
+        CASE WHEN COALESCE(s.cost_rate, 0) > 0 THEN s.cost_rate
+          ELSE (SELECT CASE WHEN SUM(pu.bags) > 0 THEN SUM((pu.purchase_rate + COALESCE(pu.freight_rate, 0)) * pu.bags) / SUM(pu.bags) ELSE 0 END FROM purchases pu WHERE pu.brand_id = s.brand_id)
+        END as purchase_cost
       FROM sales s
       JOIN parties p ON s.party_id = p.id
       JOIN cement_brands cb ON s.brand_id = cb.id
@@ -63,7 +65,7 @@ router.get('/stock/:brandId', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, party_id, brand_id, cement_type, bags, sale_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks } = req.body;
+  const { date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks } = req.body;
   try {
     const stock = await getStock(brand_id, godown_id || undefined);
     if (stock <= 0) {
@@ -75,16 +77,16 @@ router.post('/', async (req, res) => {
     }
 
     const result = await getOne(
-      `INSERT INTO sales (date, party_id, brand_id, cement_type, bags, sale_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15) RETURNING *`,
-      [date, party_id, brand_id, cement_type, bags, sale_rate, destination, invoice_number, billed_party, billed_quantity || null, billed_rate || null, billed_amount || null, truck_number, godown_id || null, remarks]
+      `INSERT INTO sales (date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+      [date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate || 0, destination, invoice_number, billed_party, billed_quantity || null, billed_rate || null, billed_amount || null, truck_number, godown_id || null, remarks]
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
 router.put('/:id', async (req, res) => {
-  const { date, party_id, brand_id, cement_type, bags, sale_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks } = req.body;
+  const { date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks } = req.body;
   try {
     const existing = await getOne('SELECT bags, brand_id, godown_id FROM sales WHERE id=$1', [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Sale not found' });
@@ -95,9 +97,9 @@ router.put('/:id', async (req, res) => {
     }
 
     const result = await getOne(
-      `UPDATE sales SET date=$1, party_id=$2, brand_id=$3, cement_type=$4, bags=$5, sale_rate=$6, destination=$7, invoice_number=$8, billed_party=$9, billed_quantity=$10, billed_rate=$11, billed_amount=$12, truck_number=$13, godown_id=$14, remarks=$15
-       WHERE id=$16 RETURNING *`,
-      [date, party_id, brand_id, cement_type, bags, sale_rate, destination, invoice_number, billed_party, billed_quantity || null, billed_rate || null, billed_amount || null, truck_number, godown_id || null, remarks, req.params.id]
+      `UPDATE sales SET date=$1, party_id=$2, brand_id=$3, cement_type=$4, bags=$5, sale_rate=$6, cost_rate=$7, destination=$8, invoice_number=$9, billed_party=$10, billed_quantity=$11, billed_rate=$12, billed_amount=$13, truck_number=$14, godown_id=$15, remarks=$16
+       WHERE id=$17 RETURNING *`,
+      [date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate || 0, destination, invoice_number, billed_party, billed_quantity || null, billed_rate || null, billed_amount || null, truck_number, godown_id || null, remarks, req.params.id]
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
