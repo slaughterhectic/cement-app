@@ -105,6 +105,18 @@ router.put('/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+router.patch('/:id/received', async (req, res) => {
+  try {
+    const { received } = req.body;
+    const row = await getOne(
+      'UPDATE sales SET received=$1 WHERE id=$2 RETURNING id, received',
+      [Boolean(received), req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Sale not found' });
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 router.delete('/:id', requirePermission('delete_sales'), async (req, res) => {
   try {
     await query('DELETE FROM sales WHERE id=$1', [req.params.id]);

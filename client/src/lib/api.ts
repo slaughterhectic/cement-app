@@ -77,6 +77,7 @@ export const api = {
     create: (data: any) => request<any>('/sales', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/sales/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/sales/${id}`, { method: 'DELETE' }),
+    setReceived: (id: number, received: boolean) => request<any>(`/sales/${id}/received`, { method: 'PATCH', body: JSON.stringify({ received }) }),
     stock: (brandId: number, godownId?: number) => {
       const q = godownId ? `?godown_id=${godownId}` : '';
       return request<{ stock: number }>(`/sales/stock/${brandId}${q}`);

@@ -30,6 +30,7 @@ export type SaleRow = {
   billed_rate: number | null;
   billed_amount: number | null;
   remarks: string | null;
+  received: boolean;
 };
 
 function marginClass(marginPerBag: number) {
@@ -176,6 +177,22 @@ export default function Sales() {
     [addToast, load]
   );
 
+  const handleToggleReceived = useCallback(
+    (row: SaleRow) => {
+      const next = !row.received;
+      // Optimistic update
+      setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, received: next } : r));
+      api.sales
+        .setReceived(row.id, next)
+        .catch((e) => {
+          // Revert on failure
+          setRows((prev) => prev.map((r) => r.id === row.id ? { ...r, received: !next } : r));
+          addToast(e instanceof Error ? e.message : 'Failed to update', 'error');
+        });
+    },
+    [addToast]
+  );
+
   const columns = useMemo<ColumnDef<SaleRow>[]>(
     () => [
       {
@@ -272,6 +289,31 @@ export default function Sales() {
         },
       },
       {
+        id: 'received',
+        header: 'Received',
+        enableSorting: true,
+        accessorFn: (row) => row.received,
+        cell: ({ row }) => {
+          const isReceived = row.original.received;
+          return (
+            <button
+              type="button"
+              onClick={() => handleToggleReceived(row.original)}
+              aria-label={isReceived ? 'Mark as not received' : 'Mark as received'}
+              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
+                isReceived ? 'bg-emerald-500' : 'bg-gray-200'
+              }`}
+            >
+              <span
+                className={`pointer-events-none inline-block h-4 w-4 rounded-full bg-white shadow-sm ring-0 transition-transform duration-200 ${
+                  isReceived ? 'translate-x-5' : 'translate-x-0.5'
+                }`}
+              />
+            </button>
+          );
+        },
+      },
+      {
         id: 'actions',
         header: 'Actions',
         enableSorting: false,
@@ -300,7 +342,7 @@ export default function Sales() {
         ),
       },
     ],
-    [handleDelete, openEdit, isAdmin]
+    [handleDelete, openEdit, isAdmin, handleToggleReceived]
   );
 
   return (
