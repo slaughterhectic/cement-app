@@ -106,12 +106,20 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const bags = watch('bags');
   const saleRate = watch('sale_rate');
   const partyId = watch('party_id');
+  const cementType = watch('cement_type');
+  const invoiceNumber = watch('invoice_number');
 
   const saleAmount = useMemo(() => {
     const b = Number(bags) || 0;
     const r = Number(saleRate) || 0;
     return b * r;
   }, [bags, saleRate]);
+
+  // GST rate: 5% for DAMAGE, 28% for OPC/PPC/OTHER
+  const gstRate = cementType === 'DAMAGE' ? 5 : 28;
+  const cgst = (saleAmount * gstRate) / 200;
+  const sgst = cgst;
+  const totalWithGst = saleAmount + cgst + sgst;
 
   const sameContextAsEdit =
     !!editData &&
@@ -440,11 +448,29 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             )}
           </div>
 
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-heading">Sale amount</label>
-            <p className="rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-2xl font-semibold text-emerald-900">
-              {formatINR(saleAmount)}
+          {/* GST Breakdown */}
+          <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+              Amount Breakdown (GST {gstRate}% — {gstRate / 2}% CGST + {gstRate / 2}% SGST)
             </p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-gray-500">Base amount</p>
+                <p className="font-semibold text-gray-800">{formatINR(saleAmount)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">CGST ({gstRate / 2}%)</p>
+                <p className="font-semibold text-gray-800">{formatINR(cgst)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">SGST ({gstRate / 2}%)</p>
+                <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Total (with GST)</p>
+                <p className="text-xl font-bold text-emerald-900">{formatINR(totalWithGst)}</p>
+              </div>
+            </div>
           </div>
 
           <div className="sm:col-span-2">
@@ -482,44 +508,40 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             <label className="mb-1 block text-sm font-medium text-heading">Truck number</label>
             <input type="text" className="input-field w-full" {...register('truck_number')} />
           </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
-            <input type="text" className="input-field w-full" placeholder="e.g. APL/2026-27/001" {...register('invoice_number')} />
-            <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms sale is billed.</p>
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Billed party</label>
-            <input type="text" className="input-field w-full" {...register('billed_party')} />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Billed quantity</label>
-            <input
-              type="number"
-              min={0}
-              step={1}
-              className="input-field w-full"
-              {...register('billed_quantity', { valueAsNumber: true })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Billed rate</label>
-            <input
-              type="number"
-              min={0}
-              step={0.01}
-              className="input-field w-full"
-              {...register('billed_rate', { valueAsNumber: true })}
-            />
-          </div>
-          <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Billed amount</label>
-            <input
-              type="number"
-              min={0}
+          {/* Invoice / Billing section — turns green when invoice number is filled */}
+          <div className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${invoiceNumber?.trim() ? 'border-emerald-300 bg-emerald-50' : 'border-gray-200 bg-gray-50'}`}>
+            <p className={`mb-3 text-xs font-semibold uppercase tracking-wide ${invoiceNumber?.trim() ? 'text-emerald-700' : 'text-gray-500'}`}>
+              {invoiceNumber?.trim() ? '✓ Billed — Invoice details' : 'Invoice & Billing (fill to mark as billed)'}
+            </p>
+            <div className="grid gap-3 sm:grid-cols-2">
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
+                <input type="text" className="input-field w-full" placeholder="e.g. APL/2026-27/001" {...register('invoice_number')} />
+                <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms sale is billed.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-heading">Billed party</label>
+                <input type="text" className="input-field w-full" {...register('billed_party')} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-heading">Billed quantity</label>
+                <input type="number" min={0} step={1} className="input-field w-full" {...register('billed_quantity', { valueAsNumber: true })} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-heading">Billed rate</label>
+                <input type="number" min={0} step={0.01} className="input-field w-full" {...register('billed_rate', { valueAsNumber: true })} />
+              </div>
+              <div>
+                <label className="mb-1 block text-sm font-medium text-heading">Billed amount</label>
+                <input
+                  type="number"
+                  min={0}
               step={0.01}
               className="input-field w-full"
               {...register('billed_amount', { valueAsNumber: true })}
             />
+              </div>
+            </div>
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Remarks</label>

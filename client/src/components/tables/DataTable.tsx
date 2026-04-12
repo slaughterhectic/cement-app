@@ -48,6 +48,7 @@ export type DataTableProps<T> = {
   getRowClassName?: (row: T) => string | undefined;
   canDelete?: boolean;
   canDownload?: boolean;
+  initialColumnVisibility?: VisibilityState;
 };
 
 export function DataTable<T>({
@@ -64,11 +65,12 @@ export function DataTable<T>({
   getRowClassName,
   canDelete = true,
   canDownload = true,
+  initialColumnVisibility = {},
 }: DataTableProps<T>) {
   const getRowId = getRowIdProp ?? ((row: T) => (row as { id: number }).id);
 
   const [sorting, setSorting] = useState<SortingState>([]);
-  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>({});
+  const [columnVisibility, setColumnVisibility] = useState<VisibilityState>(initialColumnVisibility);
   const [rowSelection, setRowSelection] = useState<RowSelectionState>({});
   const [globalFilter, setGlobalFilter] = useState('');
   const [pagination, setPagination] = useState<PaginationState>({

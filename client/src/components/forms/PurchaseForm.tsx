@@ -14,8 +14,8 @@ const schema = z.object({
   cement_type: z.string().optional(),
   bags: z.coerce.number().int().positive('Bags must be at least 1'),
   purchase_rate: z.coerce.number().positive('Rate must be positive'),
-  godown_id: z.number().int().positive().optional(),
-  truck_number: z.string().optional(),
+  godown_id: z.coerce.number().int().positive('Godown is required'),
+  truck_number: z.string().min(1, 'Truck number is required'),
   source_location: z.string().optional(),
   invoice_number: z.string().optional(),
   remarks: z.string().optional(),
@@ -52,7 +52,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
       cement_type: '',
       bags: 1,
       purchase_rate: 0,
-      godown_id: undefined as number | undefined,
+      godown_id: 0,
       truck_number: '',
       source_location: '',
       invoice_number: '',
@@ -77,12 +77,19 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
   const bags = watch('bags');
   const purchaseRate = watch('purchase_rate');
   const brandId = watch('brand_id');
+  const cementType = watch('cement_type');
 
   const purchaseAmount = useMemo(() => {
     const b = Number(bags) || 0;
     const r = Number(purchaseRate) || 0;
     return b * r;
   }, [bags, purchaseRate]);
+
+  // GST rate: 5% for DAMAGE, 28% for OPC/PPC/OTHER
+  const gstRate = cementType === 'DAMAGE' ? 5 : 28;
+  const cgst = (purchaseAmount * gstRate) / 200;   // half of gstRate
+  const sgst = cgst;
+  const totalWithGst = purchaseAmount + cgst + sgst;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -113,7 +120,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         cement_type: editData.cement_type ?? '',
         bags: editData.bags,
         purchase_rate: editData.purchase_rate,
-        godown_id: editData.godown_id ?? undefined,
+        godown_id: editData.godown_id ?? 0,
         truck_number: editData.truck_number ?? '',
         source_location: editData.source_location ?? '',
         invoice_number: (editData as any).invoice_number ?? '',
@@ -143,7 +150,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         cement_type: values.cement_type?.trim() || null,
         bags: values.bags,
         purchase_rate: values.purchase_rate,
-        godown_id: values.godown_id && !Number.isNaN(values.godown_id) ? values.godown_id : null,
+        godown_id: values.godown_id,
         truck_number: values.truck_number?.trim() || null,
         source_location: values.source_location?.trim() || null,
         invoice_number: values.invoice_number?.trim() || null,
@@ -234,28 +241,42 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               <p className="mt-1 text-xs text-red-600">{errors.purchase_rate.message}</p>
             )}
           </div>
-          <div className="sm:col-span-2">
-            <label className="mb-1 block text-sm font-medium text-heading">Purchase amount</label>
-            <p className="rounded-lg border border-brand-200 bg-brand-50 px-4 py-3 text-2xl font-semibold text-brand-900">
-              {formatINR(purchaseAmount)}
+          {/* GST Breakdown */}
+          <div className="sm:col-span-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-700">
+              Amount Breakdown (GST {gstRate}% — {gstRate / 2}% CGST + {gstRate / 2}% SGST)
             </p>
-            <p className="mt-1 text-xs text-gray-500">Bags × rate (stored automatically on save)</p>
+            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+              <div>
+                <p className="text-xs text-gray-500">Base amount</p>
+                <p className="font-semibold text-gray-800">{formatINR(purchaseAmount)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">CGST ({gstRate / 2}%)</p>
+                <p className="font-semibold text-gray-800">{formatINR(cgst)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">SGST ({gstRate / 2}%)</p>
+                <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Total (with GST)</p>
+                <p className="text-xl font-bold text-brand-900">{formatINR(totalWithGst)}</p>
+              </div>
+            </div>
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Godown</label>
+            <label className="mb-1 block text-sm font-medium text-heading">Godown *</label>
             <Controller
               name="godown_id"
               control={control}
               render={({ field }) => (
                 <select
                   className="input-field w-full"
-                  value={field.value ?? ''}
-                  onChange={(e) => {
-                    const v = e.target.value;
-                    field.onChange(v === '' ? undefined : Number(v));
-                  }}
+                  value={field.value || ''}
+                  onChange={(e) => field.onChange(Number(e.target.value))}
                 >
-                  <option value="">— None —</option>
+                  <option value={0}>Select godown</option>
                   {godowns.map((g) => (
                     <option key={g.id} value={g.id}>
                       {g.name}
@@ -264,10 +285,12 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
                 </select>
               )}
             />
+            {errors.godown_id && <p className="mt-1 text-xs text-red-600">{errors.godown_id.message}</p>}
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Truck number</label>
-            <input type="text" className="input-field w-full" {...register('truck_number')} />
+            <label className="mb-1 block text-sm font-medium text-heading">Truck number *</label>
+            <input type="text" className="input-field w-full" placeholder="e.g. UP14AT7777" {...register('truck_number')} />
+            {errors.truck_number && <p className="mt-1 text-xs text-red-600">{errors.truck_number.message}</p>}
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Source location</label>

@@ -208,6 +208,24 @@ export default function Sales() {
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
       {
+        id: 'cgst',
+        header: 'CGST (₹)',
+        accessorFn: (row: any) => {
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 28;
+          return (Number(row.sale_amount) * rate) / 200;
+        },
+        cell: ({ getValue }) => formatINR(Number(getValue())),
+      },
+      {
+        id: 'sgst',
+        header: 'SGST (₹)',
+        accessorFn: (row: any) => {
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 28;
+          return (Number(row.sale_amount) * rate) / 200;
+        },
+        cell: ({ getValue }) => formatINR(Number(getValue())),
+      },
+      {
         accessorKey: 'destination',
         header: 'Destination',
         cell: ({ getValue }) => getValue() ?? '—',
@@ -366,6 +384,7 @@ export default function Sales() {
         }
         canDelete={hasPermission('delete_sales')}
         canDownload={hasPermission('download')}
+        initialColumnVisibility={{ cgst: false, sgst: false }}
       />
 
       <SaleForm

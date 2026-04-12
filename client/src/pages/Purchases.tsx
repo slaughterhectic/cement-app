@@ -158,6 +158,24 @@ export default function Purchases() {
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
       {
+        id: 'cgst',
+        header: 'CGST (₹)',
+        accessorFn: (row: any) => {
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 28;
+          return (Number(row.purchase_amount) * rate) / 200;
+        },
+        cell: ({ getValue }) => formatINR(Number(getValue())),
+      },
+      {
+        id: 'sgst',
+        header: 'SGST (₹)',
+        accessorFn: (row: any) => {
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 28;
+          return (Number(row.purchase_amount) * rate) / 200;
+        },
+        cell: ({ getValue }) => formatINR(Number(getValue())),
+      },
+      {
         accessorKey: 'godown_name',
         header: 'Godown',
         cell: ({ getValue }) => getValue() ?? '—',
@@ -298,6 +316,7 @@ export default function Purchases() {
         exportFileName="purchases"
         canDelete={hasPermission('delete_purchases')}
         canDownload={hasPermission('download')}
+        initialColumnVisibility={{ cgst: false, sgst: false }}
       />
 
       <PurchaseForm
