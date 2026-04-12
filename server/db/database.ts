@@ -121,6 +121,22 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS direction TEXT CHECK(direction IN ('pay','receive')) DEFAULT 'receive';`);
     await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`);
     await client.query(`
+      CREATE TABLE IF NOT EXISTS expense_categories (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        sort_order INTEGER DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      INSERT INTO expense_categories (name, sort_order) VALUES
+        ('Office expense', 10), ('Staff welfare & Refreshment', 20),
+        ('Labour - Loading / Unloading', 30), ('Travel Expense', 40),
+        ('Driver expense', 50), ('Fuel expense', 60),
+        ('Bank charges', 70), ('Freight', 80), ('Salary', 90), ('Miscellaneous', 100)
+      ON CONFLICT (name) DO NOTHING;
+    `);
+    await client.query(`
       CREATE TABLE IF NOT EXISTS password_reset_tokens (
         id SERIAL PRIMARY KEY,
         user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,

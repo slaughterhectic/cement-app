@@ -7,10 +7,6 @@ import { api } from '../../lib/api';
 import { formatDateInput } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
 
-const BANKS = ['ARMTECH', 'KOTAK', 'HDFC', 'BOB', 'AXIS', 'OK', 'ICICI', 'Other'] as const;
-
-const EXPENSE_CATEGORIES = ['Office', 'Bank charges', 'Freight', 'Salary', 'Misc'] as const;
-
 const amountField = z.preprocess(
   (v) => {
     if (v === '' || v == null || (typeof v === 'number' && Number.isNaN(v))) return undefined;
@@ -24,15 +20,13 @@ const schema = z
     date: z.string().min(1, 'Date is required'),
     description: z.string().min(1, 'Description is required'),
     amount: amountField,
-    category: z.enum(EXPENSE_CATEGORIES),
+    category: z.string().min(1, 'Category is required'),
     mode: z.enum(['bank', 'cash']),
     bank_name: z.string().optional(),
   })
   .superRefine((data, ctx) => {
-    if (data.mode === 'bank') {
-      if (!data.bank_name || !BANKS.includes(data.bank_name as (typeof BANKS)[number])) {
-        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a bank', path: ['bank_name'] });
-      }
+    if (data.mode === 'bank' && !data.bank_name) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a bank', path: ['bank_name'] });
     }
   });
 
@@ -48,13 +42,15 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
   const addToast = useToastStore((s) => s.addToast);
   const [submitting, setSubmitting] = useState(false);
   const [cashHandlers, setCashHandlers] = useState<string[]>([]);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
 
   const defaultValues = useMemo(
     () => ({
       date: formatDateInput(),
       description: '',
       amount: undefined as unknown as number,
-      category: 'Office' as (typeof EXPENSE_CATEGORIES)[number],
+      category: '',
       mode: 'bank' as const,
       bank_name: '' as string,
     }),
@@ -86,7 +82,14 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
     api.imprest.handlers().then((rows: any[]) => {
       setCashHandlers(rows.map((r: any) => r.handler_name));
     }).catch(() => {});
-  }, [isOpen, reset, defaultValues, clearErrors]);
+    api.expenseCategories.list().then((rows) => {
+      setCategories(rows);
+      if (rows.length > 0) setValue('category', rows[0].name);
+    }).catch(() => {});
+    api.capital.banks().then((rows: any[]) => {
+      setBanks(rows);
+    }).catch(() => {});
+  }, [isOpen, reset, defaultValues, clearErrors, setValue]);
 
   useEffect(() => {
     setValue('bank_name', '');
@@ -138,9 +141,10 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Category *</label>
           <select className="input-field w-full" {...register('category')}>
-            {EXPENSE_CATEGORIES.map((c) => (
-              <option key={c} value={c}>
-                {c}
+            <option value="">Select category</option>
+            {categories.map((c) => (
+              <option key={c.id} value={c.name}>
+                {c.name}
               </option>
             ))}
           </select>
@@ -181,12 +185,15 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
             <label className="mb-1 block text-sm font-medium text-heading">Bank *</label>
             <select className="input-field w-full" {...register('bank_name')}>
               <option value="">Select bank</option>
-              {BANKS.map((b) => (
-                <option key={b} value={b}>
-                  {b}
+              {banks.map((b) => (
+                <option key={b.bank_name} value={b.bank_name}>
+                  {b.bank_name}
                 </option>
               ))}
             </select>
+            {banks.length === 0 && (
+              <p className="mt-1 text-xs text-amber-600">No banks configured. Add banks in Settings → Banks.</p>
+            )}
             {errors.bank_name && <p className="mt-1 text-xs text-red-600">{errors.bank_name.message}</p>}
           </div>
         )}

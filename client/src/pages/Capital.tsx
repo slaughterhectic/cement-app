@@ -17,20 +17,17 @@ interface CapitalSummary {
   totalCapital: number;
 }
 
-const EXPENSE_CATEGORIES = [
-  'Staff welfare & Refreshment',
-  'Office expense',
-  'Labour - Loading / Unloading',
-  'Travel Expense',
-  'Driver expense',
-  'Fuel expense',
-  'Miscellaneous',
-];
-
 function ImprestSection() {
   const addToast = useToastStore((s) => s.addToast);
   const hasPermission = useAuthStore((s) => s.hasPermission);
   const [data, setData] = useState<any[]>([]);
+  const [expenseCategories, setExpenseCategories] = useState<string[]>([]);
+
+  useEffect(() => {
+    api.expenseCategories.list().then((rows) => {
+      setExpenseCategories(rows.map((r) => r.name));
+    }).catch(() => {});
+  }, []);
   const [loading, setLoading] = useState(false);
   const [selectedHandler, setSelectedHandler] = useState('');
   const [showForm, setShowForm] = useState(false);
@@ -292,7 +289,7 @@ function ImprestSection() {
               <div>
                 <label className="mb-1 block text-xs font-medium text-gray-600">Category (Particulars)</label>
                 <input list="imp-cats" type="text" className="input-field w-full" value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} />
-                <datalist id="imp-cats">{EXPENSE_CATEGORIES.map((c) => <option key={c} value={c} />)}</datalist>
+                <datalist id="imp-cats">{expenseCategories.map((c) => <option key={c} value={c} />)}</datalist>
               </div>
               <div className="sm:col-span-2">
                 <label className="mb-1 block text-xs font-medium text-gray-600">Narration / Description</label>

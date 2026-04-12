@@ -123,6 +123,11 @@ export const api = {
     create: (data: any) => request<any>('/expenses', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/expenses/${id}`, { method: 'DELETE' }),
   },
+  expenseCategories: {
+    list: () => request<{ id: number; name: string; sort_order: number }[]>('/expense-categories'),
+    create: (name: string) => request<any>('/expense-categories', { method: 'POST', body: JSON.stringify({ name }) }),
+    delete: (id: number) => request<any>(`/expense-categories/${id}`, { method: 'DELETE' }),
+  },
   reports: {
     pnl: (month?: string) => request<any>(`/reports/pnl${month ? `?month=${month}` : ''}`),
     brands: () => request<any[]>('/reports/brands'),

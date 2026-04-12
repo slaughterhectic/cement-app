@@ -22,7 +22,7 @@ interface Godown {
   location: string | null;
 }
 
-type Tab = 'brands' | 'godowns' | 'banks' | 'backup';
+type Tab = 'brands' | 'godowns' | 'banks' | 'expense-categories' | 'backup';
 
 const BRAND_TYPES = ['OPC', 'PPC', 'DAMAGE', 'OTHER'] as const;
 
@@ -495,6 +495,122 @@ function BanksPanel() {
   );
 }
 
+// ─── Expense Categories Panel ─────────────────────────────────────────────────
+
+function ExpenseCategoriesPanel() {
+  const addToast = useToastStore((s) => s.addToast);
+  const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [newName, setNewName] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await api.expenseCategories.list();
+      setCategories(data);
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleAdd = async () => {
+    if (!newName.trim()) { addToast('Category name is required', 'error'); return; }
+    setSaving(true);
+    try {
+      await api.expenseCategories.create(newName.trim());
+      addToast('Category added');
+      setNewName('');
+      load();
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number, name: string) => {
+    if (!window.confirm(`Remove category "${name}"? This won't affect existing expenses.`)) return;
+    try {
+      await api.expenseCategories.delete(id);
+      addToast('Category removed');
+      load();
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-500">{categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}</p>
+      </div>
+
+      {/* Add inline */}
+      <div className="mb-4 flex gap-2">
+        <input
+          type="text"
+          className="input-field flex-1"
+          placeholder="e.g. Repair & Maintenance"
+          value={newName}
+          onChange={(e) => setNewName(e.target.value)}
+          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
+        />
+        <button
+          type="button"
+          onClick={handleAdd}
+          disabled={saving || !newName.trim()}
+          className="btn-primary disabled:opacity-50"
+        >
+          <Plus className="mr-1.5 h-4 w-4" /> Add
+        </button>
+      </div>
+
+      <div className="card overflow-hidden p-0">
+        {loading ? (
+          <div className="p-8 text-center text-sm text-gray-400">Loading...</div>
+        ) : categories.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">No categories yet. Add one above.</div>
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Category Name</th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {categories.map((c) => (
+                <tr key={c.id} className="hover:bg-gray-50/50">
+                  <td className="px-4 py-3 font-medium text-gray-900">
+                    <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-900">
+                      {c.name}
+                    </span>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <button
+                      type="button"
+                      onClick={() => handleDelete(c.id, c.name)}
+                      className="rounded p-1.5 text-red-500 hover:bg-red-50"
+                      title="Remove"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+    </>
+  );
+}
+
 // ─── Backup Panel ────────────────────────────────────────────────────────────
 
 function BackupPanel() {
@@ -568,6 +684,7 @@ const TAB_LABELS: Record<Tab, string> = {
   brands: 'Cement Brands',
   godowns: 'Godowns',
   banks: 'Banks',
+  'expense-categories': 'Expense Categories',
   backup: 'Backup',
 };
 
@@ -582,8 +699,8 @@ export default function Settings() {
       </div>
 
       {/* Tabs */}
-      <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
-        {(['brands', 'godowns', 'banks', 'backup'] as Tab[]).map((t) => (
+      <div className="flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
+        {(['brands', 'godowns', 'banks', 'expense-categories', 'backup'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -602,6 +719,7 @@ export default function Settings() {
       {tab === 'brands' && <BrandsPanel />}
       {tab === 'godowns' && <GodownsPanel />}
       {tab === 'banks' && <BanksPanel />}
+      {tab === 'expense-categories' && <ExpenseCategoriesPanel />}
       {tab === 'backup' && <BackupPanel />}
     </div>
   );
