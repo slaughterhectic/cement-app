@@ -158,11 +158,21 @@ export default function Purchases() {
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
       {
+        id: 'base_amount',
+        header: 'Base (₹)',
+        accessorFn: (row: any) => {
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 18;
+          return Number(row.purchase_amount) / (1 + rate / 100);
+        },
+        cell: ({ getValue }) => formatINR(Number(getValue())),
+      },
+      {
         id: 'cgst',
         header: 'CGST (₹)',
         accessorFn: (row: any) => {
           const rate = row.cement_type === 'DAMAGE' ? 5 : 18;
-          return (Number(row.purchase_amount) * rate) / 200;
+          const base = Number(row.purchase_amount) / (1 + rate / 100);
+          return base * (rate / 2) / 100;
         },
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
@@ -171,7 +181,8 @@ export default function Purchases() {
         header: 'SGST (₹)',
         accessorFn: (row: any) => {
           const rate = row.cement_type === 'DAMAGE' ? 5 : 18;
-          return (Number(row.purchase_amount) * rate) / 200;
+          const base = Number(row.purchase_amount) / (1 + rate / 100);
+          return base * (rate / 2) / 100;
         },
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
@@ -316,7 +327,7 @@ export default function Purchases() {
         exportFileName="purchases"
         canDelete={hasPermission('delete_purchases')}
         canDownload={hasPermission('download')}
-        initialColumnVisibility={{ cgst: false, sgst: false }}
+        initialColumnVisibility={{ base_amount: false, cgst: false, sgst: false }}
       />
 
       <PurchaseForm

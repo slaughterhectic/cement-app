@@ -115,11 +115,11 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     return b * r;
   }, [bags, saleRate]);
 
-  // GST rate: 5% for DAMAGE, 28% for OPC/PPC/OTHER
+  // Entered amount IS the total (GST-inclusive). Back-calculate base.
   const gstRate = cementType === 'DAMAGE' ? 5 : 18;
-  const cgst = (saleAmount * gstRate) / 200;
+  const base = saleAmount / (1 + gstRate / 100);
+  const cgst = base * (gstRate / 2) / 100;
   const sgst = cgst;
-  const totalWithGst = saleAmount + cgst + sgst;
 
   const sameContextAsEdit =
     !!editData &&
@@ -456,7 +456,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
               <div>
                 <p className="text-xs text-gray-500">Base amount</p>
-                <p className="font-semibold text-gray-800">{formatINR(saleAmount)}</p>
+                <p className="font-semibold text-gray-800">{formatINR(base)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">CGST ({gstRate / 2}%)</p>
@@ -467,8 +467,8 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Total (with GST)</p>
-                <p className="text-xl font-bold text-emerald-900">{formatINR(totalWithGst)}</p>
+                <p className="text-xs text-gray-500">Total (entered)</p>
+                <p className="text-xl font-bold text-emerald-900">{formatINR(saleAmount)}</p>
               </div>
             </div>
           </div>

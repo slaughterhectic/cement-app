@@ -85,11 +85,11 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
     return b * r;
   }, [bags, purchaseRate]);
 
-  // GST rate: 5% for DAMAGE, 28% for OPC/PPC/OTHER
+  // Entered amount IS the total (GST-inclusive). Back-calculate base.
   const gstRate = cementType === 'DAMAGE' ? 5 : 18;
-  const cgst = (purchaseAmount * gstRate) / 200;   // half of gstRate
+  const base = purchaseAmount / (1 + gstRate / 100);
+  const cgst = base * (gstRate / 2) / 100;
   const sgst = cgst;
-  const totalWithGst = purchaseAmount + cgst + sgst;
 
   useEffect(() => {
     if (!isOpen) return;
@@ -249,7 +249,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
               <div>
                 <p className="text-xs text-gray-500">Base amount</p>
-                <p className="font-semibold text-gray-800">{formatINR(purchaseAmount)}</p>
+                <p className="font-semibold text-gray-800">{formatINR(base)}</p>
               </div>
               <div>
                 <p className="text-xs text-gray-500">CGST ({gstRate / 2}%)</p>
@@ -260,8 +260,8 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
                 <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Total (with GST)</p>
-                <p className="text-xl font-bold text-brand-900">{formatINR(totalWithGst)}</p>
+                <p className="text-xs text-gray-500">Total (entered)</p>
+                <p className="text-xl font-bold text-brand-900">{formatINR(purchaseAmount)}</p>
               </div>
             </div>
           </div>
