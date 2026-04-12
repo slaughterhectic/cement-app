@@ -116,7 +116,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   }, [bags, saleRate]);
 
   // GST rate: 5% for DAMAGE, 28% for OPC/PPC/OTHER
-  const gstRate = cementType === 'DAMAGE' ? 5 : 28;
+  const gstRate = cementType === 'DAMAGE' ? 5 : 18;
   const cgst = (saleAmount * gstRate) / 200;
   const sgst = cgst;
   const totalWithGst = saleAmount + cgst + sgst;

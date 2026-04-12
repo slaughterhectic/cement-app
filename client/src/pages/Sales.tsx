@@ -211,7 +211,7 @@ export default function Sales() {
         id: 'cgst',
         header: 'CGST (₹)',
         accessorFn: (row: any) => {
-          const rate = row.cement_type === 'DAMAGE' ? 5 : 28;
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 18;
           return (Number(row.sale_amount) * rate) / 200;
         },
         cell: ({ getValue }) => formatINR(Number(getValue())),
@@ -220,7 +220,7 @@ export default function Sales() {
         id: 'sgst',
         header: 'SGST (₹)',
         accessorFn: (row: any) => {
-          const rate = row.cement_type === 'DAMAGE' ? 5 : 28;
+          const rate = row.cement_type === 'DAMAGE' ? 5 : 18;
           return (Number(row.sale_amount) * rate) / 200;
         },
         cell: ({ getValue }) => formatINR(Number(getValue())),
