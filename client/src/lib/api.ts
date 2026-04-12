@@ -49,7 +49,7 @@ export const api = {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = res.headers.get('Content-Disposition')?.split('filename="')[1]?.replace('"', '') || 'cementbook-backup.json';
+      a.download = res.headers.get('Content-Disposition')?.split('filename="')[1]?.replace('"', '') || 'cementbook-backup.xlsx';
       a.click();
       URL.revokeObjectURL(url);
     },

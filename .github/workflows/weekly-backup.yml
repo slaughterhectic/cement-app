@@ -1,39 +1,34 @@
-name: Weekly Database Backup
+name: Weekly DB Backup to Google Drive
 
 on:
   schedule:
-    - cron: '0 6 * * 0'  # Every Sunday at 6:00 AM UTC
-  workflow_dispatch:  # Allow manual trigger
+    - cron: '0 2 * * 0'   # Every Sunday at 2:00 AM UTC
+  workflow_dispatch:        # Allow manual trigger from GitHub UI
 
 jobs:
   backup:
     runs-on: ubuntu-latest
-    steps:
-      - name: Install PostgreSQL client
-        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+    timeout-minutes: 10
 
-      - name: Create backup
+    steps:
+      - name: Checkout repo
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Install backup dependencies
+        run: npm install --no-save pg xlsx googleapis
+
+      - name: Run backup script
         env:
           DATABASE_URL: ${{ secrets.DATABASE_URL }}
-        run: |
-          TIMESTAMP=$(date +%Y-%m-%d)
-          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists > "cementbook-backup-${TIMESTAMP}.sql"
-          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
-          echo "Backup file size: $(du -h cementbook-backup-${TIMESTAMP}.sql | cut -f1)"
+          GOOGLE_SERVICE_ACCOUNT_KEY: ${{ secrets.GOOGLE_SERVICE_ACCOUNT_KEY }}
+          GOOGLE_DRIVE_FOLDER_ID: ${{ secrets.GOOGLE_DRIVE_FOLDER_ID }}
+        run: node scripts/backup-gdrive.js
 
-      - name: Upload backup as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: cementbook-backup-${{ env.TIMESTAMP }}
-          path: cementbook-backup-${{ env.TIMESTAMP }}.sql
-          retention-days: 90
-
-      - name: Create release with backup
-        uses: softprops/action-gh-release@v2
-        with:
-          tag_name: backup-${{ env.TIMESTAMP }}
-          name: "Weekly Backup - ${{ env.TIMESTAMP }}"
-          body: "Automated weekly database backup created on ${{ env.TIMESTAMP }}"
-          files: cementbook-backup-${{ env.TIMESTAMP }}.sql
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Report success
+        if: success()
+        run: echo "Backup completed on $(date -u '+%Y-%m-%d %H:%M UTC')"

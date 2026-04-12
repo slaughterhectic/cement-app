@@ -221,10 +221,12 @@ app.get('/api/dashboard/charts', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// Database backup endpoint (admin only)
+// Database backup endpoint — returns Excel workbook (admin only)
 app.get('/api/backup', async (req, res) => {
   try {
     if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    const XLSX = await import('xlsx');
 
     const tables = [
       'parties', 'cement_brands', 'godowns', 'purchases', 'sales',
@@ -232,15 +234,20 @@ app.get('/api/backup', async (req, res) => {
       'imprest_transactions', 'bank_balances', 'users', 'user_permissions',
     ];
 
-    const backup: Record<string, any[]> = {};
+    const wb = XLSX.utils.book_new();
     for (const table of tables) {
-      backup[table] = await getAll(`SELECT * FROM ${table}`);
+      const rows = await getAll(`SELECT * FROM ${table}`);
+      const ws = rows.length > 0
+        ? XLSX.utils.json_to_sheet(rows)
+        : XLSX.utils.aoa_to_sheet([['(empty)']]);
+      XLSX.utils.book_append_sheet(wb, ws, table.replace('imprest_', 'imp_'));
     }
 
     const timestamp = new Date().toISOString().slice(0, 10);
-    res.setHeader('Content-Type', 'application/json');
-    res.setHeader('Content-Disposition', `attachment; filename="cementbook-backup-${timestamp}.json"`);
-    res.json({ version: 1, timestamp: new Date().toISOString(), tables: backup });
+    const buf: Buffer = XLSX.write(wb, { type: 'buffer', bookType: 'xlsx' });
+    res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
+    res.setHeader('Content-Disposition', `attachment; filename="cementbook-backup-${timestamp}.xlsx"`);
+    res.send(buf);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
   }
