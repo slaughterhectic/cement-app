@@ -221,6 +221,31 @@ app.get('/api/dashboard/charts', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Database backup endpoint (admin only)
+app.get('/api/backup', async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+
+    const tables = [
+      'parties', 'cement_brands', 'godowns', 'purchases', 'sales',
+      'payments', 'expenses', 'loans', 'imprest_handlers',
+      'imprest_transactions', 'bank_balances', 'users', 'user_permissions',
+    ];
+
+    const backup: Record<string, any[]> = {};
+    for (const table of tables) {
+      backup[table] = await getAll(`SELECT * FROM ${table}`);
+    }
+
+    const timestamp = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'application/json');
+    res.setHeader('Content-Disposition', `attachment; filename="cementbook-backup-${timestamp}.json"`);
+    res.json({ version: 1, timestamp: new Date().toISOString(), tables: backup });
+  } catch (e: any) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 // Serve built frontend in production
 const distPath = path.join(process.cwd(), 'client/dist');
 app.use(express.static(distPath));

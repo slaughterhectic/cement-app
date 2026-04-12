@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Pencil, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Database, Download, HardDrive, Pencil, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToastStore } from '../lib/store';
 import { Modal } from '../components/ui/Modal';
@@ -21,7 +21,7 @@ interface Godown {
   location: string | null;
 }
 
-type Tab = 'brands' | 'godowns';
+type Tab = 'brands' | 'godowns' | 'backup';
 
 const BRAND_TYPES = ['OPC', 'PPC', 'DAMAGE', 'OTHER'] as const;
 
@@ -335,7 +335,80 @@ function GodownsPanel() {
   );
 }
 
+// ─── Backup Panel ────────────────────────────────────────────────────────────
+
+function BackupPanel() {
+  const addToast = useToastStore((s) => s.addToast);
+  const [downloading, setDownloading] = useState(false);
+
+  const handleBackup = async () => {
+    setDownloading(true);
+    try {
+      await api.backup.download();
+      addToast('Backup downloaded successfully');
+    } catch (e: any) {
+      addToast(e.message || 'Backup failed', 'error');
+    } finally {
+      setDownloading(false);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="card">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-brand-500/10 text-brand-600">
+            <Database className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-heading">Download Backup</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Download a complete backup of all your data as a JSON file. This includes parties, purchases, sales, payments,
+              expenses, stock, bank balances, loans, and user data. Save this file to Google Drive or any safe location.
+            </p>
+            <div className="mt-4">
+              <button
+                type="button"
+                onClick={handleBackup}
+                disabled={downloading}
+                className="btn-primary disabled:opacity-50"
+              >
+                <Download className="mr-2 h-4 w-4" />
+                {downloading ? 'Downloading...' : 'Download Backup'}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div className="card">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-600">
+            <HardDrive className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-heading">Automatic Backups</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Supabase maintains daily automatic backups (retained for 7 days). Additionally, a weekly backup runs
+              via GitHub Actions every Sunday and is stored as a release artifact in your GitHub repository.
+            </p>
+            <p className="mt-2 text-xs text-gray-400">
+              Tip: Download a manual backup before making large data changes like bulk imports or deletions.
+            </p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ─── Settings Page ─────────────────────────────────────────────────────────────
+
+const TAB_LABELS: Record<Tab, string> = {
+  brands: 'Cement Brands',
+  godowns: 'Godowns',
+  backup: 'Backup',
+};
 
 export default function Settings() {
   const [tab, setTab] = useState<Tab>('brands');
@@ -344,28 +417,30 @@ export default function Settings() {
     <div className="space-y-6">
       <div>
         <h1 className="text-2xl font-bold text-heading">Settings</h1>
-        <p className="mt-1 text-sm text-gray-500">Manage cement brands and storage godowns</p>
+        <p className="mt-1 text-sm text-gray-500">Manage cement brands, godowns, and data backups</p>
       </div>
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
-        {(['brands', 'godowns'] as Tab[]).map((t) => (
+        {(['brands', 'godowns', 'backup'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
             onClick={() => setTab(t)}
-            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors capitalize ${
+            className={`rounded-md px-4 py-1.5 text-sm font-medium transition-colors ${
               tab === t
                 ? 'bg-white text-heading shadow-sm border border-gray-200'
                 : 'text-gray-500 hover:text-heading'
             }`}
           >
-            {t === 'brands' ? 'Cement Brands' : 'Godowns'}
+            {TAB_LABELS[t]}
           </button>
         ))}
       </div>
 
-      {tab === 'brands' ? <BrandsPanel /> : <GodownsPanel />}
+      {tab === 'brands' && <BrandsPanel />}
+      {tab === 'godowns' && <GodownsPanel />}
+      {tab === 'backup' && <BackupPanel />}
     </div>
   );
 }

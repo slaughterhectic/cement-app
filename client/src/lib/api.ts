@@ -38,6 +38,22 @@ export const api = {
     updatePermissions: (id: number, permissions: string[]) =>
       request<any>(`/auth/users/${id}/permissions`, { method: 'PUT', body: JSON.stringify({ permissions }) }),
   },
+  backup: {
+    download: async () => {
+      const token = getToken();
+      const headers: Record<string, string> = {};
+      if (token) headers['Authorization'] = `Bearer ${token}`;
+      const res = await fetch(`${BASE}/backup`, { headers });
+      if (!res.ok) throw new Error('Backup failed');
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = res.headers.get('Content-Disposition')?.split('filename="')[1]?.replace('"', '') || 'cementbook-backup.json';
+      a.click();
+      URL.revokeObjectURL(url);
+    },
+  },
   dashboard: {
     stats: () => request<any>('/dashboard/stats'),
     charts: () => request<any>('/dashboard/charts'),

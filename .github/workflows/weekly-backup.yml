@@ -1,0 +1,39 @@
+name: Weekly Database Backup
+
+on:
+  schedule:
+    - cron: '0 6 * * 0'  # Every Sunday at 6:00 AM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  backup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Install PostgreSQL client
+        run: sudo apt-get update && sudo apt-get install -y postgresql-client
+
+      - name: Create backup
+        env:
+          DATABASE_URL: ${{ secrets.DATABASE_URL }}
+        run: |
+          TIMESTAMP=$(date +%Y-%m-%d)
+          pg_dump "$DATABASE_URL" --no-owner --no-acl --clean --if-exists > "cementbook-backup-${TIMESTAMP}.sql"
+          echo "TIMESTAMP=${TIMESTAMP}" >> $GITHUB_ENV
+          echo "Backup file size: $(du -h cementbook-backup-${TIMESTAMP}.sql | cut -f1)"
+
+      - name: Upload backup as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: cementbook-backup-${{ env.TIMESTAMP }}
+          path: cementbook-backup-${{ env.TIMESTAMP }}.sql
+          retention-days: 90
+
+      - name: Create release with backup
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: backup-${{ env.TIMESTAMP }}
+          name: "Weekly Backup - ${{ env.TIMESTAMP }}"
+          body: "Automated weekly database backup created on ${{ env.TIMESTAMP }}"
+          files: cementbook-backup-${{ env.TIMESTAMP }}.sql
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
