@@ -166,6 +166,8 @@ export default function PartyLedger() {
     return { totalBags, totalCharged, totalReceived, outstanding };
   }, [ledgerEntries, openingBalance]);
 
+  const isSupplier = party?.type === 'supplier';
+
   const columns = useMemo<ColumnDef<LedgerTableRow, any>[]>(
     () => [
       { accessorKey: 'sno', header: 'S.No' },
@@ -196,33 +198,47 @@ export default function PartyLedger() {
       },
       {
         accessorKey: 'debit',
-        header: 'Debit',
+        // For supplier: debit = payment we made to them (reduces what we owe)
+        // For customer: debit = sale charged to them (increases what they owe)
+        header: isSupplier ? 'Paid by Us' : 'Charged (Dr)',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
           if (n <= 0) return '—';
-          return <span className="font-medium text-red-600">{formatINR(n)}</span>;
+          return (
+            <span className={`font-medium ${isSupplier ? 'text-emerald-600' : 'text-red-600'}`}>
+              {formatINR(n)}
+            </span>
+          );
         },
       },
       {
         accessorKey: 'credit',
-        header: 'Credit',
+        // For supplier: credit = goods purchased from them (increases what we owe)
+        // For customer: credit = payment received from them (reduces what they owe)
+        header: isSupplier ? 'Goods Received (Cr)' : 'Received (Cr)',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
           if (n <= 0) return '—';
-          return <span className="font-medium text-emerald-600">{formatINR(n)}</span>;
+          return (
+            <span className={`font-medium ${isSupplier ? 'text-orange-600' : 'text-emerald-600'}`}>
+              {formatINR(n)}
+            </span>
+          );
         },
       },
       {
         accessorKey: 'balance',
-        header: 'Balance',
+        header: isSupplier ? 'Balance (We Owe)' : 'Balance (They Owe)',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
-          const cls = n > 0 ? 'font-medium text-red-600' : '';
+          const cls = n > 0
+            ? `font-semibold ${isSupplier ? 'text-orange-600' : 'text-outstanding'}`
+            : 'font-medium text-profit';
           return <span className={cls}>{formatINR(n)}</span>;
         },
       },
     ],
-    []
+    [isSupplier]
   );
 
   const exportName = party ? `${safeExportBaseName(party.name)}_ledger` : 'ledger';
@@ -294,11 +310,16 @@ export default function PartyLedger() {
               </div>
               <div className="text-right">
                 {outstanding > 0 ? (
-                  <p className="text-2xl font-bold text-outstanding">
-                    {formatINR(outstanding)} <span className="text-lg font-semibold">Outstanding</span>
-                  </p>
+                  <div>
+                    <p className={`text-2xl font-bold ${party?.type === 'supplier' ? 'text-orange-600' : 'text-outstanding'}`}>
+                      {formatINR(outstanding)}
+                    </p>
+                    <p className={`text-sm font-semibold mt-0.5 ${party?.type === 'supplier' ? 'text-orange-500' : 'text-outstanding/80'}`}>
+                      {party?.type === 'supplier' ? 'We owe them (payable)' : 'They owe us (receivable)'}
+                    </p>
+                  </div>
                 ) : (
-                  <p className="text-2xl font-bold text-profit">All Paid</p>
+                  <p className="text-2xl font-bold text-profit">Settled</p>
                 )}
               </div>
             </div>

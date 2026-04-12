@@ -31,6 +31,7 @@ export type PartyRow = {
   type: PartyType | string | null;
   opening_balance: number;
   total_sales: number;
+  total_purchases: number;
   total_paid: number;
   outstanding: number;
   last_transaction: string | null;
@@ -213,28 +214,53 @@ export default function Parties() {
         ),
       },
       {
-        id: 'total_transactions',
-        header: 'Total Sales / Purchases',
+        accessorKey: 'total_sales',
+        header: 'Total Sales',
         cell: ({ row }) => {
-          const isSupplier = row.original.type === 'supplier';
-          const amount = isSupplier
-            ? Number((row.original as any).total_purchases) || 0
-            : Number(row.original.total_sales) || 0;
-          return <span className={isSupplier ? 'text-indigo-700' : ''}>{formatINR(amount)}</span>;
+          const n = Number(row.original.total_sales) || 0;
+          if (n === 0) return <span className="text-gray-400">—</span>;
+          return <span className="text-emerald-700 font-medium">{formatINR(n)}</span>;
+        },
+      },
+      {
+        accessorKey: 'total_purchases',
+        header: 'Total Purchases',
+        cell: ({ row }) => {
+          const n = Number(row.original.total_purchases) || 0;
+          if (n === 0) return <span className="text-gray-400">—</span>;
+          return <span className="text-indigo-700 font-medium">{formatINR(n)}</span>;
         },
       },
       {
         accessorKey: 'total_paid',
         header: 'Total Paid',
-        cell: ({ getValue }) => formatINR(Number(getValue()) || 0),
+        cell: ({ getValue }) => {
+          const n = Number(getValue()) || 0;
+          if (n === 0) return <span className="text-gray-400">—</span>;
+          return <span>{formatINR(n)}</span>;
+        },
       },
       {
         accessorKey: 'outstanding',
         header: 'Outstanding',
-        cell: ({ getValue }) => {
-          const n = Number(getValue()) || 0;
-          const cls = n > 0 ? 'text-outstanding font-medium' : n === 0 ? 'text-profit font-medium' : '';
-          return <span className={cls}>{formatINR(n)}</span>;
+        cell: ({ row }) => {
+          const n = Number(row.original.outstanding) || 0;
+          const isSupplier = row.original.type === 'supplier';
+          if (n === 0) return <span className="text-profit font-medium">Settled</span>;
+          if (isSupplier) {
+            return (
+              <div>
+                <span className="font-semibold text-orange-600">{formatINR(n)}</span>
+                <p className="text-xs text-orange-500">We owe them</p>
+              </div>
+            );
+          }
+          return (
+            <div>
+              <span className="font-semibold text-outstanding">{formatINR(n)}</span>
+              <p className="text-xs text-outstanding/70">They owe us</p>
+            </div>
+          );
         },
       },
       {
