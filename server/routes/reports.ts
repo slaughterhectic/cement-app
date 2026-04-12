@@ -51,10 +51,10 @@ router.get('/brands', async (_req, res) => {
       SELECT cb.id, cb.name, cb.type,
         COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id=cb.id),0) as bags_purchased,
         COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id=cb.id),0) as bags_sold,
-        COALESCE((SELECT AVG(purchase_rate + COALESCE(freight_rate,0)) FROM purchases WHERE brand_id=cb.id),0) as avg_purchase_rate,
-        COALESCE((SELECT AVG(sale_rate) FROM sales WHERE brand_id=cb.id),0) as avg_sale_rate,
-        COALESCE((SELECT AVG(sale_rate) FROM sales WHERE brand_id=cb.id),0)
-          - COALESCE((SELECT AVG(purchase_rate + COALESCE(freight_rate,0)) FROM purchases WHERE brand_id=cb.id),0) as avg_margin,
+        COALESCE((SELECT CASE WHEN SUM(bags)>0 THEN SUM((purchase_rate+COALESCE(freight_rate,0))*bags)/SUM(bags) ELSE 0 END FROM purchases WHERE brand_id=cb.id),0) as avg_purchase_rate,
+        COALESCE((SELECT CASE WHEN SUM(bags)>0 THEN SUM(sale_rate*bags)/SUM(bags) ELSE 0 END FROM sales WHERE brand_id=cb.id),0) as avg_sale_rate,
+        COALESCE((SELECT CASE WHEN SUM(bags)>0 THEN SUM(sale_rate*bags)/SUM(bags) ELSE 0 END FROM sales WHERE brand_id=cb.id),0)
+          - COALESCE((SELECT CASE WHEN SUM(bags)>0 THEN SUM((purchase_rate+COALESCE(freight_rate,0))*bags)/SUM(bags) ELSE 0 END FROM purchases WHERE brand_id=cb.id),0) as avg_margin,
         COALESCE((SELECT SUM(sale_amount) FROM sales WHERE brand_id=cb.id),0)
           - COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE brand_id=cb.id),0)
           - COALESCE((SELECT SUM(COALESCE(freight_rate,0) * bags) FROM purchases WHERE brand_id=cb.id),0) as total_profit
