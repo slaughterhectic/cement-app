@@ -58,17 +58,21 @@ export default function Sales() {
     monthFilter: '',
   });
   const [parties, setParties] = useState<{ id: number; name: string }[]>([]);
-  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [brands, setBrands] = useState<{ id: number; name: string; type: string }[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const params: Record<string, string> = {};
-      if (applied.startDate) params.start_date = applied.startDate;
-      if (applied.endDate) params.end_date = applied.endDate;
+      // If month is set, use it exclusively (don't mix with date range)
+      if (applied.monthFilter) {
+        params.month = applied.monthFilter;
+      } else {
+        if (applied.startDate) params.start_date = applied.startDate;
+        if (applied.endDate) params.end_date = applied.endDate;
+      }
       if (applied.partyFilter) params.party_id = applied.partyFilter;
       if (applied.brandFilter) params.brand_id = applied.brandFilter;
-      if (applied.monthFilter) params.month = applied.monthFilter;
       const res = (await api.sales.list(params)) as { data: SaleRow[] };
       setRows(res.data ?? []);
     } catch (e) {
@@ -93,11 +97,22 @@ export default function Sales() {
     });
   }, [startDate, endDate, partyFilter, brandFilter, monthFilter]);
 
+  const clearFilters = useCallback(() => {
+    setStartDate('');
+    setEndDate('');
+    setPartyFilter('');
+    setBrandFilter('');
+    setMonthFilter('');
+    setApplied({ startDate: '', endDate: '', partyFilter: '', brandFilter: '', monthFilter: '' });
+  }, []);
+
+  const hasActiveFilters = applied.startDate || applied.endDate || applied.partyFilter || applied.brandFilter || applied.monthFilter;
+
   useEffect(() => {
     Promise.all([api.parties.list(), api.brands.list()])
       .then(([p, b]) => {
         setParties(p as { id: number; name: string }[]);
-        setBrands(b as { id: number; name: string }[]);
+        setBrands(b as { id: number; name: string; type: string }[]);
       })
       .catch(() => {});
   }, []);
@@ -359,7 +374,7 @@ export default function Sales() {
             <option value="">All brands</option>
             {brands.map((b) => (
               <option key={b.id} value={String(b.id)}>
-                {b.name}
+                {b.name} ({b.type})
               </option>
             ))}
           </select>
@@ -370,7 +385,10 @@ export default function Sales() {
             type="month"
             className="input-field"
             value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
+            onChange={(e) => {
+              setMonthFilter(e.target.value);
+              if (e.target.value) { setStartDate(''); setEndDate(''); }
+            }}
           />
         </div>
         <button
@@ -380,6 +398,15 @@ export default function Sales() {
         >
           Apply
         </button>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <DataTable<SaleRow>
@@ -389,6 +416,14 @@ export default function Sales() {
         emptyMessage="No sales match your filters."
         emptyAction={{ label: 'New Sale', onClick: openCreate }}
         enableSelection
+        onDeleteSelected={async (ids) => {
+          if (!window.confirm(`Delete ${ids.length} sale(s)?`)) return;
+          try {
+            await Promise.all(ids.map((id) => api.sales.delete(id)));
+            addToast(`${ids.length} sale(s) deleted`);
+            load();
+          } catch (e) { addToast(e instanceof Error ? e.message : 'Delete failed', 'error'); }
+        }}
         exportFileName="sales"
         getRowClassName={(row) =>
           row.invoice_number ? 'bg-emerald-50' : undefined

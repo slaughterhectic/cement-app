@@ -43,7 +43,7 @@ export default function Purchases() {
     brandFilter: '',
     supplierFilter: '',
   });
-  const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
+  const [brands, setBrands] = useState<{ id: number; name: string; type: string }[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -76,8 +76,18 @@ export default function Purchases() {
     });
   }, [startDate, endDate, brandFilter, supplierFilter]);
 
+  const clearFilters = useCallback(() => {
+    setStartDate('');
+    setEndDate('');
+    setBrandFilter('');
+    setSupplierFilter('');
+    setApplied({ startDate: '', endDate: '', brandFilter: '', supplierFilter: '' });
+  }, []);
+
+  const hasActiveFilters = applied.startDate || applied.endDate || applied.brandFilter || applied.supplierFilter;
+
   useEffect(() => {
-    api.brands.list().then((b) => setBrands(b as { id: number; name: string }[])).catch(() => {});
+    api.brands.list().then((b) => setBrands(b as { id: number; name: string; type: string }[])).catch(() => {});
   }, []);
 
   const totals = useMemo(() => {
@@ -293,7 +303,7 @@ export default function Purchases() {
             <option value="">All brands</option>
             {brands.map((b) => (
               <option key={b.id} value={String(b.id)}>
-                {b.name}
+                {b.name} ({b.type})
               </option>
             ))}
           </select>
@@ -315,6 +325,15 @@ export default function Purchases() {
         >
           Apply
         </button>
+        {hasActiveFilters && (
+          <button
+            type="button"
+            onClick={clearFilters}
+            className="rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+          >
+            Clear
+          </button>
+        )}
       </div>
 
       <DataTable<PurchaseRow>
@@ -324,7 +343,18 @@ export default function Purchases() {
         emptyMessage="No purchases match your filters."
         emptyAction={{ label: 'New Purchase', onClick: openCreate }}
         enableSelection
+        onDeleteSelected={async (ids) => {
+          if (!window.confirm(`Delete ${ids.length} purchase(s)?`)) return;
+          try {
+            await Promise.all(ids.map((id) => api.purchases.delete(id)));
+            addToast(`${ids.length} purchase(s) deleted`);
+            load();
+          } catch (e) { addToast(e instanceof Error ? e.message : 'Delete failed', 'error'); }
+        }}
         exportFileName="purchases"
+        getRowClassName={(row) =>
+          row.invoice_number ? 'bg-emerald-50' : undefined
+        }
         canDelete={hasPermission('delete_purchases')}
         canDownload={hasPermission('download')}
         initialColumnVisibility={{ base_amount: false, cgst: false, sgst: false }}
