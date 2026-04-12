@@ -87,28 +87,21 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   });
 
   const partyId = watch('party_id');
-  const amountVal = watch('amount');
   const mode = watch('mode');
 
-  // Filter parties list by direction
-  const parties = useMemo(() => {
-    if (direction === 'pay') return allParties.filter((p) => p.type === 'supplier');
-    return allParties.filter((p) => p.type !== 'supplier');
-  }, [allParties, direction]);
+  // All parties shown regardless of direction
+  const parties = allParties;
 
   const selectedParty = useMemo(
     () => allParties.find((p) => p.id === Number(partyId)),
     [allParties, partyId]
   );
   const outstanding = selectedParty?.outstanding ?? 0;
-  const amountNum = typeof amountVal === 'number' && !Number.isNaN(amountVal) ? amountVal : NaN;
-  const exceedsOutstanding =
-    selectedParty != null && !Number.isNaN(amountNum) && amountNum > outstanding;
 
   const loadParties = useCallback(async () => {
     setLoadingParties(true);
     try {
-      const rows = (await api.payments.partiesWithDues()) as PartyWithDue[];
+      const rows = (await api.parties.list()) as PartyWithDue[];
       setAllParties(Array.isArray(rows) ? rows : []);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load parties', 'error');
@@ -167,20 +160,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
     if (p) setPartyQuery(p.name);
   }, [partyId, allParties]);
 
-  // When direction changes, clear selected party if it doesn't match
-  useEffect(() => {
-    if (!partyId) return;
-    const p = allParties.find((x) => x.id === partyId);
-    if (!p) return;
-    const isSupplier = p.type === 'supplier';
-    if (direction === 'pay' && !isSupplier) {
-      setValue('party_id', 0, { shouldValidate: false });
-      setPartyQuery('');
-    } else if (direction === 'receive' && isSupplier) {
-      setValue('party_id', 0, { shouldValidate: false });
-      setPartyQuery('');
-    }
-  }, [direction, partyId, allParties, setValue]);
+  // Direction change no longer clears party — any party is valid for either direction
 
   useEffect(() => {
     const onDoc = (e: MouseEvent) => {
@@ -204,15 +184,6 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   }, [parties, partyQuery]);
 
   const onSubmit = async (values: PaymentFormValues) => {
-    const party = allParties.find((p) => p.id === values.party_id);
-    const out = party?.outstanding ?? 0;
-    if (values.amount > out) {
-      setError('amount', {
-        type: 'manual',
-        message: `Outstanding balance is ${formatINR(out)}. You cannot record more than this.`,
-      });
-      return;
-    }
     setSubmitting(true);
     try {
       await api.payments.create({
@@ -234,7 +205,6 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   };
 
   const amountErrorMsg = errors.amount?.message;
-  const exceedCopy = `Outstanding balance is ${formatINR(outstanding)}. You cannot record more than this.`;
   const isPay = direction === 'pay';
 
   return (
@@ -255,7 +225,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               }`}
             >
               <p className="font-semibold">Receive</p>
-              <p className="text-xs mt-0.5 opacity-80">Customer paid us — reduces their due</p>
+              <p className="text-xs mt-0.5 opacity-80">Money came in — reduces their due</p>
             </button>
             <button
               type="button"
@@ -267,7 +237,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               }`}
             >
               <p className="font-semibold">Pay</p>
-              <p className="text-xs mt-0.5 opacity-80">We paid supplier — reduces our due</p>
+              <p className="text-xs mt-0.5 opacity-80">Money went out — reduces our due</p>
             </button>
           </div>
         </div>
@@ -279,9 +249,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         </div>
 
         <div className="relative" ref={partyWrapRef}>
-          <label className="mb-1 block text-sm font-medium text-heading">
-            {isPay ? 'Supplier *' : 'Customer / Party *'}
-          </label>
+          <label className="mb-1 block text-sm font-medium text-heading">Party *</label>
           <input
             type="text"
             className="input-field w-full"
@@ -292,13 +260,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               if (partyId) setValue('party_id', 0, { shouldValidate: true });
             }}
             onFocus={() => setPartyMenuOpen(true)}
-            placeholder={
-              loadingParties
-                ? 'Loading…'
-                : isPay
-                ? 'Search supplier…'
-                : 'Search customer…'
-            }
+            placeholder={loadingParties ? 'Loading…' : 'Search party…'}
             autoComplete="off"
           />
           {errors.party_id && <p className="mt-1 text-xs text-red-600">{errors.party_id.message}</p>}
@@ -317,10 +279,17 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
                       clearErrors('amount');
                     }}
                   >
-                    <span className="font-medium">{p.name}</span>
-                    <span className={`text-xs font-semibold ${isPay ? 'text-orange-600' : 'text-outstanding'}`}>
-                      {isPay ? 'We owe: ' : 'They owe: '}{formatINR(p.outstanding)}
-                    </span>
+                    <div className="flex items-center gap-2 min-w-0">
+                      <span className="font-medium truncate">{p.name}</span>
+                      <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize ${
+                        p.type === 'supplier' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+                      }`}>{p.type ?? 'other'}</span>
+                    </div>
+                    {p.outstanding > 0 && (
+                      <span className={`shrink-0 text-xs font-semibold ${p.type === 'supplier' ? 'text-orange-600' : 'text-outstanding'}`}>
+                        {p.type === 'supplier' ? 'We owe: ' : 'Due: '}{formatINR(p.outstanding)}
+                      </span>
+                    )}
                   </button>
                 </li>
               ))}
@@ -328,7 +297,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
           )}
           {partyMenuOpen && !loadingParties && filteredParties.length === 0 && (
             <div className="absolute z-20 mt-1 w-full rounded-md border border-card-border bg-white py-3 px-3 text-sm text-gray-500 shadow-lg">
-              No {isPay ? 'suppliers' : 'customers'} with outstanding dues found.
+              No parties found.
             </div>
           )}
           <input type="hidden" {...register('party_id', { valueAsNumber: true })} />
@@ -336,24 +305,19 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
 
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Amount *</label>
-          {selectedParty != null && (
-            <p className={`mb-1 text-sm font-medium ${isPay ? 'text-orange-600' : 'text-outstanding'}`}>
-              {isPay ? 'We owe them' : 'They owe us'}: {formatINR(outstanding)}
+          {selectedParty != null && outstanding > 0 && (
+            <p className={`mb-1 text-sm font-medium ${selectedParty.type === 'supplier' ? 'text-orange-600' : 'text-outstanding'}`}>
+              {selectedParty.type === 'supplier' ? 'We owe them' : 'They owe us'}: {formatINR(outstanding)}
             </p>
           )}
           <input
             type="number"
             step="0.01"
             min={0}
-            max={selectedParty != null ? outstanding : undefined}
             className="input-field w-full"
             {...register('amount')}
           />
-          {exceedsOutstanding ? (
-            <p className="mt-1 text-xs text-red-600">{exceedCopy}</p>
-          ) : (
-            amountErrorMsg && <p className="mt-1 text-xs text-red-600">{amountErrorMsg}</p>
-          )}
+          {amountErrorMsg && <p className="mt-1 text-xs text-red-600">{amountErrorMsg}</p>}
         </div>
 
         <div>
@@ -420,7 +384,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
           <button type="button" onClick={onClose} className="btn-secondary">Cancel</button>
           <button
             type="submit"
-            disabled={submitting || exceedsOutstanding}
+            disabled={submitting}
             className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-50 ${
               isPay ? 'bg-orange-600 hover:bg-orange-700' : 'bg-brand-600 hover:bg-brand-700'
             }`}

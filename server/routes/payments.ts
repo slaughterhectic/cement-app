@@ -76,13 +76,6 @@ router.get('/parties-with-dues', async (_req, res) => {
 router.post('/', async (req, res) => {
   const { date, party_id, amount, mode, bank_name, remarks } = req.body;
   try {
-    const outstanding = await getOutstanding(party_id);
-    if (amount > outstanding) {
-      return res.status(400).json({
-        error: `Outstanding balance is ₹${Math.round(outstanding).toLocaleString('en-IN')}. You cannot record more than this.`,
-      });
-    }
-
     const result = await getOne(
       `INSERT INTO payments (date, party_id, amount, mode, bank_name, remarks) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
       [date, party_id, amount, mode, bank_name, remarks]
