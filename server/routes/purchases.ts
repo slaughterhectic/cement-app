@@ -74,29 +74,36 @@ router.get('/suppliers', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/purchases/rates/:brandId — distinct landed rates + total brand stock
+// GET /api/purchases/rates/:brandId — distinct landed rates with available stock per rate
 router.get('/rates/:brandId', async (req, res) => {
   try {
+    // available_bags per rate = total purchased at that rate - total sold at that cost_rate
     const rates = await getAll(`
-      SELECT
-        p.purchase_rate + COALESCE(p.freight_rate, 0) as landed_rate,
-        p.purchase_rate,
-        COALESCE(p.freight_rate, 0) as freight_rate,
-        SUM(p.bags) as purchased_bags,
-        MAX(p.date) as last_date
-      FROM purchases p WHERE p.brand_id = $1
-      GROUP BY p.purchase_rate, p.freight_rate
+      SELECT * FROM (
+        SELECT
+          p.purchase_rate + COALESCE(p.freight_rate, 0) as landed_rate,
+          p.purchase_rate,
+          COALESCE(p.freight_rate, 0) as freight_rate,
+          SUM(p.bags) as purchased_bags,
+          SUM(p.bags) - COALESCE(
+            (SELECT SUM(s.bags) FROM sales s
+             WHERE s.brand_id = $1
+               AND s.cost_rate = p.purchase_rate + COALESCE(p.freight_rate, 0)),
+            0
+          ) as available_bags,
+          MAX(p.date) as last_date
+        FROM purchases p
+        WHERE p.brand_id = $1
+        GROUP BY p.purchase_rate, p.freight_rate
+      ) sub
+      WHERE available_bags > 0
       ORDER BY landed_rate DESC
     `, [req.params.brandId]);
 
-    // Total stock for this brand = all purchased - all sold
-    const stockRow = await getOne(`
-      SELECT
-        COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id = $1), 0)
-        - COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id = $1), 0) as total_stock
-    `, [req.params.brandId]);
+    // Total stock for this brand = sum of available_bags across all rates
+    const totalStock = rates.reduce((sum: number, r: any) => sum + Number(r.available_bags), 0);
 
-    res.json({ rates, totalStock: Number(stockRow?.total_stock ?? 0) });
+    res.json({ rates, totalStock });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
