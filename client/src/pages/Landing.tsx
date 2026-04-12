@@ -92,7 +92,9 @@ export default function Landing() {
     <div className="min-h-screen bg-white text-heading">
       <header className="border-b border-card-border bg-white">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6">
-          <span className="text-xl font-bold text-heading">CementBook</span>
+          <span className="text-xl font-bold text-heading">
+            <span className="text-brand-500">arm</span>tech
+          </span>
           <Link to="/login" className="btn-primary">
             Sign in
           </Link>
@@ -103,8 +105,11 @@ export default function Landing() {
         <section className="mx-auto max-w-6xl px-4 py-16 md:px-6 md:py-24">
           <div className="mx-auto max-w-3xl text-center">
             <h1 className="text-4xl font-bold tracking-tight text-heading md:text-6xl">
-              CementBook
+              <span className="text-brand-500">arm</span>tech
             </h1>
+            <p className="mt-1 text-sm font-medium uppercase tracking-widest text-gray-400">
+              Innovation and Excellence
+            </p>
             <p className="mt-4 text-lg text-gray-600">
               Complete business management for cement traders.
             </p>
@@ -188,7 +193,7 @@ export default function Landing() {
 
       <footer className="bg-heading py-8 text-white">
         <div className="mx-auto grid max-w-6xl grid-cols-1 gap-4 px-4 text-center md:grid-cols-3 md:items-center md:px-6 md:text-left">
-          <span className="font-semibold">CementBook</span>
+          <span className="font-semibold"><span className="text-brand-400">arm</span>tech</span>
           <span className="text-sm text-white/80 md:text-center">Built for cement traders of UP</span>
           <span className="text-sm text-white/80 md:text-right">© 2026</span>
         </div>

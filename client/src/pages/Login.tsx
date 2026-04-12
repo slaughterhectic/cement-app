@@ -37,7 +37,10 @@ export default function Login() {
           <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-brand-500/20 ring-2 ring-brand-400/30">
             <Package className="h-10 w-10 text-brand-400" />
           </div>
-          <h1 className="text-4xl font-bold tracking-tight">CementBook</h1>
+          <h1 className="text-4xl font-bold tracking-tight">
+            <span className="text-brand-400">arm</span>tech
+          </h1>
+          <p className="mt-1 text-xs font-medium uppercase tracking-widest text-slate-500">Innovation and Excellence</p>
           <p className="mt-4 text-lg text-slate-300">
             Your complete cement dealership management platform.
           </p>
@@ -60,7 +63,9 @@ export default function Login() {
             <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-xl bg-brand-500/20 ring-2 ring-brand-400/30">
               <Package className="h-7 w-7 text-brand-400" />
             </div>
-            <h1 className="text-2xl font-bold text-white">CementBook</h1>
+            <h1 className="text-2xl font-bold text-white">
+              <span className="text-brand-400">arm</span>tech
+            </h1>
           </div>
 
           <div className="rounded-2xl bg-white/5 p-8 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">

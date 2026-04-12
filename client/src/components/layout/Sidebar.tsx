@@ -75,7 +75,9 @@ export function Sidebar() {
           <Building2 className="h-6 w-6" strokeWidth={2} />
         </div>
         {!collapsed && (
-          <span className="truncate font-semibold tracking-tight text-heading">CementBook</span>
+          <span className="truncate font-semibold tracking-tight text-heading">
+            <span className="text-brand-500">arm</span>tech
+          </span>
         )}
       </div>
 
