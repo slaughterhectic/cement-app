@@ -7,8 +7,6 @@ import { api } from '../../lib/api';
 import { formatDateInput, formatINR } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
 
-const BANKS = ['ARMTECH', 'KOTAK', 'HDFC', 'BOB', 'AXIS', 'OK', 'ICICI', 'Other'] as const;
-
 const amountField = z.preprocess(
   (v) => {
     if (v === '' || v == null || (typeof v === 'number' && Number.isNaN(v))) return undefined;
@@ -28,7 +26,7 @@ const baseSchema = z
   })
   .superRefine((data, ctx) => {
     if (data.mode === 'bank') {
-      if (!data.bank_name || !BANKS.includes(data.bank_name as (typeof BANKS)[number])) {
+      if (!data.bank_name?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a bank', path: ['bank_name'] });
       }
     }
@@ -59,6 +57,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   const partyWrapRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
   const [cashHandlers, setCashHandlers] = useState<string[]>([]);
+  const [bankOptions, setBankOptions] = useState<string[]>([]);
 
   const defaultValues = useMemo(
     () => ({
@@ -116,6 +115,9 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
     loadParties();
     api.imprest.handlers().then((rows: any[]) => {
       setCashHandlers(rows.map((r: any) => r.handler_name));
+    }).catch(() => {});
+    api.capital.banks().then((rows: any[]) => {
+      setBankOptions(rows.map((r: any) => r.bank_name));
     }).catch(() => {});
   }, [isOpen, loadParties]);
 
@@ -355,9 +357,10 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             <label className="mb-1 block text-sm font-medium text-heading">Bank *</label>
             <select className="input-field w-full" {...register('bank_name')}>
               <option value="">Select bank</option>
-              {BANKS.map((b) => (
-                <option key={b} value={b}>{b}</option>
-              ))}
+              {bankOptions.length > 0
+                ? bankOptions.map((b) => <option key={b} value={b}>{b}</option>)
+                : <option disabled value="">No banks configured — add in Settings → Banks</option>
+              }
             </select>
             {errors.bank_name && <p className="mt-1 text-xs text-red-600">{errors.bank_name.message}</p>}
           </div>

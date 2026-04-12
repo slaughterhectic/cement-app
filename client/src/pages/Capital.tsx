@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle } from 'lucide-react';
+// Note: Plus/Trash2/Pencil still used in ImprestSection
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -376,53 +377,19 @@ function ImprestSection() {
   );
 }
 
-function BankSection({ summary, onRefresh }: { summary: CapitalSummary; onRefresh: () => void }) {
-  const addToast = useToastStore((s) => s.addToast);
-  const hasPermission = useAuthStore((s) => s.hasPermission);
-  const [showAdd, setShowAdd] = useState(false);
-  const [form, setForm] = useState({ bank_name: '', opening_balance: '' });
-
-  const handleSave = async () => {
-    try {
-      await api.capital.upsertBank({ bank_name: form.bank_name.trim(), opening_balance: parseFloat(form.opening_balance) || 0 });
-      addToast('Bank updated', 'success');
-      setShowAdd(false);
-      setForm({ bank_name: '', opening_balance: '' });
-      onRefresh();
-    } catch {
-      addToast('Save failed', 'error');
-    }
-  };
-
-  const handleDelete = async (name: string) => {
-    if (!window.confirm(`Remove ${name} opening balance?`)) return;
-    try {
-      await api.capital.deleteBank(name);
-      addToast('Removed', 'success');
-      onRefresh();
-    } catch {
-      addToast('Delete failed', 'error');
-    }
-  };
-
+function BankSection({ summary }: { summary: CapitalSummary }) {
   return (
     <div className="space-y-3">
-      <div className="flex items-center justify-between">
-        <div>
-          <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
-          <p className="text-xs text-gray-500 mt-0.5">
-            Add bank accounts (e.g. Kotak, BOB, HDFC) and set their opening balance.
-            Running balance = Opening + receipts tagged to that bank − expenses paid via that bank.
-          </p>
-        </div>
-        <button type="button" onClick={() => setShowAdd(true)} className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium hover:bg-gray-50 shrink-0">
-          <Plus className="h-3.5 w-3.5" /> Add Bank
-        </button>
+      <div>
+        <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
+        <p className="text-xs text-gray-500 mt-0.5">
+          Manage bank accounts in <strong>Settings → Banks</strong>. Running balance = Opening + received payments − paid-out payments − expenses.
+        </p>
       </div>
 
       {summary.banks.length === 0 ? (
         <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-          No banks configured yet. Click "Add Bank" to add Kotak, BOB, HDFC etc. with their opening balances.
+          No banks configured yet. Go to <strong>Settings → Banks</strong> to add your bank accounts.
         </div>
       ) : (
         <div className="card overflow-hidden p-0">
@@ -464,29 +431,6 @@ function BankSection({ summary, onRefresh }: { summary: CapitalSummary; onRefres
               </tr>
             </tbody>
           </table>
-        </div>
-      )}
-
-      {showAdd && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
-            <h3 className="mb-4 text-base font-semibold">Add / Update Bank</h3>
-            <div className="space-y-3">
-              <div>
-                <label className="mb-1 block text-xs font-medium">Bank Name</label>
-                <input type="text" className="input-field w-full" placeholder="e.g. Kotak, BOB, HDFC" value={form.bank_name} onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))} />
-                <p className="mt-1 text-xs text-gray-500">Must match the bank name used in Payments and Expenses.</p>
-              </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium">Opening Balance (₹)</label>
-                <input type="number" step={0.01} className="input-field w-full" placeholder="Balance at the start of tracking" value={form.opening_balance} onChange={(e) => setForm((p) => ({ ...p, opening_balance: e.target.value }))} />
-              </div>
-            </div>
-            <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => setShowAdd(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
-              <button type="button" onClick={handleSave} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Save</button>
-            </div>
-          </div>
         </div>
       )}
     </div>
@@ -602,7 +546,7 @@ export default function Capital() {
           {/* Bank breakdown */}
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-heading">Bank breakdown</h2>
-            <BankSection summary={summary} onRefresh={load} />
+            <BankSection summary={summary} />
           </section>
 
           {/* Cash/Imprest section */}

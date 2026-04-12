@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
-import { Database, Download, HardDrive, Pencil, Plus, Trash2, ToggleLeft, ToggleRight } from 'lucide-react';
+import { Database, Download, HardDrive, Pencil, Plus, Trash2, ToggleLeft, ToggleRight, Landmark } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToastStore } from '../lib/store';
 import { Modal } from '../components/ui/Modal';
+import { formatINR } from '../lib/format';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -21,7 +22,7 @@ interface Godown {
   location: string | null;
 }
 
-type Tab = 'brands' | 'godowns' | 'backup';
+type Tab = 'brands' | 'godowns' | 'banks' | 'backup';
 
 const BRAND_TYPES = ['OPC', 'PPC', 'DAMAGE', 'OTHER'] as const;
 
@@ -335,6 +336,165 @@ function GodownsPanel() {
   );
 }
 
+// ─── Banks Panel ─────────────────────────────────────────────────────────────
+
+interface Bank {
+  bank_name: string;
+  opening_balance: number;
+}
+
+function BanksPanel() {
+  const addToast = useToastStore((s) => s.addToast);
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<Bank | null>(null);
+  const [form, setForm] = useState({ bank_name: '', opening_balance: '' });
+  const [saving, setSaving] = useState(false);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await api.capital.banks();
+      setBanks(data);
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm({ bank_name: '', opening_balance: '' });
+    setModalOpen(true);
+  };
+
+  const openEdit = (b: Bank) => {
+    setEditing(b);
+    setForm({ bank_name: b.bank_name, opening_balance: String(b.opening_balance) });
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
+    if (!form.bank_name.trim()) { addToast('Bank name is required', 'error'); return; }
+    setSaving(true);
+    try {
+      await api.capital.upsertBank({
+        bank_name: form.bank_name.trim().toUpperCase(),
+        opening_balance: parseFloat(form.opening_balance) || 0,
+      });
+      addToast(editing ? 'Bank updated' : 'Bank added');
+      setModalOpen(false);
+      load();
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (b: Bank) => {
+    if (!window.confirm(`Remove bank "${b.bank_name}"? This will not delete any transaction history.`)) return;
+    try {
+      await api.capital.deleteBank(b.bank_name);
+      addToast('Bank removed');
+      load();
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    }
+  };
+
+  return (
+    <>
+      <div className="flex items-center justify-between mb-4">
+        <p className="text-sm text-gray-500">{banks.length} bank{banks.length !== 1 ? 's' : ''} configured</p>
+        <button type="button" onClick={openAdd} className="btn-primary">
+          <Plus className="mr-2 h-4 w-4" /> Add Bank
+        </button>
+      </div>
+
+      <div className="card overflow-hidden p-0">
+        {loading ? (
+          <div className="p-8 text-center text-sm text-gray-400">Loading...</div>
+        ) : banks.length === 0 ? (
+          <div className="p-8 text-center text-sm text-gray-400">
+            No banks configured yet. Add your bank accounts here — they will appear in the Payment form and Capital page.
+          </div>
+        ) : (
+          <table className="min-w-full text-sm">
+            <thead>
+              <tr className="bg-gray-50 border-b border-gray-100">
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Bank Name</th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Opening Balance (₹)</th>
+                <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-100">
+              {banks.map((b) => (
+                <tr key={b.bank_name} className="hover:bg-gray-50/50">
+                  <td className="px-4 py-3 font-medium text-gray-900 flex items-center gap-2">
+                    <Landmark className="h-4 w-4 text-brand-500 shrink-0" />
+                    {b.bank_name}
+                  </td>
+                  <td className="px-4 py-3 text-right tabular-nums text-gray-700">{formatINR(b.opening_balance)}</td>
+                  <td className="px-4 py-3 text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <button type="button" onClick={() => openEdit(b)} className="rounded p-1.5 text-gray-500 hover:bg-gray-100" title="Edit">
+                        <Pencil className="h-4 w-4" />
+                      </button>
+                      <button type="button" onClick={() => handleDelete(b)} className="rounded p-1.5 text-red-500 hover:bg-red-50" title="Remove">
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
+      </div>
+
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title={editing ? 'Edit Bank' : 'Add Bank'}>
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Bank Name *</label>
+            <input
+              className="input-field"
+              value={form.bank_name}
+              onChange={(e) => setForm({ ...form, bank_name: e.target.value })}
+              placeholder="e.g. KOTAK, HDFC, BOB"
+              disabled={!!editing}
+            />
+            {editing && <p className="mt-1 text-xs text-gray-500">Bank name cannot be changed (it links to transaction history).</p>}
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Opening Balance (₹)</label>
+            <input
+              className="input-field"
+              type="number"
+              step="0.01"
+              min={0}
+              value={form.opening_balance}
+              onChange={(e) => setForm({ ...form, opening_balance: e.target.value })}
+              placeholder="Balance at the start of tracking"
+            />
+            <p className="mt-1 text-xs text-gray-500">Balance before any transactions were recorded in this app.</p>
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
+              {saving ? 'Saving...' : editing ? 'Update' : 'Add Bank'}
+            </button>
+          </div>
+        </div>
+      </Modal>
+    </>
+  );
+}
+
 // ─── Backup Panel ────────────────────────────────────────────────────────────
 
 function BackupPanel() {
@@ -407,6 +567,7 @@ function BackupPanel() {
 const TAB_LABELS: Record<Tab, string> = {
   brands: 'Cement Brands',
   godowns: 'Godowns',
+  banks: 'Banks',
   backup: 'Backup',
 };
 
@@ -422,7 +583,7 @@ export default function Settings() {
 
       {/* Tabs */}
       <div className="flex gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
-        {(['brands', 'godowns', 'backup'] as Tab[]).map((t) => (
+        {(['brands', 'godowns', 'banks', 'backup'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -440,6 +601,7 @@ export default function Settings() {
 
       {tab === 'brands' && <BrandsPanel />}
       {tab === 'godowns' && <GodownsPanel />}
+      {tab === 'banks' && <BanksPanel />}
       {tab === 'backup' && <BackupPanel />}
     </div>
   );
