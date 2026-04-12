@@ -74,16 +74,21 @@ router.get('/suppliers', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/purchases/rates/:brandId — distinct landed rates for a brand
+// GET /api/purchases/rates/:brandId — distinct landed rates with available bags
 router.get('/rates/:brandId', async (req, res) => {
   try {
     const rows = await getAll(`
-      SELECT DISTINCT purchase_rate + COALESCE(freight_rate, 0) as landed_rate,
-        purchase_rate, COALESCE(freight_rate, 0) as freight_rate,
-        SUM(bags) as total_bags,
-        MAX(date) as last_date
-      FROM purchases WHERE brand_id = $1
-      GROUP BY purchase_rate, freight_rate
+      SELECT
+        p.purchase_rate + COALESCE(p.freight_rate, 0) as landed_rate,
+        p.purchase_rate,
+        COALESCE(p.freight_rate, 0) as freight_rate,
+        SUM(p.bags) as purchased_bags,
+        COALESCE((SELECT SUM(s.bags) FROM sales s WHERE s.brand_id = $1 AND s.cost_rate = p.purchase_rate + COALESCE(p.freight_rate, 0)), 0) as sold_bags,
+        SUM(p.bags) - COALESCE((SELECT SUM(s.bags) FROM sales s WHERE s.brand_id = $1 AND s.cost_rate = p.purchase_rate + COALESCE(p.freight_rate, 0)), 0) as available_bags,
+        MAX(p.date) as last_date
+      FROM purchases p WHERE p.brand_id = $1
+      GROUP BY p.purchase_rate, p.freight_rate
+      HAVING SUM(p.bags) - COALESCE((SELECT SUM(s.bags) FROM sales s WHERE s.brand_id = $1 AND s.cost_rate = p.purchase_rate + COALESCE(p.freight_rate, 0)), 0) > 0
       ORDER BY landed_rate DESC
     `, [req.params.brandId]);
     res.json(rows);
