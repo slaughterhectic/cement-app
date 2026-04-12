@@ -51,12 +51,13 @@ router.get('/brands', async (_req, res) => {
       SELECT cb.id, cb.name, cb.type,
         COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id=cb.id),0) as bags_purchased,
         COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id=cb.id),0) as bags_sold,
-        COALESCE((SELECT AVG(purchase_rate) FROM purchases WHERE brand_id=cb.id),0) as avg_purchase_rate,
+        COALESCE((SELECT AVG(purchase_rate + COALESCE(freight_rate,0)) FROM purchases WHERE brand_id=cb.id),0) as avg_purchase_rate,
         COALESCE((SELECT AVG(sale_rate) FROM sales WHERE brand_id=cb.id),0) as avg_sale_rate,
         COALESCE((SELECT AVG(sale_rate) FROM sales WHERE brand_id=cb.id),0)
-          - COALESCE((SELECT AVG(purchase_rate) FROM purchases WHERE brand_id=cb.id),0) as avg_margin,
+          - COALESCE((SELECT AVG(purchase_rate + COALESCE(freight_rate,0)) FROM purchases WHERE brand_id=cb.id),0) as avg_margin,
         COALESCE((SELECT SUM(sale_amount) FROM sales WHERE brand_id=cb.id),0)
-          - COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE brand_id=cb.id),0) as total_profit
+          - COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE brand_id=cb.id),0)
+          - COALESCE((SELECT SUM(COALESCE(freight_rate,0) * bags) FROM purchases WHERE brand_id=cb.id),0) as total_profit
       FROM cement_brands cb WHERE cb.is_active=1 ORDER BY total_profit DESC
     `);
     res.json(brands);

@@ -119,7 +119,7 @@ app.get('/api/dashboard/stats', async (_req, res) => {
         SELECT cb.id,
           (COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id = cb.id), 0)
            - COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id = cb.id), 0)) as stock,
-          COALESCE((SELECT AVG(purchase_rate) FROM purchases WHERE brand_id = cb.id), 0) as avg_rate
+          COALESCE((SELECT AVG(purchase_rate + COALESCE(freight_rate, 0)) FROM purchases WHERE brand_id = cb.id), 0) as avg_rate
         FROM cement_brands cb
       ) sub WHERE sub.stock > 0
     `);

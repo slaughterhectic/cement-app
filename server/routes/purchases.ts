@@ -37,24 +37,24 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, supplier_name, brand_id, cement_type, bags, purchase_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
+  const { date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
   try {
     const result = await getOne(
-      `INSERT INTO purchases (date, supplier_name, brand_id, cement_type, bags, purchase_rate, godown_id, truck_number, source_location, invoice_number, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`,
-      [date, supplier_name, brand_id, cement_type, bags, purchase_rate, godown_id || null, truck_number, source_location, invoice_number || null, remarks]
+      `INSERT INTO purchases (date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
+      [date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks]
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
 router.put('/:id', async (req, res) => {
-  const { date, supplier_name, brand_id, cement_type, bags, purchase_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
+  const { date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
   try {
     const result = await getOne(
-      `UPDATE purchases SET date=$1, supplier_name=$2, brand_id=$3, cement_type=$4, bags=$5, purchase_rate=$6, godown_id=$7, truck_number=$8, source_location=$9, invoice_number=$10, remarks=$11
-       WHERE id=$12 RETURNING *`,
-      [date, supplier_name, brand_id, cement_type, bags, purchase_rate, godown_id || null, truck_number, source_location, invoice_number || null, remarks, req.params.id]
+      `UPDATE purchases SET date=$1, supplier_name=$2, brand_id=$3, cement_type=$4, bags=$5, purchase_rate=$6, freight_rate=$7, godown_id=$8, truck_number=$9, source_location=$10, invoice_number=$11, remarks=$12
+       WHERE id=$13 RETURNING *`,
+      [date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks, req.params.id]
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }

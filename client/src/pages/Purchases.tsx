@@ -17,6 +17,7 @@ export type PurchaseRow = {
   bags: number;
   purchase_rate: number;
   purchase_amount: number;
+  freight_rate: number;
   godown_id: number | null;
   godown_name: string | null;
   truck_number: string | null;
@@ -110,6 +111,7 @@ export default function Purchases() {
       cement_type: row.cement_type ?? '',
       bags: row.bags,
       purchase_rate: row.purchase_rate,
+      freight_rate: row.freight_rate ?? 0,
       godown_id: row.godown_id ?? undefined,
       truck_number: row.truck_number ?? '',
       source_location: row.source_location ?? '',
@@ -194,6 +196,29 @@ export default function Purchases() {
           const base = Number(row.purchase_amount) / (1 + rate / 100);
           return base * (rate / 2) / 100;
         },
+        cell: ({ getValue }) => formatINR(Number(getValue())),
+      },
+      {
+        accessorKey: 'freight_rate',
+        header: 'Freight (₹/bag)',
+        cell: ({ getValue }) => {
+          const v = Number(getValue());
+          return v > 0 ? formatINR(v) : '—';
+        },
+      },
+      {
+        id: 'freight_amount',
+        header: 'Freight Total (₹)',
+        accessorFn: (row: any) => (Number(row.freight_rate) || 0) * (Number(row.bags) || 0),
+        cell: ({ getValue }) => {
+          const v = Number(getValue());
+          return v > 0 ? formatINR(v) : '—';
+        },
+      },
+      {
+        id: 'landed_cost',
+        header: 'Landed Cost (₹)',
+        accessorFn: (row: any) => Number(row.purchase_amount) + (Number(row.freight_rate) || 0) * (Number(row.bags) || 0),
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
       {
@@ -357,7 +382,7 @@ export default function Purchases() {
         }
         canDelete={hasPermission('delete_purchases')}
         canDownload={hasPermission('download')}
-        initialColumnVisibility={{ base_amount: false, cgst: false, sgst: false }}
+        initialColumnVisibility={{ base_amount: false, cgst: false, sgst: false, freight_amount: false, landed_cost: false }}
       />
 
       <PurchaseForm

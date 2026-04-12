@@ -24,7 +24,7 @@ router.get('/', async (req, res) => {
     const { start_date, end_date, party_id, brand_id, month } = req.query;
     let sql = `
       SELECT s.*, p.name as party_name, cb.name as brand_name, g.name as godown_name,
-        (SELECT AVG(pu.purchase_rate) FROM purchases pu WHERE pu.brand_id = s.brand_id) as avg_purchase_rate
+        (SELECT AVG(pu.purchase_rate + COALESCE(pu.freight_rate, 0)) FROM purchases pu WHERE pu.brand_id = s.brand_id) as avg_purchase_rate
       FROM sales s
       JOIN parties p ON s.party_id = p.id
       JOIN cement_brands cb ON s.brand_id = cb.id

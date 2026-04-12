@@ -14,6 +14,7 @@ const schema = z.object({
   cement_type: z.string().optional(),
   bags: z.coerce.number().int().positive('Bags must be at least 1'),
   purchase_rate: z.coerce.number().positive('Rate must be positive'),
+  freight_rate: z.coerce.number().min(0).optional(),
   godown_id: z.coerce.number().int().positive('Godown is required'),
   truck_number: z.string().min(1, 'Truck number is required'),
   source_location: z.string().optional(),
@@ -52,6 +53,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
       cement_type: '',
       bags: 1,
       purchase_rate: 0,
+      freight_rate: 0,
       godown_id: 0,
       truck_number: '',
       source_location: '',
@@ -76,14 +78,22 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
 
   const bags = watch('bags');
   const purchaseRate = watch('purchase_rate');
+  const freightRate = watch('freight_rate');
   const brandId = watch('brand_id');
   const cementType = watch('cement_type');
 
+  const bagsNum = Number(bags) || 0;
   const purchaseAmount = useMemo(() => {
-    const b = Number(bags) || 0;
     const r = Number(purchaseRate) || 0;
-    return b * r;
-  }, [bags, purchaseRate]);
+    return bagsNum * r;
+  }, [bagsNum, purchaseRate]);
+
+  const freightAmount = useMemo(() => {
+    const fr = Number(freightRate) || 0;
+    return bagsNum * fr;
+  }, [bagsNum, freightRate]);
+
+  const totalLandedCost = purchaseAmount + freightAmount;
 
   // Entered amount IS the total (GST-inclusive). Back-calculate base.
   const gstRate = cementType === 'DAMAGE' ? 5 : 18;
@@ -120,6 +130,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         cement_type: editData.cement_type ?? '',
         bags: editData.bags,
         purchase_rate: editData.purchase_rate,
+        freight_rate: (editData as any).freight_rate ?? 0,
         godown_id: editData.godown_id ?? 0,
         truck_number: editData.truck_number ?? '',
         source_location: editData.source_location ?? '',
@@ -150,6 +161,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         cement_type: values.cement_type?.trim() || null,
         bags: values.bags,
         purchase_rate: values.purchase_rate,
+        freight_rate: values.freight_rate || 0,
         godown_id: values.godown_id,
         truck_number: values.truck_number?.trim() || null,
         source_location: values.source_location?.trim() || null,
@@ -241,27 +253,45 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               <p className="mt-1 text-xs text-red-600">{errors.purchase_rate.message}</p>
             )}
           </div>
-          {/* GST Breakdown */}
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Freight rate (₹ / bag)</label>
+            <input
+              type="number"
+              min={0}
+              step={0.01}
+              className="input-field w-full"
+              placeholder="0"
+              {...register('freight_rate')}
+            />
+            <p className="mt-1 text-xs text-gray-500">Optional. Transport cost per bag.</p>
+          </div>
+          {/* Amount Breakdown */}
           <div className="sm:col-span-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3">
             <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-brand-700">
               Amount Breakdown (GST {gstRate}% — {gstRate / 2}% CGST + {gstRate / 2}% SGST)
             </p>
-            <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
+            <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
               <div>
-                <p className="text-xs text-gray-500">Base amount</p>
+                <p className="text-xs text-gray-500">Purchase amount</p>
+                <p className="font-semibold text-gray-800">{formatINR(purchaseAmount)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-500">Base (excl GST)</p>
                 <p className="font-semibold text-gray-800">{formatINR(base)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">CGST ({gstRate / 2}%)</p>
-                <p className="font-semibold text-gray-800">{formatINR(cgst)}</p>
+                <p className="text-xs text-gray-500">CGST + SGST</p>
+                <p className="font-semibold text-gray-800">{formatINR(cgst + sgst)}</p>
               </div>
-              <div>
-                <p className="text-xs text-gray-500">SGST ({gstRate / 2}%)</p>
-                <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
-              </div>
-              <div>
-                <p className="text-xs text-gray-500">Total (entered)</p>
-                <p className="text-xl font-bold text-brand-900">{formatINR(purchaseAmount)}</p>
+              {freightAmount > 0 && (
+                <div>
+                  <p className="text-xs text-gray-500">Freight ({formatINR(Number(freightRate) || 0)}/bag × {bagsNum})</p>
+                  <p className="font-semibold text-amber-700">{formatINR(freightAmount)}</p>
+                </div>
+              )}
+              <div className={freightAmount > 0 ? 'sm:col-span-2' : 'sm:col-span-3'}>
+                <p className="text-xs text-gray-500">Total landed cost{freightAmount > 0 ? ' (purchase + freight)' : ''}</p>
+                <p className="text-xl font-bold text-brand-900">{formatINR(totalLandedCost)}</p>
               </div>
             </div>
           </div>
