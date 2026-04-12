@@ -501,6 +501,7 @@ function ExpenseCategoriesPanel() {
   const addToast = useToastStore((s) => s.addToast);
   const [categories, setCategories] = useState<{ id: number; name: string }[]>([]);
   const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
   const [newName, setNewName] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -518,13 +519,18 @@ function ExpenseCategoriesPanel() {
 
   useEffect(() => { load(); }, []);
 
-  const handleAdd = async () => {
+  const openAdd = () => {
+    setNewName('');
+    setModalOpen(true);
+  };
+
+  const handleSave = async () => {
     if (!newName.trim()) { addToast('Category name is required', 'error'); return; }
     setSaving(true);
     try {
       await api.expenseCategories.create(newName.trim());
       addToast('Category added');
-      setNewName('');
+      setModalOpen(false);
       load();
     } catch (e: any) {
       addToast(e.message, 'error');
@@ -548,25 +554,8 @@ function ExpenseCategoriesPanel() {
     <>
       <div className="flex items-center justify-between mb-4">
         <p className="text-sm text-gray-500">{categories.length} categor{categories.length !== 1 ? 'ies' : 'y'}</p>
-      </div>
-
-      {/* Add inline */}
-      <div className="mb-4 flex gap-2">
-        <input
-          type="text"
-          className="input-field flex-1"
-          placeholder="e.g. Repair & Maintenance"
-          value={newName}
-          onChange={(e) => setNewName(e.target.value)}
-          onKeyDown={(e) => e.key === 'Enter' && handleAdd()}
-        />
-        <button
-          type="button"
-          onClick={handleAdd}
-          disabled={saving || !newName.trim()}
-          className="btn-primary disabled:opacity-50"
-        >
-          <Plus className="mr-1.5 h-4 w-4" /> Add
+        <button type="button" onClick={openAdd} className="btn-primary">
+          <Plus className="mr-2 h-4 w-4" /> Add Category
         </button>
       </div>
 
@@ -574,7 +563,7 @@ function ExpenseCategoriesPanel() {
         {loading ? (
           <div className="p-8 text-center text-sm text-gray-400">Loading...</div>
         ) : categories.length === 0 ? (
-          <div className="p-8 text-center text-sm text-gray-400">No categories yet. Add one above.</div>
+          <div className="p-8 text-center text-sm text-gray-400">No categories yet. Click "Add Category" to get started.</div>
         ) : (
           <table className="min-w-full text-sm">
             <thead>
@@ -607,6 +596,28 @@ function ExpenseCategoriesPanel() {
           </table>
         )}
       </div>
+
+      <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)} title="Add Expense Category">
+        <div className="space-y-4">
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Category Name *</label>
+            <input
+              className="input-field"
+              value={newName}
+              onChange={(e) => setNewName(e.target.value)}
+              onKeyDown={(e) => e.key === 'Enter' && handleSave()}
+              placeholder="e.g. Repair & Maintenance"
+              autoFocus
+            />
+          </div>
+          <div className="flex justify-end gap-3 pt-2">
+            <button type="button" onClick={() => setModalOpen(false)} className="btn-secondary">Cancel</button>
+            <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
+              {saving ? 'Saving...' : 'Add Category'}
+            </button>
+          </div>
+        </div>
+      </Modal>
     </>
   );
 }
