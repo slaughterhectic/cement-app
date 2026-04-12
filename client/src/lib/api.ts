@@ -32,11 +32,19 @@ export const api = {
       }),
     me: () => request<{ user: any; permissions: string[] }>('/auth/me'),
     listUsers: () => request<any[]>('/auth/users'),
-    createUser: (data: { username: string; password: string; display_name: string; role: string }) =>
+    createUser: (data: { username: string; password: string; display_name: string; role: string; email?: string }) =>
       request<any>('/auth/users', { method: 'POST', body: JSON.stringify(data) }),
     deleteUser: (id: number) => request<any>(`/auth/users/${id}`, { method: 'DELETE' }),
     updatePermissions: (id: number, permissions: string[]) =>
       request<any>(`/auth/users/${id}/permissions`, { method: 'PUT', body: JSON.stringify({ permissions }) }),
+    updateEmail: (id: number, email: string) =>
+      request<any>(`/auth/users/${id}/email`, { method: 'PUT', body: JSON.stringify({ email }) }),
+    adminResetPassword: (id: number, new_password: string) =>
+      request<any>(`/auth/users/${id}/reset-password`, { method: 'POST', body: JSON.stringify({ new_password }) }),
+    forgotPassword: (email: string) =>
+      request<any>('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+    resetPassword: (token: string, new_password: string) =>
+      request<any>('/auth/reset-password', { method: 'POST', body: JSON.stringify({ token, new_password }) }),
   },
   backup: {
     download: async () => {

@@ -19,6 +19,7 @@ import Finance from './pages/Finance';
 import ImportPage from './pages/Import';
 import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
+import ResetPassword from './pages/ResetPassword';
 import { useAuthStore } from './lib/store';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -45,6 +46,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
+        <Route path="/reset-password" element={<ResetPassword />} />
         <Route
           element={
             <Protected>

@@ -2,7 +2,7 @@ import { FormEvent, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuthStore } from '../lib/store';
 import { api } from '../lib/api';
-import { Eye, EyeOff, Package, X } from 'lucide-react';
+import { Eye, EyeOff, Package, X, CheckCircle } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
@@ -13,6 +13,10 @@ export default function Login() {
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
   const [forgotOpen, setForgotOpen] = useState(false);
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotLoading, setForgotLoading] = useState(false);
+  const [forgotSent, setForgotSent] = useState(false);
+  const [forgotError, setForgotError] = useState('');
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();
@@ -159,27 +163,71 @@ export default function Login() {
           <div className="w-full max-w-sm rounded-2xl bg-slate-800 p-6 shadow-2xl ring-1 ring-white/10">
             <div className="mb-4 flex items-start justify-between">
               <div>
-                <h3 className="text-base font-semibold text-white">Forgot Password</h3>
-                <p className="mt-1 text-sm text-slate-400">Password reset assistance</p>
+                <h3 className="text-base font-semibold text-white">Reset Password</h3>
+                <p className="mt-1 text-sm text-slate-400">Enter your email to receive a reset link</p>
               </div>
               <button
                 type="button"
-                onClick={() => setForgotOpen(false)}
+                onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotEmail(''); setForgotError(''); }}
                 className="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white transition"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
-            <div className="rounded-lg border border-amber-500/20 bg-amber-500/10 p-4 text-sm text-amber-300">
-              Please contact your administrator to reset your password. They can update it from the User Management settings.
-            </div>
-            <button
-              type="button"
-              onClick={() => setForgotOpen(false)}
-              className="mt-4 w-full rounded-lg bg-slate-700 px-4 py-2.5 text-sm font-medium text-white hover:bg-slate-600 transition"
-            >
-              Got it
-            </button>
+
+            {forgotSent ? (
+              <div className="text-center py-2">
+                <CheckCircle className="mx-auto h-10 w-10 text-emerald-400 mb-3" />
+                <p className="text-sm font-semibold text-white">Check your inbox</p>
+                <p className="mt-1 text-sm text-slate-400">
+                  If an account with that email exists, a reset link has been sent. It expires in 1 hour.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotEmail(''); }}
+                  className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700 transition"
+                >
+                  Done
+                </button>
+              </div>
+            ) : (
+              <>
+                <div className="space-y-3">
+                  <input
+                    type="email"
+                    placeholder="your@email.com"
+                    value={forgotEmail}
+                    onChange={(e) => { setForgotEmail(e.target.value); setForgotError(''); }}
+                    className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  />
+                  {forgotError && <p className="text-sm text-red-400">{forgotError}</p>}
+                </div>
+                <button
+                  type="button"
+                  disabled={forgotLoading || !forgotEmail.trim()}
+                  onClick={async () => {
+                    setForgotLoading(true);
+                    setForgotError('');
+                    try {
+                      await api.auth.forgotPassword(forgotEmail.trim());
+                      setForgotSent(true);
+                    } catch (e: any) {
+                      setForgotError(e.message || 'Failed to send reset email');
+                    } finally {
+                      setForgotLoading(false);
+                    }
+                  }}
+                  className="mt-4 w-full rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-brand-700 disabled:opacity-50 transition"
+                >
+                  {forgotLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="h-4 w-4 animate-spin rounded-full border-2 border-white/30 border-t-white" />
+                      Sending…
+                    </span>
+                  ) : 'Send Reset Link'}
+                </button>
+              </>
+            )}
           </div>
         </div>
       )}

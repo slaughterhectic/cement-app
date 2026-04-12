@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Plus, Trash2, Shield, X } from 'lucide-react';
+import { Plus, Trash2, Shield, X, KeyRound, Mail } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToastStore } from '../lib/store';
 import Modal from '../components/ui/Modal';
@@ -23,6 +23,7 @@ interface User {
   username: string;
   role: string;
   display_name: string;
+  email: string | null;
   created_at: string;
   permissions: string[];
 }
@@ -33,7 +34,11 @@ export default function UserManagement() {
   const [loading, setLoading] = useState(true);
   const [showAddModal, setShowAddModal] = useState(false);
   const [permUserId, setPermUserId] = useState<number | null>(null);
-  const [form, setForm] = useState({ username: '', password: '', display_name: '', role: 'user' });
+  const [resetUserId, setResetUserId] = useState<number | null>(null);
+  const [emailEditId, setEmailEditId] = useState<number | null>(null);
+  const [form, setForm] = useState({ username: '', password: '', display_name: '', role: 'user', email: '' });
+  const [resetPw, setResetPw] = useState('');
+  const [emailVal, setEmailVal] = useState('');
   const [saving, setSaving] = useState(false);
 
   const loadUsers = async () => {
@@ -52,7 +57,7 @@ export default function UserManagement() {
 
   const handleAddUser = async () => {
     if (!form.username || !form.password || !form.display_name) {
-      addToast('All fields are required', 'error');
+      addToast('Username, password, and display name are required', 'error');
       return;
     }
     setSaving(true);
@@ -60,7 +65,7 @@ export default function UserManagement() {
       await api.auth.createUser(form);
       addToast('User created successfully');
       setShowAddModal(false);
-      setForm({ username: '', password: '', display_name: '', role: 'user' });
+      setForm({ username: '', password: '', display_name: '', role: 'user', email: '' });
       loadUsers();
     } catch (e: any) {
       addToast(e.message, 'error');
@@ -89,23 +94,52 @@ export default function UserManagement() {
       : [...current, permKey];
     try {
       await api.auth.updatePermissions(userId, updated);
-      setUsers((prev) =>
-        prev.map((u) => (u.id === userId ? { ...u, permissions: updated } : u))
-      );
+      setUsers((prev) => prev.map((u) => (u.id === userId ? { ...u, permissions: updated } : u)));
       addToast('Permissions updated');
     } catch (e: any) {
       addToast(e.message, 'error');
     }
   };
 
+  const handleAdminResetPassword = async () => {
+    if (!resetPw || resetPw.length < 6) { addToast('Password must be at least 6 characters', 'error'); return; }
+    setSaving(true);
+    try {
+      await api.auth.adminResetPassword(resetUserId!, resetPw);
+      addToast('Password reset successfully');
+      setResetUserId(null);
+      setResetPw('');
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleEmailSave = async () => {
+    setSaving(true);
+    try {
+      await api.auth.updateEmail(emailEditId!, emailVal.trim());
+      setUsers((prev) => prev.map((u) => (u.id === emailEditId ? { ...u, email: emailVal.trim() || null } : u)));
+      addToast('Email updated');
+      setEmailEditId(null);
+    } catch (e: any) {
+      addToast(e.message, 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const permUser = users.find((u) => u.id === permUserId);
+  const resetUser = users.find((u) => u.id === resetUserId);
+  const emailUser = users.find((u) => u.id === emailEditId);
 
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold text-heading">User Management</h1>
-          <p className="mt-1 text-sm text-gray-500">Manage users, roles, and permissions</p>
+          <p className="mt-1 text-sm text-gray-500">Manage users, roles, emails, and permissions</p>
         </div>
         <button type="button" onClick={() => setShowAddModal(true)} className="btn-primary">
           <Plus className="mr-2 h-4 w-4" />
@@ -122,6 +156,7 @@ export default function UserManagement() {
               <tr className="bg-gray-50">
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Username</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Display Name</th>
+                <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Email</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Role</th>
                 <th className="px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500">Permissions</th>
                 <th className="px-4 py-3 text-right text-xs font-medium uppercase tracking-wide text-gray-500">Actions</th>
@@ -132,11 +167,24 @@ export default function UserManagement() {
                 <tr key={u.id} className="hover:bg-gray-50/50">
                   <td className="px-4 py-3 text-sm font-medium text-gray-900">{u.username}</td>
                   <td className="px-4 py-3 text-sm text-gray-700">{u.display_name}</td>
+                  <td className="px-4 py-3 text-sm text-gray-500">
+                    <div className="flex items-center gap-1.5">
+                      <span className={u.email ? 'text-gray-700' : 'text-gray-400 italic'}>
+                        {u.email || 'No email set'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={() => { setEmailEditId(u.id); setEmailVal(u.email || ''); }}
+                        className="rounded p-0.5 text-gray-400 hover:text-brand-600 hover:bg-brand-50"
+                        title="Edit email"
+                      >
+                        <Mail className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </td>
                   <td className="px-4 py-3">
                     <span className={`inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                      u.role === 'admin'
-                        ? 'bg-brand-500/10 text-brand-700'
-                        : 'bg-gray-100 text-gray-700'
+                      u.role === 'admin' ? 'bg-brand-500/10 text-brand-700' : 'bg-gray-100 text-gray-700'
                     }`}>
                       {u.role}
                     </span>
@@ -150,6 +198,14 @@ export default function UserManagement() {
                   </td>
                   <td className="px-4 py-3 text-right">
                     <div className="flex items-center justify-end gap-1">
+                      <button
+                        type="button"
+                        onClick={() => { setResetUserId(u.id); setResetPw(''); }}
+                        className="rounded p-1.5 text-gray-600 hover:bg-amber-50 hover:text-amber-700"
+                        title="Reset password"
+                      >
+                        <KeyRound className="h-4 w-4" />
+                      </button>
                       {u.role !== 'admin' && (
                         <button
                           type="button"
@@ -183,47 +239,31 @@ export default function UserManagement() {
       <Modal isOpen={showAddModal} onClose={() => setShowAddModal(false)} title="Add User">
         <div className="space-y-4">
           <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Username</label>
-            <input
-              type="text"
-              className="input-field"
-              value={form.username}
-              onChange={(e) => setForm({ ...form, username: e.target.value })}
-            />
+            <label className="mb-1 block text-sm font-medium text-heading">Username *</label>
+            <input type="text" className="input-field" value={form.username} onChange={(e) => setForm({ ...form, username: e.target.value })} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Password</label>
-            <input
-              type="password"
-              className="input-field"
-              value={form.password}
-              onChange={(e) => setForm({ ...form, password: e.target.value })}
-            />
+            <label className="mb-1 block text-sm font-medium text-heading">Password *</label>
+            <input type="password" className="input-field" value={form.password} onChange={(e) => setForm({ ...form, password: e.target.value })} />
           </div>
           <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Display Name</label>
-            <input
-              type="text"
-              className="input-field"
-              value={form.display_name}
-              onChange={(e) => setForm({ ...form, display_name: e.target.value })}
-            />
+            <label className="mb-1 block text-sm font-medium text-heading">Display Name *</label>
+            <input type="text" className="input-field" value={form.display_name} onChange={(e) => setForm({ ...form, display_name: e.target.value })} />
+          </div>
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Email</label>
+            <input type="email" className="input-field" placeholder="user@example.com" value={form.email} onChange={(e) => setForm({ ...form, email: e.target.value })} />
+            <p className="mt-1 text-xs text-gray-500">Required for password reset emails.</p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Role</label>
-            <select
-              className="input-field"
-              value={form.role}
-              onChange={(e) => setForm({ ...form, role: e.target.value })}
-            >
+            <select className="input-field" value={form.role} onChange={(e) => setForm({ ...form, role: e.target.value })}>
               <option value="user">User</option>
               <option value="admin">Admin</option>
             </select>
           </div>
           <div className="flex justify-end gap-3 pt-2">
-            <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary">
-              Cancel
-            </button>
+            <button type="button" onClick={() => setShowAddModal(false)} className="btn-secondary">Cancel</button>
             <button type="button" onClick={handleAddUser} disabled={saving} className="btn-primary disabled:opacity-50">
               {saving ? 'Creating...' : 'Create User'}
             </button>
@@ -231,19 +271,80 @@ export default function UserManagement() {
         </div>
       </Modal>
 
+      {/* Edit Email Modal */}
+      {emailUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-heading">Set Email — {emailUser.display_name}</h2>
+              <button type="button" onClick={() => setEmailEditId(null)} className="rounded p-1 hover:bg-gray-100"><X className="h-4 w-4" /></button>
+            </div>
+            <input
+              type="email"
+              className="input-field w-full"
+              placeholder="user@example.com"
+              value={emailVal}
+              onChange={(e) => setEmailVal(e.target.value)}
+            />
+            <p className="mt-1 text-xs text-gray-500">This email is used for password reset links.</p>
+            <div className="flex justify-end gap-3 mt-4">
+              <button type="button" onClick={() => setEmailEditId(null)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={handleEmailSave} disabled={saving} className="btn-primary disabled:opacity-50">
+                {saving ? 'Saving...' : 'Save'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Admin Reset Password Modal */}
+      {resetUser && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
+          <div className="card w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-base font-semibold text-heading">Reset Password — {resetUser.display_name}</h2>
+              <button type="button" onClick={() => setResetUserId(null)} className="rounded p-1 hover:bg-gray-100"><X className="h-4 w-4" /></button>
+            </div>
+            <div className="space-y-3">
+              <div>
+                <label className="mb-1 block text-sm font-medium text-heading">New Password</label>
+                <input
+                  type="password"
+                  className="input-field w-full"
+                  placeholder="Min. 6 characters"
+                  value={resetPw}
+                  onChange={(e) => setResetPw(e.target.value)}
+                />
+              </div>
+              {resetUser.email && (
+                <p className="text-xs text-gray-500">
+                  A notification will be sent to <strong>{resetUser.email}</strong>.
+                </p>
+              )}
+              {!resetUser.email && (
+                <p className="text-xs text-amber-600">
+                  No email set for this user — no notification will be sent.
+                </p>
+              )}
+            </div>
+            <div className="flex justify-end gap-3 mt-4">
+              <button type="button" onClick={() => setResetUserId(null)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={handleAdminResetPassword} disabled={saving} className="rounded-lg bg-amber-600 px-4 py-2 text-sm font-medium text-white hover:bg-amber-700 disabled:opacity-50">
+                {saving ? 'Resetting...' : 'Reset Password'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Permissions Modal */}
       {permUser && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50">
           <div className="card w-full max-w-lg max-h-[80vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-heading">
-                Permissions for {permUser.display_name}
-              </h2>
-              <button type="button" onClick={() => setPermUserId(null)} className="rounded p-1 hover:bg-gray-100">
-                <X className="h-5 w-5" />
-              </button>
+              <h2 className="text-lg font-semibold text-heading">Permissions — {permUser.display_name}</h2>
+              <button type="button" onClick={() => setPermUserId(null)} className="rounded p-1 hover:bg-gray-100"><X className="h-5 w-5" /></button>
             </div>
-
             {['Pages', 'Delete', 'Other'].map((group) => (
               <div key={group} className="mb-4">
                 <h3 className="mb-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">{group}</h3>
@@ -251,10 +352,7 @@ export default function UserManagement() {
                   {ALL_PERMISSIONS.filter((p) => p.group === group).map((perm) => {
                     const checked = (permUser.permissions || []).includes(perm.key);
                     return (
-                      <label
-                        key={perm.key}
-                        className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 hover:bg-gray-50 cursor-pointer"
-                      >
+                      <label key={perm.key} className="flex items-center justify-between rounded-lg border border-gray-200 px-3 py-2.5 hover:bg-gray-50 cursor-pointer">
                         <span className="text-sm text-gray-700">{perm.label}</span>
                         <input
                           type="checkbox"
@@ -268,11 +366,8 @@ export default function UserManagement() {
                 </div>
               </div>
             ))}
-
             <div className="flex justify-end pt-2">
-              <button type="button" onClick={() => setPermUserId(null)} className="btn-primary">
-                Done
-              </button>
+              <button type="button" onClick={() => setPermUserId(null)} className="btn-primary">Done</button>
             </div>
           </div>
         </div>

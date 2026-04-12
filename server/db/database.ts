@@ -119,6 +119,17 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE parties ADD COLUMN IF NOT EXISTS parent_id INTEGER REFERENCES parties(id);`);
     await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS received BOOLEAN NOT NULL DEFAULT FALSE;`);
     await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS direction TEXT CHECK(direction IN ('pay','receive')) DEFAULT 'receive';`);
+    await client.query(`ALTER TABLE users ADD COLUMN IF NOT EXISTS email TEXT;`);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS password_reset_tokens (
+        id SERIAL PRIMARY KEY,
+        user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        token TEXT NOT NULL UNIQUE,
+        expires_at TIMESTAMPTZ NOT NULL,
+        used BOOLEAN DEFAULT FALSE,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
 
     // Add 'supplier' to parties type check
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check;`);
