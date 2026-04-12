@@ -27,6 +27,9 @@ const allowedOrigins = process.env.FRONTEND_URL
 app.use(cors({ origin: allowedOrigins, credentials: true }));
 app.use(express.json({ limit: '50mb' }));
 
+// Health check — no auth, used by keep-alive ping
+app.get('/api/health', (_req, res) => res.json({ ok: true }));
+
 // Auth routes (login is unprotected inside the router)
 app.use('/api/auth', authRouter);
 
