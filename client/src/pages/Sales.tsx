@@ -41,6 +41,7 @@ function marginClass(marginPerBag: number) {
 export default function Sales() {
   const addToast = useToastStore((s) => s.addToast);
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const isAdmin = useAuthStore((s) => s.isAdmin)();
   const [rows, setRows] = useState<SaleRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -199,26 +200,26 @@ export default function Sales() {
         cell: ({ getValue }) => getValue() ?? '—',
       },
       { accessorKey: 'bags', header: 'Bags' },
-      {
+      ...(isAdmin ? [{
         accessorKey: 'purchase_cost',
         header: 'Purchase Rate',
-        cell: ({ getValue }) => formatINR(Number(getValue() ?? 0)),
-      },
+        cell: ({ getValue }: any) => formatINR(Number(getValue() ?? 0)),
+      }] : []),
       {
         accessorKey: 'sale_rate',
         header: 'Sale Rate',
         cell: ({ getValue }) => formatINR(Number(getValue())),
       },
-      {
+      ...(isAdmin ? [{
         id: 'margin',
         header: 'Margin/bag',
-        cell: ({ row }) => {
+        cell: ({ row }: any) => {
           const pr = Number(row.original.purchase_cost ?? 0);
           const sr = Number(row.original.sale_rate);
           const m = sr - pr;
           return <span className={marginClass(m)}>{formatINR(m)}</span>;
         },
-      },
+      }] : []),
       {
         accessorKey: 'sale_amount',
         header: 'Sale Amount',
@@ -299,7 +300,7 @@ export default function Sales() {
         ),
       },
     ],
-    [handleDelete, openEdit]
+    [handleDelete, openEdit, isAdmin]
   );
 
   return (
@@ -316,10 +317,12 @@ export default function Sales() {
               Total amount:{' '}
               <span className="font-semibold text-gray-900">{formatINR(totals.totalAmount)}</span>
             </span>
-            <span>
-              Avg margin / bag:{' '}
-              <span className={marginClass(totals.avgMargin)}>{formatINR(totals.avgMargin)}</span>
-            </span>
+            {isAdmin && (
+              <span>
+                Avg margin / bag:{' '}
+                <span className={marginClass(totals.avgMargin)}>{formatINR(totals.avgMargin)}</span>
+              </span>
+            )}
           </div>
         </div>
         <button

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatINR, formatDate, formatNumber } from '../lib/format';
@@ -6,6 +6,7 @@ import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 import { BarChart3, TrendingUp, Users, FileSpreadsheet, Banknote, ChevronDown, ChevronUp } from 'lucide-react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { useAuthStore } from '../lib/store';
 
 type TabId = 'pnl' | 'brands' | 'outstanding' | 'daily' | 'collection';
 
@@ -82,7 +83,12 @@ const tabs: { id: TabId; label: string; icon: typeof BarChart3 }[] = [
 ];
 
 export default function Reports() {
-  const [tab, setTab] = useState<TabId>('pnl');
+  const isAdmin = useAuthStore((s) => s.isAdmin)();
+  const visibleTabs = useMemo(
+    () => (isAdmin ? tabs : tabs.filter((t) => t.id !== 'pnl')),
+    [isAdmin]
+  );
+  const [tab, setTab] = useState<TabId>(() => (isAdmin ? 'pnl' : 'brands'));
   const [pnlMonth, setPnlMonth] = useState(currentMonth);
   const [dailyMonth, setDailyMonth] = useState(currentMonth);
 
@@ -232,34 +238,42 @@ export default function Reports() {
       header: 'Bags Sold',
       cell: ({ getValue }) => formatNumber(Number(getValue()) || 0),
     },
-    {
-      accessorKey: 'avg_purchase_rate',
-      header: 'Avg Purchase Rate (₹)',
-      cell: ({ getValue }) => formatINR(Number(getValue()) || 0),
-    },
-    {
-      accessorKey: 'avg_sale_rate',
-      header: 'Avg Sale Rate (₹)',
-      cell: ({ getValue }) => formatINR(Number(getValue()) || 0),
-    },
-    {
-      accessorKey: 'avg_margin',
-      header: 'Avg Margin/Bag (₹)',
-      cell: ({ getValue }) => {
-        const v = Number(getValue()) || 0;
-        const cls = v >= 0 ? 'text-emerald-600' : 'text-red-600';
-        return <span className={`font-medium ${cls}`}>{formatINR(v)}</span>;
+    ...(isAdmin ? [
+      {
+        accessorKey: 'avg_purchase_rate',
+        header: 'Avg Purchase Rate (₹)',
+        cell: ({ getValue }: any) => formatINR(Number(getValue()) || 0),
       },
-    },
-    {
-      accessorKey: 'total_profit',
-      header: 'Total Profit (₹)',
-      cell: ({ getValue }) => {
-        const v = Number(getValue()) || 0;
-        const cls = v >= 0 ? 'text-green-600' : 'text-red-600';
-        return <span className={`font-semibold ${cls}`}>{formatINR(v)}</span>;
+      {
+        accessorKey: 'avg_sale_rate',
+        header: 'Avg Sale Rate (₹)',
+        cell: ({ getValue }: any) => formatINR(Number(getValue()) || 0),
       },
-    },
+      {
+        accessorKey: 'avg_margin',
+        header: 'Avg Margin/Bag (₹)',
+        cell: ({ getValue }: any) => {
+          const v = Number(getValue()) || 0;
+          const cls = v >= 0 ? 'text-emerald-600' : 'text-red-600';
+          return <span className={`font-medium ${cls}`}>{formatINR(v)}</span>;
+        },
+      },
+      {
+        accessorKey: 'total_profit',
+        header: 'Total Profit (₹)',
+        cell: ({ getValue }: any) => {
+          const v = Number(getValue()) || 0;
+          const cls = v >= 0 ? 'text-green-600' : 'text-red-600';
+          return <span className={`font-semibold ${cls}`}>{formatINR(v)}</span>;
+        },
+      },
+    ] : [
+      {
+        accessorKey: 'avg_sale_rate',
+        header: 'Avg Sale Rate (₹)',
+        cell: ({ getValue }: any) => formatINR(Number(getValue()) || 0),
+      },
+    ]),
   ];
 
   const outstandingColumns: ColumnDef<OutstandingRow, unknown>[] = [
@@ -384,7 +398,7 @@ export default function Reports() {
       </header>
 
       <div className="flex flex-wrap gap-2 border-b border-card-border pb-px">
-        {tabs.map(({ id, label, icon: Icon }) => (
+        {visibleTabs.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
             type="button"
