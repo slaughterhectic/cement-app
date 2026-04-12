@@ -74,35 +74,69 @@ router.get('/suppliers', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-// GET /api/purchases/rates/:brandId — distinct landed rates with available stock per rate
+// GET /api/purchases/rates/:brandId — distinct landed rates with available stock per rate (FIFO)
+// Sales with cost_rate>0 are attributed directly; cost_rate=0 (legacy) are applied FIFO (oldest lot first)
 router.get('/rates/:brandId', async (req, res) => {
   try {
-    // available_bags per rate = total purchased at that rate - total sold at that cost_rate
     const rates = await getAll(`
-      SELECT * FROM (
+      WITH purchase_rates AS (
         SELECT
-          p.purchase_rate + COALESCE(p.freight_rate, 0) as landed_rate,
-          p.purchase_rate,
-          COALESCE(p.freight_rate, 0) as freight_rate,
-          SUM(p.bags) as purchased_bags,
-          SUM(p.bags) - COALESCE(
-            (SELECT SUM(s.bags) FROM sales s
-             WHERE s.brand_id = $1
-               AND s.cost_rate = p.purchase_rate + COALESCE(p.freight_rate, 0)),
-            0
-          ) as available_bags,
-          MAX(p.date) as last_date
-        FROM purchases p
-        WHERE p.brand_id = $1
-        GROUP BY p.purchase_rate, p.freight_rate
-      ) sub
-      WHERE available_bags > 0
-      ORDER BY landed_rate DESC
+          purchase_rate + COALESCE(freight_rate, 0) AS landed_rate,
+          purchase_rate,
+          COALESCE(freight_rate, 0) AS freight_rate,
+          SUM(bags) AS purchased_bags,
+          MAX(date) AS last_date,
+          MIN(date) AS first_date
+        FROM purchases
+        WHERE brand_id = $1
+        GROUP BY purchase_rate, freight_rate
+      ),
+      direct_sold AS (
+        SELECT cost_rate, SUM(bags) AS bags_sold
+        FROM sales
+        WHERE brand_id = $1 AND COALESCE(cost_rate, 0) > 0
+        GROUP BY cost_rate
+      ),
+      after_direct AS (
+        SELECT pr.*,
+          GREATEST(0, pr.purchased_bags - COALESCE(ds.bags_sold, 0)) AS remaining_after_direct
+        FROM purchase_rates pr
+        LEFT JOIN direct_sold ds ON ds.cost_rate = pr.landed_rate
+      ),
+      unattributed AS (
+        SELECT COALESCE(SUM(bags), 0) AS total_unattr
+        FROM sales
+        WHERE brand_id = $1 AND COALESCE(cost_rate, 0) = 0
+      ),
+      fifo AS (
+        SELECT ad.*,
+          COALESCE(SUM(ad.remaining_after_direct) OVER (
+            ORDER BY ad.first_date, ad.landed_rate
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+          ), 0) AS cum_start
+        FROM after_direct ad
+      )
+      SELECT
+        f.landed_rate,
+        f.purchase_rate,
+        f.freight_rate,
+        f.purchased_bags,
+        GREATEST(0,
+          f.remaining_after_direct - GREATEST(0,
+            LEAST(u.total_unattr - f.cum_start, f.remaining_after_direct)
+          )
+        ) AS available_bags,
+        f.last_date
+      FROM fifo f, unattributed u
+      WHERE GREATEST(0,
+        f.remaining_after_direct - GREATEST(0,
+          LEAST(u.total_unattr - f.cum_start, f.remaining_after_direct)
+        )
+      ) > 0
+      ORDER BY f.landed_rate DESC
     `, [req.params.brandId]);
 
-    // Total stock for this brand = sum of available_bags across all rates
     const totalStock = rates.reduce((sum: number, r: any) => sum + Number(r.available_bags), 0);
-
     res.json({ rates, totalStock });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
