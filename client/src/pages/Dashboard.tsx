@@ -1,7 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AlertCircle, Building2, IndianRupee, Package, TrendingUp, Wallet } from 'lucide-react';
 import { OutstandingBarChart } from '../components/charts/OutstandingBarChart';
-import { ProfitLineChart } from '../components/charts/ProfitLineChart';
 import { SalesBarChart } from '../components/charts/SalesBarChart';
 import { KPICard } from '../components/ui/KPICard';
 import { SkeletonCard } from '../components/ui/Skeleton';
@@ -125,15 +124,18 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [charts, setCharts] = useState<DashboardCharts | null>(null);
+  const [collection, setCollection] = useState<{ rows: any[]; daily: any[] } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
-    Promise.all([api.dashboard.stats(), api.dashboard.charts()])
-      .then(([s, c]) => {
+    const currentMonth = new Date().toISOString().slice(0, 7);
+    Promise.all([api.dashboard.stats(), api.dashboard.charts(), api.reports.dailyCollection(currentMonth)])
+      .then(([s, c, col]) => {
         if (!cancelled) {
           setStats(s as DashboardStats);
           setCharts(c as DashboardCharts);
+          setCollection(col as { rows: any[]; daily: any[] });
         }
       })
       .catch(() => {
@@ -142,9 +144,6 @@ export default function Dashboard() {
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
   }, []);
-
-  const revenue = charts?.dailyRevenue?.map((r) => ({ date: r.date, revenue: Number(r.revenue) })) ?? [];
-  const cost = charts?.dailyCost?.map((c) => ({ date: c.date, cost: Number(c.cost) })) ?? [];
 
   return (
     <div className="space-y-8">
@@ -243,11 +242,55 @@ export default function Dashboard() {
         </div>
       </section>
 
-      {/* Charts row 2 */}
+      {/* Charts row 2 — Collection + Outstanding */}
       <section className="grid gap-4 lg:grid-cols-2 items-stretch">
-        <div className="h-full">
-          {loading || !charts ? <ChartSkeleton /> : (
-            <ProfitLineChart revenue={revenue} cost={cost} title="Daily revenue vs cost" />
+        {/* Daily Collection this month */}
+        <div className="card flex flex-col gap-3 overflow-hidden p-0">
+          <div className="flex items-center justify-between border-b border-card-border px-4 py-3">
+            <h3 className="text-base font-semibold text-heading">Daily Collection — this month</h3>
+            {collection && (
+              <span className="text-sm font-semibold tabular-nums text-green-700">
+                {formatINR(collection.daily.reduce((s: number, d: any) => s + Number(d.total), 0))}
+              </span>
+            )}
+          </div>
+          {loading ? (
+            <div className="p-4 space-y-2">
+              {Array.from({ length: 5 }).map((_, i) => (
+                <div key={i} className="flex animate-pulse gap-3">
+                  <div className="h-4 w-24 rounded bg-gray-200" />
+                  <div className="h-4 flex-1 rounded bg-gray-200" />
+                  <div className="h-4 w-20 rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          ) : !collection || collection.daily.length === 0 ? (
+            <p className="px-4 py-6 text-center text-sm text-gray-400">No collections recorded this month.</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="min-w-full text-sm">
+                <thead>
+                  <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                    <th className="px-4 py-2">Date</th>
+                    <th className="px-4 py-2 text-right">Txns</th>
+                    <th className="px-4 py-2 text-right">Bank</th>
+                    <th className="px-4 py-2 text-right">Cash</th>
+                    <th className="px-4 py-2 text-right font-semibold text-green-700">Total</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                  {collection.daily.slice().reverse().map((d: any) => (
+                    <tr key={d.date} className="hover:bg-gray-50">
+                      <td className="px-4 py-2 font-medium">{formatDate(d.date)}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-gray-500">{d.count}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-blue-700">{formatINR(Number(d.bank))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-amber-700">{formatINR(Number(d.cash))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(d.total))}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
           )}
         </div>
         <div className="h-full">
