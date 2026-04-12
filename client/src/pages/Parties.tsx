@@ -90,7 +90,7 @@ export default function Parties() {
     setLoading(true);
     try {
       const data = (await api.parties.list()) as PartyRow[];
-      setRows((data ?? []).filter((r) => r.type !== 'dealer'));
+      setRows((data ?? []).filter((r) => r.type !== 'dealer' && !r.parent_id));
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load parties', 'error');
       setRows([]);
