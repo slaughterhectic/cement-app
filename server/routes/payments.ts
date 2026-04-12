@@ -5,11 +5,21 @@ import { requirePermission } from '../middleware/auth';
 const router = Router();
 
 async function getOutstanding(partyId: number): Promise<number> {
+  const party = await getOne('SELECT type, opening_balance FROM parties WHERE id=$1', [partyId]);
+  if (!party) return 0;
+  if (party.type === 'supplier') {
+    const r = await getOne(`
+      SELECT COALESCE($2::real, 0)
+           + COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE supplier_id=$1), 0)
+           - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1), 0) as outstanding
+    `, [partyId, party.opening_balance || 0]);
+    return Number(r.outstanding);
+  }
   const r = await getOne(`
-    SELECT COALESCE((SELECT opening_balance FROM parties WHERE id=$1), 0)
+    SELECT COALESCE($2::real, 0)
          + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=$1), 0)
          - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1), 0) as outstanding
-  `, [partyId]);
+  `, [partyId, party.opening_balance || 0]);
   return Number(r.outstanding);
 }
 

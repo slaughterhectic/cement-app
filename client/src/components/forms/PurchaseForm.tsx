@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { useForm, Controller } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -9,7 +9,7 @@ import { useToastStore } from '../../lib/store';
 
 const schema = z.object({
   date: z.string().min(1, 'Date is required'),
-  supplier_name: z.string().min(1, 'Supplier is required'),
+  supplier_id: z.coerce.number().int().positive('Supplier is required'),
   brand_id: z.coerce.number().int().positive('Brand is required'),
   cement_type: z.string().optional(),
   bags: z.coerce.number().int().positive('Bags must be at least 1'),
@@ -26,6 +26,7 @@ export type PurchaseFormValues = z.infer<typeof schema>;
 
 export interface PurchaseEditData extends PurchaseFormValues {
   id: number;
+  supplier_id?: number;
 }
 
 export interface PurchaseFormProps {
@@ -37,18 +38,22 @@ export interface PurchaseFormProps {
 
 type Brand = { id: number; name: string; type?: string };
 type Godown = { id: number; name: string };
+type Party = { id: number; name: string; type?: string };
 
 export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseFormProps) {
   const addToast = useToastStore((s) => s.addToast);
-  const [suppliers, setSuppliers] = useState<string[]>([]);
+  const [parties, setParties] = useState<Party[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [supplierQuery, setSupplierQuery] = useState('');
+  const [supplierMenuOpen, setSupplierMenuOpen] = useState(false);
+  const supplierWrapRef = useRef<HTMLDivElement>(null);
   const [submitting, setSubmitting] = useState(false);
 
   const defaultValues = useMemo(
     () => ({
       date: formatDateInput(),
-      supplier_name: '',
+      supplier_id: 0,
       brand_id: 0,
       cement_type: '',
       bags: 1,
@@ -104,10 +109,10 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    Promise.all([api.purchases.suppliers(), api.brands.list(), api.godowns.list()])
-      .then(([sup, br, gd]) => {
+    Promise.all([api.parties.list(), api.brands.list(), api.godowns.list()])
+      .then(([pt, br, gd]) => {
         if (!cancelled) {
-          setSuppliers(sup as string[]);
+          setParties(pt as Party[]);
           setBrands(br as Brand[]);
           setGodowns(gd as Godown[]);
         }
@@ -125,7 +130,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
     if (editData) {
       reset({
         date: formatDateInput(editData.date),
-        supplier_name: editData.supplier_name,
+        supplier_id: editData.supplier_id ?? 0,
         brand_id: editData.brand_id,
         cement_type: editData.cement_type ?? '',
         bags: editData.bags,
@@ -137,13 +142,23 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         invoice_number: (editData as any).invoice_number ?? '',
         remarks: editData.remarks ?? '',
       });
+      const p = parties.find((x) => x.id === editData.supplier_id);
+      setSupplierQuery(p?.name ?? (editData as any).supplier_name ?? '');
     } else {
-      reset({
-        ...defaultValues,
-        date: formatDateInput(),
-      });
+      reset({ ...defaultValues, date: formatDateInput() });
+      setSupplierQuery('');
     }
-  }, [isOpen, editData, reset, defaultValues]);
+  }, [isOpen, editData, reset, defaultValues, parties]);
+
+  useEffect(() => {
+    const onDoc = (e: MouseEvent) => {
+      if (supplierWrapRef.current && !supplierWrapRef.current.contains(e.target as Node)) {
+        setSupplierMenuOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', onDoc);
+    return () => document.removeEventListener('mousedown', onDoc);
+  }, []);
 
   useEffect(() => {
     if (!brandId || brandId === 0) return;
@@ -151,12 +166,19 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
     if (b?.type) setValue('cement_type', b.type);
   }, [brandId, brands, setValue]);
 
+  const filteredSuppliers = useMemo(() => {
+    const q = supplierQuery.trim().toLowerCase();
+    const list = parties.filter((p) => p.type === 'supplier' || !p.type);
+    if (!q) return list.slice(0, 50);
+    return list.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
+  }, [parties, supplierQuery]);
+
   const onSubmit = async (values: PurchaseFormValues) => {
     setSubmitting(true);
     try {
       const payload = {
         date: values.date,
-        supplier_name: values.supplier_name.trim(),
+        supplier_id: values.supplier_id,
         brand_id: values.brand_id,
         cement_type: values.cement_type?.trim() || null,
         bags: values.bags,
@@ -198,22 +220,42 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
             <input type="date" className="input-field w-full" {...register('date')} />
             {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
           </div>
-          <div>
+          <div className="relative" ref={supplierWrapRef}>
             <label className="mb-1 block text-sm font-medium text-heading">Supplier *</label>
             <input
               type="text"
-              list="purchase-suppliers-datalist"
               className="input-field w-full"
-              placeholder="Supplier name"
-              {...register('supplier_name')}
+              value={supplierQuery}
+              onChange={(e) => {
+                setSupplierQuery(e.target.value);
+                setSupplierMenuOpen(true);
+                setValue('supplier_id', 0, { shouldValidate: true });
+              }}
+              onFocus={() => setSupplierMenuOpen(true)}
+              placeholder="Search supplier…"
             />
-            <datalist id="purchase-suppliers-datalist">
-              {suppliers.map((s) => (
-                <option key={s} value={s} />
-              ))}
-            </datalist>
-            {errors.supplier_name && (
-              <p className="mt-1 text-xs text-red-600">{errors.supplier_name.message}</p>
+            <input type="hidden" {...register('supplier_id', { valueAsNumber: true })} />
+            {supplierMenuOpen && filteredSuppliers.length > 0 && (
+              <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-card-border bg-white py-1 shadow-lg">
+                {filteredSuppliers.map((p) => (
+                  <li key={p.id}>
+                    <button
+                      type="button"
+                      className="w-full px-3 py-2 text-left text-sm hover:bg-brand-50"
+                      onClick={() => {
+                        setValue('supplier_id', p.id, { shouldValidate: true });
+                        setSupplierQuery(p.name);
+                        setSupplierMenuOpen(false);
+                      }}
+                    >
+                      {p.name}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
+            {errors.supplier_id && (
+              <p className="mt-1 text-xs text-red-600">{errors.supplier_id.message}</p>
             )}
           </div>
           <div>

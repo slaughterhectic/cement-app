@@ -8,13 +8,22 @@ router.get('/', async (_req, res) => {
     const parties = await getAll(`
       SELECT p.*,
         COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0) as total_sales,
+        COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0) as total_purchases,
         COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as total_paid,
-        (COALESCE(p.opening_balance, 0)
-         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)) as outstanding,
+        CASE
+          WHEN p.type = 'supplier' THEN
+            COALESCE(p.opening_balance, 0)
+            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
+          ELSE
+            COALESCE(p.opening_balance, 0)
+            + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
+        END as outstanding,
         (SELECT MAX(d) FROM (
           SELECT date as d FROM sales WHERE party_id = p.id
           UNION ALL SELECT date FROM payments WHERE party_id = p.id
+          UNION ALL SELECT date FROM purchases WHERE supplier_id = p.id
         ) sub) as last_transaction
       FROM parties p ORDER BY p.name
     `);
@@ -49,19 +58,28 @@ router.get('/:id/summary', async (req, res) => {
     const party = await getOne('SELECT * FROM parties WHERE id=$1', [req.params.id]);
     if (!party) return res.status(404).json({ error: 'Party not found' });
 
+    const isSupplier = party.type === 'supplier';
+
     const totals = await getOne(`
       SELECT
         COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=$1), 0) as total_sales,
         COALESCE((SELECT SUM(bags) FROM sales WHERE party_id=$1), 0) as total_bags,
-        COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1), 0) as total_paid
+        COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1), 0) as total_paid,
+        COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE supplier_id=$1), 0) as total_purchases,
+        COALESCE((SELECT SUM(bags) FROM purchases WHERE supplier_id=$1), 0) as total_purchase_bags
     `, [party.id]);
+
+    const outstanding = isSupplier
+      ? (party.opening_balance || 0) + Number(totals.total_purchases) - Number(totals.total_paid)
+      : (party.opening_balance || 0) + Number(totals.total_sales) - Number(totals.total_paid);
 
     res.json({
       ...party,
       total_sales: Number(totals.total_sales),
-      total_bags: Number(totals.total_bags),
+      total_bags: Number(isSupplier ? totals.total_purchase_bags : totals.total_bags),
       total_paid: Number(totals.total_paid),
-      outstanding: (party.opening_balance || 0) + Number(totals.total_sales) - Number(totals.total_paid),
+      total_purchases: Number(totals.total_purchases),
+      outstanding,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -71,28 +89,68 @@ router.get('/:id/ledger', async (req, res) => {
     const party = await getOne('SELECT * FROM parties WHERE id=$1', [req.params.id]);
     if (!party) return res.status(404).json({ error: 'Party not found' });
 
-    const sales = await getAll(`
-      SELECT s.date, cb.name as particulars, s.bags as qty, s.sale_rate as rate,
-        s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
-      FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
-      WHERE s.party_id = $1
-    `, [party.id]);
+    const isSupplier = party.type === 'supplier';
 
-    const payments = await getAll(`
-      SELECT p.date,
-        ('Payment - ' || COALESCE(p.mode, 'bank') || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END) as particulars,
-        0 as qty, 0 as rate, 0 as debit, p.amount as credit, 'payment' as entry_type, p.id
-      FROM payments p WHERE p.party_id = $1
-    `, [party.id]);
+    let entries: any[] = [];
 
-    const ledger = [...sales, ...payments].sort((a: any, b: any) => {
-      if (a.date === b.date) return a.entry_type === 'sale' ? -1 : 1;
+    if (isSupplier) {
+      // Purchases = credit (they supplied goods, we owe them)
+      const purchases = await getAll(`
+        SELECT pu.date, cb.name as particulars, pu.bags as qty, pu.purchase_rate as rate,
+          0 as debit, pu.purchase_amount as credit, 'purchase' as entry_type, pu.id
+        FROM purchases pu
+        LEFT JOIN cement_brands cb ON pu.brand_id = cb.id
+        WHERE pu.supplier_id = $1
+      `, [party.id]);
+
+      // Payments = debit (we paid them)
+      const payments = await getAll(`
+        SELECT p.date,
+          ('Payment - ' || COALESCE(p.mode, 'bank') || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END) as particulars,
+          0 as qty, 0 as rate, p.amount as debit, 0 as credit, 'payment' as entry_type, p.id
+        FROM payments p WHERE p.party_id = $1
+      `, [party.id]);
+
+      entries = [...purchases, ...payments];
+    } else {
+      // Sales = debit (customer owes us)
+      const sales = await getAll(`
+        SELECT s.date, cb.name as particulars, s.bags as qty, s.sale_rate as rate,
+          s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
+        FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
+        WHERE s.party_id = $1
+      `, [party.id]);
+
+      // Payments = credit (customer paid us)
+      const payments = await getAll(`
+        SELECT p.date,
+          ('Payment - ' || COALESCE(p.mode, 'bank') || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END) as particulars,
+          0 as qty, 0 as rate, 0 as debit, p.amount as credit, 'payment' as entry_type, p.id
+        FROM payments p WHERE p.party_id = $1
+      `, [party.id]);
+
+      entries = [...sales, ...payments];
+    }
+
+    const ledger = entries.sort((a: any, b: any) => {
+      if (a.date === b.date) {
+        // purchases/sales before payments on same day
+        if (a.entry_type === 'payment') return 1;
+        if (b.entry_type === 'payment') return -1;
+        return 0;
+      }
       return a.date.localeCompare(b.date);
     });
 
     let balance = party.opening_balance || 0;
     const ledgerWithBalance = ledger.map((entry: any, idx: number) => {
-      balance = balance + Number(entry.debit || 0) - Number(entry.credit || 0);
+      if (isSupplier) {
+        // credit increases balance (we owe more), debit decreases (we paid)
+        balance = balance + Number(entry.credit || 0) - Number(entry.debit || 0);
+      } else {
+        // debit increases balance (customer owes more), credit decreases (they paid)
+        balance = balance + Number(entry.debit || 0) - Number(entry.credit || 0);
+      }
       return { ...entry, sno: idx + 1, balance };
     });
 

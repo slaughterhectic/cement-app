@@ -117,6 +117,28 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS freight_rate REAL DEFAULT 0;`);
     await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS cost_rate REAL DEFAULT 0;`);
 
+    // Add 'supplier' to parties type check
+    await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check;`);
+    await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','other','supplier'));`);
+
+    // Add supplier_id FK to purchases
+    await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES parties(id);`);
+
+    // Migrate existing supplier_name values into parties table (type = supplier) and link back
+    await client.query(`
+      INSERT INTO parties (name, type)
+      SELECT DISTINCT p.supplier_name, 'supplier'
+      FROM purchases p
+      WHERE p.supplier_name IS NOT NULL AND p.supplier_name != ''
+        AND NOT EXISTS (SELECT 1 FROM parties pt WHERE LOWER(pt.name) = LOWER(p.supplier_name));
+    `);
+    await client.query(`
+      UPDATE purchases p
+      SET supplier_id = pt.id
+      FROM parties pt
+      WHERE LOWER(pt.name) = LOWER(p.supplier_name) AND p.supplier_id IS NULL;
+    `);
+
     await client.query(`
       CREATE TABLE IF NOT EXISTS loans (
         id SERIAL PRIMARY KEY,

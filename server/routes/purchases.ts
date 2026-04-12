@@ -8,10 +8,13 @@ router.get('/', async (req, res) => {
   try {
     const { start_date, end_date, brand_id, supplier } = req.query;
     let sql = `
-      SELECT p.*, cb.name as brand_name, g.name as godown_name
+      SELECT p.*,
+        COALESCE(pt.name, p.supplier_name) as supplier_name,
+        cb.name as brand_name, g.name as godown_name
       FROM purchases p
       LEFT JOIN cement_brands cb ON p.brand_id = cb.id
       LEFT JOIN godowns g ON p.godown_id = g.id
+      LEFT JOIN parties pt ON p.supplier_id = pt.id
       WHERE 1=1
     `;
     const params: any[] = [];
@@ -20,7 +23,7 @@ router.get('/', async (req, res) => {
     if (start_date) { sql += ` AND p.date >= $${idx++}`; params.push(start_date); }
     if (end_date) { sql += ` AND p.date <= $${idx++}`; params.push(end_date); }
     if (brand_id) { sql += ` AND p.brand_id = $${idx++}`; params.push(brand_id); }
-    if (supplier) { sql += ` AND p.supplier_name ILIKE $${idx++}`; params.push(`%${supplier}%`); }
+    if (supplier) { sql += ` AND COALESCE(pt.name, p.supplier_name) ILIKE $${idx++}`; params.push(`%${supplier}%`); }
 
     sql += ' ORDER BY p.date DESC, p.id DESC';
     const rows = await getAll(sql, params);
@@ -37,24 +40,29 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
+  const { date, supplier_id, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
   try {
+    // Resolve supplier_name from party for backward compat
+    const party = supplier_id ? await getOne('SELECT name FROM parties WHERE id=$1', [supplier_id]) : null;
+    const supplier_name = party?.name ?? '';
     const result = await getOne(
-      `INSERT INTO purchases (date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING *`,
-      [date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks]
+      `INSERT INTO purchases (date, supplier_name, supplier_id, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13) RETURNING *`,
+      [date, supplier_name, supplier_id || null, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks]
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
 router.put('/:id', async (req, res) => {
-  const { date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
+  const { date, supplier_id, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
   try {
+    const party = supplier_id ? await getOne('SELECT name FROM parties WHERE id=$1', [supplier_id]) : null;
+    const supplier_name = party?.name ?? '';
     const result = await getOne(
-      `UPDATE purchases SET date=$1, supplier_name=$2, brand_id=$3, cement_type=$4, bags=$5, purchase_rate=$6, freight_rate=$7, godown_id=$8, truck_number=$9, source_location=$10, invoice_number=$11, remarks=$12
-       WHERE id=$13 RETURNING *`,
-      [date, supplier_name, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks, req.params.id]
+      `UPDATE purchases SET date=$1, supplier_name=$2, supplier_id=$3, brand_id=$4, cement_type=$5, bags=$6, purchase_rate=$7, freight_rate=$8, godown_id=$9, truck_number=$10, source_location=$11, invoice_number=$12, remarks=$13
+       WHERE id=$14 RETURNING *`,
+      [date, supplier_name, supplier_id || null, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks, req.params.id]
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }

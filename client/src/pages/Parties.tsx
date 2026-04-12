@@ -16,6 +16,7 @@ const PARTY_TYPES = [
   'builder',
   'institution',
   'damage_buyer',
+  'supplier',
   'other',
 ] as const;
 
@@ -63,6 +64,8 @@ function typeBadgeClass(type: string | null | undefined): string {
       return 'bg-purple-100 text-purple-800';
     case 'damage_buyer':
       return 'bg-orange-100 text-orange-800';
+    case 'supplier':
+      return 'bg-indigo-100 text-indigo-800';
     default:
       return 'bg-gray-100 text-gray-700';
   }
@@ -210,9 +213,15 @@ export default function Parties() {
         ),
       },
       {
-        accessorKey: 'total_sales',
-        header: 'Total Sales',
-        cell: ({ getValue }) => formatINR(Number(getValue()) || 0),
+        id: 'total_transactions',
+        header: 'Total Sales / Purchases',
+        cell: ({ row }) => {
+          const isSupplier = row.original.type === 'supplier';
+          const amount = isSupplier
+            ? Number((row.original as any).total_purchases) || 0
+            : Number(row.original.total_sales) || 0;
+          return <span className={isSupplier ? 'text-indigo-700' : ''}>{formatINR(amount)}</span>;
+        },
       },
       {
         accessorKey: 'total_paid',

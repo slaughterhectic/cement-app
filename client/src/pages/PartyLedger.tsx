@@ -7,6 +7,7 @@ import { useToastStore } from '../lib/store';
 import { ArrowLeft, Plus, CreditCard } from 'lucide-react';
 import SaleForm from '../components/forms/SaleForm';
 import PaymentForm from '../components/forms/PaymentForm';
+import PurchaseForm from '../components/forms/PurchaseForm';
 
 type LedgerEntry = {
   sno: number;
@@ -55,6 +56,8 @@ function typeBadgeClass(type: string | null | undefined): string {
       return 'bg-purple-100 text-purple-800';
     case 'damage_buyer':
       return 'bg-orange-100 text-orange-800';
+    case 'supplier':
+      return 'bg-indigo-100 text-indigo-800';
     default:
       return 'bg-gray-100 text-gray-700';
   }
@@ -80,6 +83,7 @@ export default function PartyLedger() {
   const [loading, setLoading] = useState(true);
   const [saleOpen, setSaleOpen] = useState(false);
   const [paymentOpen, setPaymentOpen] = useState(false);
+  const [purchaseOpen, setPurchaseOpen] = useState(false);
 
   const load = useCallback(async () => {
     if (!Number.isFinite(partyId) || partyId <= 0) {
@@ -300,21 +304,32 @@ export default function PartyLedger() {
             </div>
 
             <div className="flex flex-wrap gap-3">
-              <button
-                type="button"
-                onClick={() => setSaleOpen(true)}
-                className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
-              >
-                <Plus className="h-4 w-4" />
-                Record Sale
-              </button>
+              {party?.type === 'supplier' ? (
+                <button
+                  type="button"
+                  onClick={() => setPurchaseOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Record Purchase
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  onClick={() => setSaleOpen(true)}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-700"
+                >
+                  <Plus className="h-4 w-4" />
+                  Record Sale
+                </button>
+              )}
               <button
                 type="button"
                 onClick={() => setPaymentOpen(true)}
                 className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700"
               >
                 <CreditCard className="h-4 w-4" />
-                Record Payment
+                {party?.type === 'supplier' ? 'Record Payment (to supplier)' : 'Record Payment'}
               </button>
             </div>
           </>
@@ -333,25 +348,34 @@ export default function PartyLedger() {
           const id = Number(idStr);
           if (!Number.isFinite(id)) return row.rowKey.length + 3_000_000;
           if (kind === 'sale') return 1_000_000 + id;
+          if (kind === 'purchase') return 3_000_000 + id;
           return 2_000_000 + id;
         }}
       />
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Bags Sold</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            {party?.type === 'supplier' ? 'Total Bags Purchased' : 'Total Bags Sold'}
+          </p>
           <p className="mt-1 text-xl font-semibold text-heading">{summary.totalBags}</p>
         </div>
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Charged</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            {party?.type === 'supplier' ? 'Total Purchases' : 'Total Charged'}
+          </p>
           <p className="mt-1 text-xl font-semibold text-heading">{formatINR(summary.totalCharged)}</p>
         </div>
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total Received</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            {party?.type === 'supplier' ? 'Total Paid to Supplier' : 'Total Received'}
+          </p>
           <p className="mt-1 text-xl font-semibold text-emerald-700">{formatINR(summary.totalReceived)}</p>
         </div>
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Outstanding Balance</p>
+          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+            {party?.type === 'supplier' ? 'Payable Balance' : 'Outstanding Balance'}
+          </p>
           <p
             className={`mt-1 text-xl font-semibold ${summary.outstanding > 0 ? 'text-outstanding' : 'text-profit'}`}
           >
@@ -371,6 +395,11 @@ export default function PartyLedger() {
         onClose={() => setPaymentOpen(false)}
         onSuccess={onPaymentSuccess}
         partyId={partyId}
+      />
+      <PurchaseForm
+        isOpen={purchaseOpen}
+        onClose={() => setPurchaseOpen(false)}
+        onSuccess={() => { setPurchaseOpen(false); load(); addToast('Purchase recorded'); }}
       />
     </div>
   );
