@@ -35,6 +35,7 @@ export type PartyRow = {
   total_paid: number;
   outstanding: number;
   last_transaction: string | null;
+  parent_id: number | null;
 };
 
 const partySchema = z.object({
