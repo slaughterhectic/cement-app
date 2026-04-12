@@ -121,7 +121,13 @@ export const api = {
     outstanding: () => request<any[]>('/reports/outstanding'),
     dailyRegister: (month?: string) => request<any[]>(`/reports/daily-register${month ? `?month=${month}` : ''}`),
     dailyPnl: (month?: string) => request<any[]>(`/reports/daily-pnl${month ? `?month=${month}` : ''}`),
-    dailyCollection: (month?: string) => request<any>(`/reports/daily-collection${month ? `?month=${month}` : ''}`),
+    dailyCollection: (month?: string, view?: 'daily' | 'monthly') => {
+      const params = new URLSearchParams();
+      if (month) params.set('month', month);
+      if (view) params.set('view', view);
+      const qs = params.toString();
+      return request<any>(`/reports/daily-collection${qs ? `?${qs}` : ''}`);
+    },
   },
   capital: {
     summary: () => request<any>('/capital/summary'),

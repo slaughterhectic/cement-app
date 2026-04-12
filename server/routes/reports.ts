@@ -132,11 +132,32 @@ router.get('/daily-pnl', async (req, res) => {
 router.get('/daily-collection', async (req, res) => {
   try {
     const month = (req.query.month as string) || new Date().toISOString().substring(0, 7);
+    const view = (req.query.view as string) || 'daily'; // 'daily' | 'monthly'
+
+    if (view === 'monthly') {
+      // Monthly aggregation — last 12 months, only received payments
+      const monthly = await getAll(`
+        SELECT to_char(date::date,'YYYY-MM') as month,
+          COALESCE(SUM(amount),0) as total,
+          COALESCE(SUM(CASE WHEN mode='bank' THEN amount ELSE 0 END),0) as bank,
+          COALESCE(SUM(CASE WHEN mode='cash' THEN amount ELSE 0 END),0) as cash,
+          COUNT(*) as count
+        FROM payments
+        WHERE direction='receive'
+          AND date::date >= (CURRENT_DATE - INTERVAL '12 months')
+        GROUP BY to_char(date::date,'YYYY-MM')
+        ORDER BY month
+      `);
+      return res.json({ rows: [], daily: monthly, view: 'monthly' });
+    }
+
+    // Daily view — only received payments for the selected month
     const rows = await getAll(`
       SELECT py.id, py.date, pt.name as party_name, py.amount, py.mode, py.bank_name, py.remarks
       FROM payments py
       JOIN parties pt ON py.party_id = pt.id
       WHERE to_char(py.date::date,'YYYY-MM')=$1
+        AND py.direction='receive'
       ORDER BY py.date, py.id
     `, [month]);
 
@@ -148,10 +169,11 @@ router.get('/daily-collection', async (req, res) => {
         COUNT(*) as count
       FROM payments
       WHERE to_char(date::date,'YYYY-MM')=$1
+        AND direction='receive'
       GROUP BY date ORDER BY date
     `, [month]);
 
-    res.json({ rows, daily });
+    res.json({ rows, daily, view: 'daily' });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 

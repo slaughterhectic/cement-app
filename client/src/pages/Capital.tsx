@@ -1,6 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
 import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle } from 'lucide-react';
-// Note: Plus/Trash2/Pencil still used in ImprestSection
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -401,7 +400,6 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                 <th className="px-4 py-3 text-right">+ Received (₹)</th>
                 <th className="px-4 py-3 text-right">− Paid Out (₹)</th>
                 <th className="px-4 py-3 text-right font-semibold text-blue-700">Balance (₹)</th>
-                <th className="px-4 py-3" />
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-100">
@@ -412,13 +410,6 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                   <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(b.total_received)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(b.total_paid)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700">{formatINR(b.balance)}</td>
-                  <td className="px-4 py-3">
-                    {hasPermission('delete_capital_banks') && (
-                      <button type="button" onClick={() => handleDelete(b.bank_name)} className="rounded p-1 text-gray-400 hover:text-red-500">
-                        <Trash2 className="h-3.5 w-3.5" />
-                      </button>
-                    )}
-                  </td>
                 </tr>
               ))}
               <tr className="border-t-2 border-gray-300 bg-blue-50/60 font-semibold">
@@ -427,7 +418,6 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                 <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_received, 0))}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_paid, 0))}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-800">{formatINR(summary.totalBank)}</td>
-                <td />
               </tr>
             </tbody>
           </table>
