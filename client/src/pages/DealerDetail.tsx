@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import { useToastStore } from '../lib/store';
-import { ArrowLeft, Plus, CreditCard, Users } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import PaymentForm from '../components/forms/PaymentForm';
 
@@ -211,22 +211,13 @@ export default function DealerDetail() {
             {dealer.phone && <span>{dealer.phone}</span>}
           </div>
         </div>
-        <div className="flex gap-2">
-          <button
-            type="button"
-            onClick={() => setSubPartyOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
-          >
-            <Users className="h-4 w-4" /> Add Sub-Party
-          </button>
-          <button
-            type="button"
-            onClick={() => setPaymentOpen(true)}
-            className="inline-flex items-center gap-2 rounded-lg bg-green-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-green-700"
-          >
-            <CreditCard className="h-4 w-4" /> Record Payment
-          </button>
-        </div>
+        <button
+          type="button"
+          onClick={() => setPaymentOpen(true)}
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+        >
+          <CreditCard className="h-4 w-4" /> Record Payment
+        </button>
       </div>
 
       {/* Summary cards */}
@@ -248,27 +239,52 @@ export default function DealerDetail() {
       </div>
 
       {/* Sub-parties */}
-      {subParties.length > 0 && (
-        <div className="card">
-          <h2 className="mb-3 text-base font-semibold text-heading">Sub-Parties ({subParties.length})</h2>
-          <div className="flex flex-wrap gap-2">
-            {subParties.map((sp) => (
-              <Link
-                key={sp.id}
-                to={`/parties/${sp.id}`}
-                className="inline-flex items-center gap-1 rounded-full border border-gray-200 bg-white px-3 py-1.5 text-sm text-gray-700 hover:bg-gray-50"
-              >
-                {sp.name}
-                {sp.type && (
-                  <span className="ml-1 rounded px-1.5 py-0.5 text-xs bg-gray-100 text-gray-500 capitalize">
-                    {sp.type.replace(/_/g, ' ')}
-                  </span>
-                )}
-              </Link>
-            ))}
-          </div>
+      <div className="card">
+        <div className="flex items-center justify-between mb-3">
+          <h2 className="text-base font-semibold text-heading">
+            Sub-Parties {subParties.length > 0 ? `(${subParties.length})` : ''}
+          </h2>
+          <button
+            type="button"
+            onClick={() => setSubPartyOpen(true)}
+            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <Plus className="h-3.5 w-3.5" /> Add
+          </button>
         </div>
-      )}
+        {subParties.length === 0 ? (
+          <p className="text-sm text-gray-500">No sub-parties registered under this dealer yet.</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="border-b border-gray-100 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Type</th>
+                  <th className="px-3 py-2">Phone</th>
+                  <th className="px-3 py-2">Location</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-50">
+                {subParties.map((sp) => (
+                  <tr key={sp.id} className="hover:bg-gray-50">
+                    <td className="px-3 py-2 font-medium text-heading">{sp.name}</td>
+                    <td className="px-3 py-2">
+                      {sp.type && (
+                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium capitalize text-blue-700">
+                          {sp.type.replace(/_/g, ' ')}
+                        </span>
+                      )}
+                    </td>
+                    <td className="px-3 py-2 text-gray-600">{sp.phone ?? '—'}</td>
+                    <td className="px-3 py-2 text-gray-600">{sp.location ?? '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
 
       {/* Ledger */}
       <div>

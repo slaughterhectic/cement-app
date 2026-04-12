@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, Navigate } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
@@ -30,6 +30,7 @@ type Party = {
   district: string | null;
   type: string | null;
   opening_balance: number;
+  parent_id: number | null;
 };
 
 export type LedgerTableRow = {
@@ -262,6 +263,11 @@ export default function PartyLedger() {
         </Link>
       </div>
     );
+  }
+
+  // Sub-parties belong to a dealer — redirect to their dealer's page
+  if (!loading && party?.parent_id) {
+    return <Navigate to={`/dealers/${party.parent_id}`} replace />;
   }
 
   if (!loading && !party) {

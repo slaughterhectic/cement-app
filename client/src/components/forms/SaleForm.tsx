@@ -113,6 +113,8 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const partyId = watch('party_id');
   const cementType = watch('cement_type');
   const invoiceNumber = watch('invoice_number');
+  const billedQty = watch('billed_quantity');
+  const billedRate = watch('billed_rate');
 
   const selectedParty = useMemo(() => parties.find((p) => p.id === Number(partyId)), [parties, partyId]);
   const isDealer = selectedParty?.type === 'dealer';
@@ -122,6 +124,15 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     if (!isDealer || !partyId) { setSubParties([]); return; }
     api.dealers.subParties(Number(partyId)).then((r) => setSubParties(r as any[])).catch(() => {});
   }, [isDealer, partyId]);
+
+  // Auto-calculate billed_amount when billed_quantity × billed_rate are both set
+  useEffect(() => {
+    const q = Number(billedQty);
+    const r = Number(billedRate);
+    if (q > 0 && r > 0) {
+      setValue('billed_amount', q * r, { shouldValidate: false });
+    }
+  }, [billedQty, billedRate, setValue]);
 
   const saleAmount = useMemo(() => {
     const b = Number(bags) || 0;
@@ -328,6 +339,10 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
       if (!values.billed_quantity) { setError('billed_quantity', { message: 'Required for dealer' }); hasError = true; }
       if (!values.billed_rate) { setError('billed_rate', { message: 'Required for dealer' }); hasError = true; }
       if (!values.billed_amount) { setError('billed_amount', { message: 'Required for dealer' }); hasError = true; }
+      if (values.billed_quantity && values.billed_quantity > values.bags) {
+        setError('billed_quantity', { message: `Cannot exceed sale bags (${values.bags})` });
+        hasError = true;
+      }
       if (hasError) return;
     }
     setSubmitting(true);
@@ -644,7 +659,14 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 <label className="mb-1 block text-sm font-medium text-heading">
                   Billed quantity{isDealer ? ' *' : ''}
                 </label>
-                <input type="number" min={0} step={1} className="input-field w-full" {...register('billed_quantity', { valueAsNumber: true })} />
+                <input
+                  type="number" min={0} step={1} max={Number(bags) || undefined}
+                  className="input-field w-full"
+                  {...register('billed_quantity', { valueAsNumber: true })}
+                />
+                {isDealer && bags > 0 && (
+                  <p className="mt-1 text-xs text-gray-500">Max {bags} bags (matches sale quantity)</p>
+                )}
                 {errors.billed_quantity && <p className="mt-1 text-xs text-red-600">{errors.billed_quantity.message}</p>}
               </div>
               <div>
@@ -657,12 +679,16 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               <div>
                 <label className="mb-1 block text-sm font-medium text-heading">
                   Billed amount{isDealer ? ' *' : ''}
+                  {isDealer && Number(billedQty) > 0 && Number(billedRate) > 0 && (
+                    <span className="ml-2 text-xs font-normal text-emerald-600">auto-calculated</span>
+                  )}
                 </label>
                 <input
                   type="number"
                   min={0}
                   step={0.01}
-                  className="input-field w-full"
+                  className="input-field w-full bg-gray-50"
+                  readOnly={isDealer && Number(billedQty) > 0 && Number(billedRate) > 0}
                   {...register('billed_amount', { valueAsNumber: true })}
                 />
                 {errors.billed_amount && <p className="mt-1 text-xs text-red-600">{errors.billed_amount.message}</p>}
