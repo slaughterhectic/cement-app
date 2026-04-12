@@ -3,7 +3,7 @@ import { api } from '../lib/api';
 import { formatDate, formatINR } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import StockCard from '../components/ui/StockCard';
-import type { StockType } from '../components/ui/StockCard';
+import type { StockType, RateBreakdown } from '../components/ui/StockCard';
 import { Package } from 'lucide-react';
 import { useToastStore } from '../lib/store';
 
@@ -107,6 +107,7 @@ export default function Stock() {
 
   const [stockList, setStockList] = useState<StockSummaryRow[]>([]);
   const [stockListLoading, setStockListLoading] = useState(true);
+  const [rateBreakdownByBrandId, setRateBreakdownByBrandId] = useState<Map<number, RateBreakdown[]>>(new Map());
 
   const [movement, setMovement] = useState<MovementRow[]>([]);
   const [movementLoading, setMovementLoading] = useState(true);
@@ -123,7 +124,20 @@ export default function Stock() {
     setStockListLoading(true);
     try {
       const rows = (await api.stock.list()) as StockSummaryRow[];
-      setStockList(Array.isArray(rows) ? rows : []);
+      const list = Array.isArray(rows) ? rows : [];
+      setStockList(list);
+      // Fetch rate breakdown for each brand in parallel
+      const entries = await Promise.all(
+        list.map(async (row) => {
+          try {
+            const res = await api.purchases.rates(row.id) as any;
+            return [row.id, (res.rates ?? []) as RateBreakdown[]] as const;
+          } catch {
+            return [row.id, [] as RateBreakdown[]] as const;
+          }
+        })
+      );
+      setRateBreakdownByBrandId(new Map(entries));
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load stock summary', 'error');
       setStockList([]);
@@ -302,6 +316,7 @@ export default function Stock() {
                 stock={Number(row.stock)}
                 value={Math.round(Number(row.stock) * Number(row.avg_rate))}
                 lastPurchase={row.last_purchase ?? ''}
+                rateBreakdown={rateBreakdownByBrandId.get(row.id)}
               />
             ))}
           </div>

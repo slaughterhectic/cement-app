@@ -2,12 +2,18 @@ import { formatDate, formatINR } from '../../lib/format';
 
 export type StockType = 'OPC' | 'PPC' | 'DAMAGE';
 
+export interface RateBreakdown {
+  landed_rate: number;
+  available_bags: number;
+}
+
 export interface StockCardProps {
   name: string;
   type: StockType;
   stock: number;
   value: number;
   lastPurchase: string;
+  rateBreakdown?: RateBreakdown[];
 }
 
 function borderClass(stock: number): string {
@@ -22,7 +28,7 @@ function typeBadgeClass(type: StockType): string {
   return 'bg-purchase/10 text-purchase';
 }
 
-export function StockCard({ name, type, stock, value, lastPurchase }: StockCardProps) {
+export function StockCard({ name, type, stock, value, lastPurchase, rateBreakdown }: StockCardProps) {
   return (
     <div
       className={`rounded-xl border-2 bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${borderClass(
@@ -51,6 +57,23 @@ export function StockCard({ name, type, stock, value, lastPurchase }: StockCardP
           <span className="font-medium text-heading">{formatDate(lastPurchase) || '—'}</span>
         </div>
       </div>
+      {rateBreakdown && rateBreakdown.length > 0 && (
+        <div className="mt-3 border-t border-card-border pt-3">
+          <p className="mb-1.5 text-xs font-semibold uppercase tracking-wide text-heading/50">
+            Rate breakdown
+          </p>
+          <ul className="flex flex-col gap-1">
+            {rateBreakdown.map((r, i) => (
+              <li key={i} className="flex items-center justify-between text-xs">
+                <span className="text-gray-500">₹{Number(r.landed_rate).toFixed(0)}/bag</span>
+                <span className="font-semibold tabular-nums text-heading">
+                  {Number(r.available_bags)} bags
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
     </div>
   );
 }
