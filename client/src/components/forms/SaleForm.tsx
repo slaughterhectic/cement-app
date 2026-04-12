@@ -38,6 +38,7 @@ export type SaleFormValues = z.infer<typeof schema>;
 
 export interface SaleEditData extends SaleFormValues {
   id: number;
+  cost_rate?: number;
 }
 
 export interface SaleFormProps {
