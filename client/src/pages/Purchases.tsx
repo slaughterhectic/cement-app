@@ -11,6 +11,7 @@ export type PurchaseRow = {
   id: number;
   date: string;
   supplier_name: string;
+  supplier_id: number | null;
   brand_id: number;
   brand_name: string;
   cement_type: string | null;
@@ -106,7 +107,7 @@ export default function Purchases() {
     setEditData({
       id: row.id,
       date: row.date,
-      supplier_name: row.supplier_name,
+      supplier_id: row.supplier_id ?? 0,
       brand_id: row.brand_id,
       cement_type: row.cement_type ?? '',
       bags: row.bags,

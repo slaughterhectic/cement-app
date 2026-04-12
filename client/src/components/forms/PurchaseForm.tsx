@@ -24,9 +24,9 @@ const schema = z.object({
 
 export type PurchaseFormValues = z.infer<typeof schema>;
 
-export interface PurchaseEditData extends PurchaseFormValues {
+export interface PurchaseEditData extends Omit<PurchaseFormValues, 'supplier_id'> {
   id: number;
-  supplier_id?: number;
+  supplier_id: number;
 }
 
 export interface PurchaseFormProps {
@@ -168,9 +168,8 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
 
   const filteredSuppliers = useMemo(() => {
     const q = supplierQuery.trim().toLowerCase();
-    const list = parties.filter((p) => p.type === 'supplier' || !p.type);
-    if (!q) return list.slice(0, 50);
-    return list.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
+    if (!q) return parties.slice(0, 50);
+    return parties.filter((p) => p.name.toLowerCase().includes(q)).slice(0, 50);
   }, [parties, supplierQuery]);
 
   const onSubmit = async (values: PurchaseFormValues) => {
@@ -241,14 +240,19 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
                   <li key={p.id}>
                     <button
                       type="button"
-                      className="w-full px-3 py-2 text-left text-sm hover:bg-brand-50"
+                      className="flex w-full items-center justify-between px-3 py-2 text-left text-sm hover:bg-brand-50"
                       onClick={() => {
                         setValue('supplier_id', p.id, { shouldValidate: true });
                         setSupplierQuery(p.name);
                         setSupplierMenuOpen(false);
                       }}
                     >
-                      {p.name}
+                      <span>{p.name}</span>
+                      {p.type && (
+                        <span className="ml-2 rounded px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 capitalize">
+                          {p.type.replace(/_/g, ' ')}
+                        </span>
+                      )}
                     </button>
                   </li>
                 ))}
@@ -398,3 +402,5 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
     </Modal>
   );
 }
+
+export default PurchaseForm;
