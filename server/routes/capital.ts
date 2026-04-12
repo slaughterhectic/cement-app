@@ -76,13 +76,21 @@ router.get('/summary', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
-    // Outstanding (sum of positive individual party balances only)
+    // Outstanding receivable = customers owe us (exclude suppliers)
     const outstandingCalc = await getOne(`
       SELECT COALESCE(SUM(GREATEST(0,
         COALESCE(p.opening_balance,0)
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)
-      )),0) as total FROM parties p
+      )),0) as total FROM parties p WHERE p.type != 'supplier'
+    `);
+    // Outstanding payable = we owe suppliers
+    const payableCalc = await getOne(`
+      SELECT COALESCE(SUM(GREATEST(0,
+        COALESCE(p.opening_balance,0)
+        + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
+        - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id),0)
+      )),0) as total FROM parties p WHERE p.type = 'supplier'
     `);
 
     // Loans outstanding
@@ -97,6 +105,7 @@ router.get('/summary', async (_req, res) => {
       totalBank,
       stockValue: { value: Number(stockCalc?.value ?? 0), bags: Number(stockCalc?.bags ?? 0) },
       totalOutstanding: Number(outstandingCalc?.total ?? 0),
+      totalPayable: Number(payableCalc?.total ?? 0),
       totalLoans: Number(loansCalc?.total ?? 0),
       totalCapital: totalCash + totalBank,
     });

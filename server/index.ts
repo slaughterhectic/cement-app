@@ -105,13 +105,21 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date >= $1`, [monthStart]
     );
 
-    // Outstanding = sum of POSITIVE individual party balances only (don't let overpaid parties cancel others)
+    // Outstanding receivable = sum of POSITIVE customer balances (they owe us)
     const outstandingCalc = await getOne(`
       SELECT COALESCE(SUM(GREATEST(0,
         COALESCE(p.opening_balance,0)
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)
-      )),0) as total FROM parties p
+      )),0) as total FROM parties p WHERE p.type != 'supplier'
+    `);
+    // Outstanding payable = sum of POSITIVE supplier balances (we owe them)
+    const payableCalc = await getOne(`
+      SELECT COALESCE(SUM(GREATEST(0,
+        COALESCE(p.opening_balance,0)
+        + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
+        - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id),0)
+      )),0) as total FROM parties p WHERE p.type = 'supplier'
     `);
 
     const stockCalc = await getOne(`
@@ -150,6 +158,8 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       todaySales: { bags: Number(todaySales.bags), amount: Number(todaySales.amount) },
       monthProfit: Number(monthSales.amount) - Number(monthPurchases.amount),
       outstanding: Number(outstandingCalc.total),
+      outstandingReceivable: Number(outstandingCalc.total),
+      outstandingPayable: Number(payableCalc.total),
       stockValue: { bags: Number(stockCalc.bags), value: Number(stockCalc.value) },
       totalCapital: Number(bankCalc?.total ?? 0) + Number(cashCalc?.total ?? 0),
       bankBalance: Number(bankCalc?.total ?? 0),

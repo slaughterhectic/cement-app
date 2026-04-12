@@ -12,6 +12,7 @@ interface CapitalSummary {
   totalBank: number;
   stockValue: { value: number; bags: number };
   totalOutstanding: number;
+  totalPayable: number;
   totalLoans: number;
   totalCapital: number;
 }
@@ -571,14 +572,22 @@ export default function Capital() {
           </div>
 
           {/* Secondary info */}
-          <div className="grid gap-4 sm:grid-cols-2">
-            <div className="rounded-lg border border-card-border bg-white p-4">
+          <div className="grid gap-4 sm:grid-cols-3">
+            <div className="rounded-lg border border-red-200 bg-red-50/80 p-4">
               <div className="flex items-center gap-2 text-red-600">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Outstanding Receivables</span>
               </div>
               <p className="mt-2 text-xl font-bold tabular-nums text-red-700">{formatINR(summary.totalOutstanding)}</p>
-              <p className="text-xs text-gray-500 mt-1">Money owed by all parties</p>
+              <p className="text-xs text-red-500 mt-1">Customers owe us</p>
+            </div>
+            <div className="rounded-lg border border-orange-200 bg-orange-50/80 p-4">
+              <div className="flex items-center gap-2 text-orange-600">
+                <AlertCircle className="h-4 w-4" />
+                <span className="text-sm font-semibold">Outstanding Payables</span>
+              </div>
+              <p className="mt-2 text-xl font-bold tabular-nums text-orange-700">{formatINR(summary.totalPayable ?? 0)}</p>
+              <p className="text-xs text-orange-500 mt-1">We owe suppliers</p>
             </div>
             <div className="rounded-lg border border-card-border bg-white p-4">
               <div className="flex items-center gap-2 text-orange-600">

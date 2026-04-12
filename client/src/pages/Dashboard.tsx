@@ -13,6 +13,8 @@ interface DashboardStats {
   todaySales: { bags: number; amount: number };
   monthProfit: number;
   outstanding: number;
+  outstandingReceivable: number;
+  outstandingPayable: number;
   stockValue: { bags: number; value: number };
   totalCapital: number;
   bankBalance: number;
@@ -152,15 +154,26 @@ export default function Dashboard() {
       </header>
 
       {/* KPI Cards */}
-      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         {loading || !stats ? (
-          <>{Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}</>
+          <>{Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}</>
         ) : (
           <>
             <KPICard title="Today's Sales" value={formatINR(stats.todaySales.amount)} subtitle={`${formatNumber(stats.todaySales.bags)} bags sold`} icon={TrendingUp} color="sale" />
             <KPICard title="This Month's Profit" value={formatINR(stats.monthProfit)} subtitle="Sales − purchases" icon={IndianRupee} color="profit" />
-            <KPICard title="Outstanding Dues" value={formatINR(stats.outstanding)} subtitle="Total owed by all parties" icon={AlertCircle} color="outstanding" />
             <KPICard title="Stock Value" value={formatINR(stats.stockValue.value)} subtitle={`${formatNumber(stats.stockValue.bags)} bags`} icon={Package} color="purchase" />
+          </>
+        )}
+      </section>
+
+      {/* Outstanding + Capital KPIs */}
+      <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
+        {loading || !stats ? (
+          <>{Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}</>
+        ) : (
+          <>
+            <KPICard title="Outstanding Receivables" value={formatINR(stats.outstandingReceivable ?? stats.outstanding)} subtitle="Customers owe us" icon={AlertCircle} color="outstanding" />
+            <KPICard title="Outstanding Payables" value={formatINR(stats.outstandingPayable ?? 0)} subtitle="We owe suppliers" icon={AlertCircle} color="purchase" />
             <KPICard title="Total Capital" value={formatINR(stats.totalCapital)} subtitle="Cash + bank" icon={Wallet} color="profit" />
           </>
         )}
