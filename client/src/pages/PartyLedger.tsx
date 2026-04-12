@@ -416,6 +416,7 @@ export default function PartyLedger() {
         onClose={() => setPaymentOpen(false)}
         onSuccess={onPaymentSuccess}
         partyId={partyId}
+        direction={party?.type === 'supplier' ? 'pay' : 'receive'}
       />
       <PurchaseForm
         isOpen={purchaseOpen}

@@ -12,6 +12,7 @@ export type PaymentRow = {
   date: string;
   party_id: number;
   party_name: string;
+  party_type: string | null;
   amount: number;
   mode: string;
   bank_name: string | null;
@@ -86,6 +87,22 @@ export default function Payments() {
         cell: ({ getValue }) => formatDate(String(getValue())),
       },
       { accessorKey: 'party_name', header: 'Party Name' },
+      {
+        id: 'direction',
+        header: 'Type',
+        cell: ({ row }) => {
+          const isSupplier = row.original.party_type === 'supplier';
+          return isSupplier ? (
+            <span className="inline-flex rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">
+              Paid Out
+            </span>
+          ) : (
+            <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+              Received
+            </span>
+          );
+        },
+      },
       {
         accessorKey: 'amount',
         header: 'Amount',

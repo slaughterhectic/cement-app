@@ -26,7 +26,7 @@ async function getOutstanding(partyId: number): Promise<number> {
 router.get('/', async (req, res) => {
   try {
     const { start_date, end_date, party_id } = req.query;
-    let sql = `SELECT pm.*, p.name as party_name FROM payments pm JOIN parties p ON pm.party_id = p.id WHERE 1=1`;
+    let sql = `SELECT pm.*, p.name as party_name, p.type as party_type FROM payments pm JOIN parties p ON pm.party_id = p.id WHERE 1=1`;
     const params: any[] = [];
     let idx = 1;
 
@@ -41,15 +41,32 @@ router.get('/', async (req, res) => {
 
 router.get('/parties-with-dues', async (_req, res) => {
   try {
+    // Return ALL parties with outstanding > 0 — both customers (receivable) and suppliers (payable)
     const parties = await getAll(`
-      SELECT p.id, p.name,
-        (COALESCE(p.opening_balance, 0)
-         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)) as outstanding
+      SELECT p.id, p.name, p.type,
+        CASE
+          WHEN p.type = 'supplier' THEN
+            COALESCE(p.opening_balance, 0)
+            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
+          ELSE
+            COALESCE(p.opening_balance, 0)
+            + COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id = p.id), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
+        END as outstanding
       FROM parties p
-      WHERE (COALESCE(p.opening_balance, 0)
-         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)) > 0
+      WHERE (
+        CASE
+          WHEN p.type = 'supplier' THEN
+            COALESCE(p.opening_balance, 0)
+            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
+          ELSE
+            COALESCE(p.opening_balance, 0)
+            + COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id = p.id), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
+        END
+      ) > 0
       ORDER BY p.name
     `);
     res.json(parties);
