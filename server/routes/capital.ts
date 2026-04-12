@@ -22,17 +22,24 @@ router.get('/summary', async (_req, res) => {
     }));
     const imprestCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
 
-    // Cash from party payments (mode=cash) minus cash expenses
-    const cashPaymentsTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash'`))?.t ?? 0);
+    // Cash received from customers (direction='receive') minus cash paid to suppliers (direction='pay') minus expenses
+    const cashReceivedTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='receive'`))?.t ?? 0);
+    const cashPaidOutTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='pay'`))?.t ?? 0);
     const cashExpensesTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash'`))?.t ?? 0);
-    const totalCash = imprestCash + cashPaymentsTotal - cashExpensesTotal;
+    const totalCash = imprestCash + cashReceivedTotal - cashPaidOutTotal - cashExpensesTotal;
 
-    // Banks: auto-compute from payments/expenses grouped by bank_name
+    // Banks: received = payments with direction='receive'; paid = payments with direction='pay' + expenses
     // Also include opening balances from bank_balances table for configured banks
-    const bankPaymentsRows = await getAll(`
+    const bankReceivedRows = await getAll(`
       SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
         COALESCE(SUM(amount),0) as received
-      FROM payments WHERE mode='bank'
+      FROM payments WHERE mode='bank' AND direction='receive'
+      GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
+    `);
+    const bankPayOutRows = await getAll(`
+      SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
+        COALESCE(SUM(amount),0) as paid_out
+      FROM payments WHERE mode='bank' AND direction='pay'
       GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
     `);
     const bankExpenseRows = await getAll(`
@@ -45,24 +52,28 @@ router.get('/summary', async (_req, res) => {
 
     // Merge all distinct bank names
     const allNames = new Set<string>([
-      ...bankPaymentsRows.map((r: any) => r.bank_name),
+      ...bankReceivedRows.map((r: any) => r.bank_name),
+      ...bankPayOutRows.map((r: any) => r.bank_name),
       ...bankExpenseRows.map((r: any) => r.bank_name),
       ...bankOpeningRows.map((r: any) => r.bank_name),
     ]);
 
     const banks = Array.from(allNames).map((name: string) => {
-      const received = Number(bankPaymentsRows.find((r: any) => r.bank_name === name)?.received ?? 0);
-      const paid = Number(bankExpenseRows.find((r: any) => r.bank_name === name)?.paid ?? 0);
+      const received = Number(bankReceivedRows.find((r: any) => r.bank_name === name)?.received ?? 0);
+      const paidOut = Number(bankPayOutRows.find((r: any) => r.bank_name === name)?.paid_out ?? 0);
+      const expense = Number(bankExpenseRows.find((r: any) => r.bank_name === name)?.paid ?? 0);
+      const totalPaid = paidOut + expense;
       const ob = Number(bankOpeningRows.find((r: any) =>
         r.bank_name?.toLowerCase() === name.toLowerCase()
       )?.opening_balance ?? 0);
-      return { bank_name: name, opening: ob, total_received: received, total_paid: paid, balance: ob + received - paid };
+      return { bank_name: name, opening: ob, total_received: received, total_paid: totalPaid, balance: ob + received - totalPaid };
     }).sort((a: any, b: any) => b.balance - a.balance);
 
-    // Total bank = opening balances + all bank payments received - all bank expenses
+    // Total bank = opening balances + received payments - paid-out payments - expenses
     const totalBank =
       Number((await getOne(`SELECT COALESCE(SUM(opening_balance),0) as t FROM bank_balances`))?.t ?? 0) +
-      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank'`))?.t ?? 0) -
+      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='receive'`))?.t ?? 0) -
+      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='pay'`))?.t ?? 0) -
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0);
 
     // Stock value

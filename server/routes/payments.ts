@@ -74,11 +74,12 @@ router.get('/parties-with-dues', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, party_id, amount, mode, bank_name, remarks } = req.body;
+  const { date, party_id, amount, mode, bank_name, remarks, direction } = req.body;
+  const dir = direction === 'pay' ? 'pay' : 'receive';
   try {
     const result = await getOne(
-      `INSERT INTO payments (date, party_id, amount, mode, bank_name, remarks) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [date, party_id, amount, mode, bank_name, remarks]
+      `INSERT INTO payments (date, party_id, amount, mode, bank_name, remarks, direction) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [date, party_id, amount, mode, bank_name, remarks, dir]
     );
     const full = await getOne(
       'SELECT pm.*, p.name as party_name FROM payments pm JOIN parties p ON pm.party_id=p.id WHERE pm.id=$1',

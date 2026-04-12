@@ -193,6 +193,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         mode: values.mode,
         bank_name: values.bank_name || null,
         remarks: values.remarks?.trim() || null,
+        direction,
       });
       addToast(direction === 'pay' ? 'Payment to supplier recorded' : 'Payment received recorded', 'success');
       onSuccess();
