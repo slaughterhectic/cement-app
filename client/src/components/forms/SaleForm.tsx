@@ -67,7 +67,8 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const [liveStock, setLiveStock] = useState<number | null>(null);
   const [loadingStock, setLoadingStock] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-  const [purchaseRates, setPurchaseRates] = useState<{ landed_rate: number; purchase_rate: number; freight_rate: number; purchased_bags: number; available_bags: number; last_date: string }[]>([]);
+  const [purchaseRates, setPurchaseRates] = useState<{ landed_rate: number; purchase_rate: number; freight_rate: number; purchased_bags: number; last_date: string }[]>([]);
+  const [rateStock, setRateStock] = useState<number>(0);
   const [selectedCostRate, setSelectedCostRate] = useState<number>(0);
 
   const defaultValues = useMemo(
@@ -221,11 +222,13 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
       setSelectedCostRate(0);
       return;
     }
-    api.purchases.rates(Number(brandId)).then((rates) => {
+    api.purchases.rates(Number(brandId)).then((res: any) => {
+      const { rates, totalStock } = res;
       setPurchaseRates(rates);
+      setRateStock(totalStock);
       // Auto-select if only one rate exists
       if (rates.length === 1) setSelectedCostRate(Number(rates[0].landed_rate));
-    }).catch(() => setPurchaseRates([]));
+    }).catch(() => { setPurchaseRates([]); setRateStock(0); });
   }, [isOpen, brandId]);
 
   useEffect(() => {
@@ -436,9 +439,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                     <>
                       Available:{' '}
                       <span className="font-semibold text-brand-800">
-                        {selectedCostRate > 0
-                          ? (purchaseRates.find((r) => Number(r.landed_rate) === selectedCostRate)?.available_bags ?? effectiveMaxStock)
-                          : effectiveMaxStock}
+                        {rateStock > 0 ? rateStock : effectiveMaxStock}
                       </span> bags
                     </>
                   )}
@@ -470,7 +471,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   <option key={i} value={Number(r.landed_rate)}>
                     ₹{Number(r.landed_rate).toFixed(0)}/bag
                     {Number(r.freight_rate) > 0 ? ` (₹${Number(r.purchase_rate)} + ₹${Number(r.freight_rate)} freight)` : ''}
-                    {' — '}{r.available_bags} bags available
+                    {' — '}{r.purchased_bags} bags purchased
                   </option>
                 ))}
               </select>
@@ -485,14 +486,11 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 onChange={(e) => setSelectedCostRate(Number(e.target.value))}
               />
             )}
-            {selectedCostRate > 0 && (() => {
-              const sel = purchaseRates.find((r) => Number(r.landed_rate) === selectedCostRate);
-              return sel ? (
-                <p className="mt-1 text-xs text-gray-500">
-                  Available: <span className="font-semibold">{sel.available_bags} bags</span> at {formatINR(selectedCostRate)}/bag
-                </p>
-              ) : null;
-            })()}
+            {selectedCostRate > 0 && (
+              <p className="mt-1 text-xs text-gray-500">
+                Cost: {formatINR(selectedCostRate)}/bag — Total stock available: <span className="font-semibold">{rateStock} bags</span>
+              </p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Sale rate (₹ / bag) *</label>
