@@ -193,6 +193,11 @@ export const api = {
       request<any>(`/godowns/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/godowns/${id}`, { method: 'DELETE' }),
   },
+  partyLoans: {
+    list: () => request<any[]>('/party-loans'),
+    create: (data: any) => request<any>('/party-loans', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/party-loans/${id}`, { method: 'DELETE' }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();

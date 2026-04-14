@@ -147,6 +147,20 @@ export async function initializeDatabase() {
       );
     `);
 
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS party_loans (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        party_id INTEGER NOT NULL REFERENCES parties(id),
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('bank', 'cash')) DEFAULT 'bank',
+        bank_name TEXT,
+        type TEXT CHECK(type IN ('disbursement', 'repayment')) NOT NULL,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     // Add 'supplier' to parties type check
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check;`);
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','other','supplier'));`);

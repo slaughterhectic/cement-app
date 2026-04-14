@@ -26,7 +26,9 @@ router.get('/summary', async (_req, res) => {
     const cashReceivedTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='receive'`))?.t ?? 0);
     const cashPaidOutTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='pay'`))?.t ?? 0);
     const cashExpensesTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash'`))?.t ?? 0);
-    const totalCash = imprestCash + cashReceivedTotal - cashPaidOutTotal - cashExpensesTotal;
+    const cashLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='disbursement'`))?.t ?? 0);
+    const cashLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='repayment'`))?.t ?? 0);
+    const totalCash = imprestCash + cashReceivedTotal - cashPaidOutTotal - cashExpensesTotal - cashLoanDisbursed + cashLoanRepaid;
 
     // Banks: received = payments with direction='receive'; paid = payments with direction='pay' + expenses
     // Also include opening balances from bank_balances table for configured banks
@@ -69,12 +71,16 @@ router.get('/summary', async (_req, res) => {
       return { bank_name: name, opening: ob, total_received: received, total_paid: totalPaid, balance: ob + received - totalPaid };
     }).sort((a: any, b: any) => b.balance - a.balance);
 
-    // Total bank = opening balances + received payments - paid-out payments - expenses
+    const bankLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='disbursement'`))?.t ?? 0);
+    const bankLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='repayment'`))?.t ?? 0);
+
+    // Total bank = opening balances + received payments - paid-out payments - expenses - loan disbursements + loan repayments
     const totalBank =
       Number((await getOne(`SELECT COALESCE(SUM(opening_balance),0) as t FROM bank_balances`))?.t ?? 0) +
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='receive'`))?.t ?? 0) -
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='pay'`))?.t ?? 0) -
-      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0);
+      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0) -
+      bankLoanDisbursed + bankLoanRepaid;
 
     // Stock value
     const stockCalc = await getOne(`

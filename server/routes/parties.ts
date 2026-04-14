@@ -145,7 +145,18 @@ router.get('/:id/ledger', async (req, res) => {
         FROM payments p WHERE p.party_id = $1
       `, [party.id]);
 
-      entries = [...sales, ...payments];
+      // Party loans: disbursement = debit (we gave, they owe us), repayment = credit
+      const partyLoans = await getAll(`
+        SELECT pl.date,
+          CASE WHEN pl.type='disbursement' THEN 'Loan Disbursed' ELSE 'Loan Repayment' END as particulars,
+          0 as qty, 0 as rate,
+          CASE WHEN pl.type='disbursement' THEN pl.amount ELSE 0 END as debit,
+          CASE WHEN pl.type='repayment' THEN pl.amount ELSE 0 END as credit,
+          'party_loan' as entry_type, pl.id
+        FROM party_loans pl WHERE pl.party_id = $1
+      `, [party.id]);
+
+      entries = [...sales, ...payments, ...partyLoans];
     }
 
     const ledger = entries.sort((a: any, b: any) => {
