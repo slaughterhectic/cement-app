@@ -103,6 +103,7 @@ export const api = {
     list: () => request<any[]>('/parties'),
     create: (data: any) => request<any>('/parties', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/parties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/parties/${id}`, { method: 'DELETE' }),
     summary: (id: number) => request<any>(`/parties/${id}/summary`),
     ledger: (id: number) => request<any>(`/parties/${id}/ledger`),
   },
@@ -169,8 +170,10 @@ export const api = {
     list: () => request<any[]>('/dealers'),
     create: (data: any) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/dealers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/dealers/${id}`, { method: 'DELETE' }),
     subParties: (id: number) => request<any[]>(`/dealers/${id}/sub-parties`),
     addSubParty: (id: number, data: any) => request<any>(`/dealers/${id}/sub-parties`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteSubParty: (dealerId: number, subId: number) => request<any>(`/dealers/${dealerId}/sub-parties/${subId}`, { method: 'DELETE' }),
     ledger: (id: number) => request<any>(`/dealers/${id}/ledger`),
   },
   brands: {

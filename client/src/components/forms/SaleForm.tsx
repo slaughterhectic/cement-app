@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Modal } from '../ui/Modal';
 import { api } from '../../lib/api';
 import { formatDateInput, formatINR } from '../../lib/format';
-import { useToastStore } from '../../lib/store';
+import { useToastStore, useAuthStore } from '../../lib/store';
 
 const optionalInt = z.preprocess(
   (v) => (v === '' || v == null || (typeof v === 'number' && Number.isNaN(v)) ? undefined : v),
@@ -56,6 +56,8 @@ type Godown = { id: number; name: string };
 
 export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId }: SaleFormProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const isAdmin = useAuthStore((s) => s.isAdmin());
+  const lockFields = !!editData && !isAdmin;
   const [parties, setParties] = useState<Party[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -394,10 +396,15 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   return (
     <Modal isOpen={isOpen} onClose={onClose} title={editData ? 'Edit sale' : 'New sale'} size="xl">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {lockFields && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            Only the <strong>invoice number</strong> can be edited. Contact an admin to change other fields.
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Date *</label>
-            <input type="date" className="input-field w-full" {...register('date')} />
+            <input type="date" className="input-field w-full" disabled={lockFields} {...register('date')} />
             {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
           </div>
 
@@ -407,12 +414,13 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               type="text"
               className="input-field w-full"
               value={partyQuery}
+              disabled={lockFields}
               onChange={(e) => {
                 setPartyQuery(e.target.value);
                 setPartyMenuOpen(true);
                 setValue('party_id', 0, { shouldValidate: true });
               }}
-              onFocus={() => setPartyMenuOpen(true)}
+              onFocus={() => !lockFields && setPartyMenuOpen(true)}
               placeholder="Search party…"
             />
             <input type="hidden" {...register('party_id', { valueAsNumber: true })} />
@@ -440,7 +448,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
 
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Brand *</label>
-            <select className="input-field w-full" {...register('brand_id')} disabled={stocksForGodownLoading}>
+            <select className="input-field w-full" {...register('brand_id')} disabled={lockFields || stocksForGodownLoading}>
               <option value={0}>
                 {stocksForGodownLoading ? 'Loading brands…' : 'Select brand'}
               </option>
@@ -458,7 +466,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
 
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Cement type</label>
-            <input type="text" className="input-field w-full" {...register('cement_type')} />
+            <input type="text" className="input-field w-full" disabled={lockFields} {...register('cement_type')} />
           </div>
 
           <div>
@@ -488,6 +496,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               max={effectiveMaxStock > 0 ? effectiveMaxStock : undefined}
               step={1}
               className="input-field w-full"
+              disabled={lockFields}
               {...register('bags', { valueAsNumber: true })}
             />
             {stockZeroMessage && <p className="mt-1 text-sm text-red-600">{stockZeroMessage}</p>}
@@ -499,6 +508,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             {purchaseRates.length > 0 ? (
               <select
                 className="input-field w-full"
+                disabled={lockFields}
                 value={selectedCostRate}
                 onChange={(e) => setSelectedCostRate(Number(e.target.value))}
               >
@@ -518,6 +528,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 step={0.01}
                 className="input-field w-full"
                 placeholder="No purchases found"
+                disabled={lockFields}
                 value={selectedCostRate || ''}
                 onChange={(e) => setSelectedCostRate(Number(e.target.value))}
               />
@@ -538,6 +549,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               min={0}
               step={0.01}
               className="input-field w-full"
+              disabled={lockFields}
               {...register('sale_rate', { valueAsNumber: true })}
             />
             {errors.sale_rate && (
@@ -577,7 +589,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
 
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Destination</label>
-            <input type="text" className="input-field w-full" {...register('destination')} />
+            <input type="text" className="input-field w-full" disabled={lockFields} {...register('destination')} />
           </div>
 
           <div className="sm:col-span-2">
@@ -588,6 +600,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               render={({ field }) => (
                 <select
                   className="input-field w-full"
+                  disabled={lockFields}
                   value={field.value ?? ''}
                   onChange={(e) => {
                     const v = e.target.value;
@@ -608,7 +621,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
 
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Truck number</label>
-            <input type="text" className="input-field w-full" {...register('truck_number')} />
+            <input type="text" className="input-field w-full" disabled={lockFields} {...register('truck_number')} />
           </div>
           {/* Invoice / Billing section */}
           <div className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${
@@ -644,14 +657,14 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   Billed party{isDealer ? ' *' : ''}
                 </label>
                 {isDealer && subParties.length > 0 ? (
-                  <select className="input-field w-full" {...register('billed_party')}>
+                  <select className="input-field w-full" disabled={lockFields} {...register('billed_party')}>
                     <option value="">Select sub-party *</option>
                     {subParties.map((sp) => (
                       <option key={sp.id} value={sp.name}>{sp.name}</option>
                     ))}
                   </select>
                 ) : (
-                  <input type="text" className="input-field w-full" {...register('billed_party')} />
+                  <input type="text" className="input-field w-full" disabled={lockFields} {...register('billed_party')} />
                 )}
                 {errors.billed_party && <p className="mt-1 text-xs text-red-600">{errors.billed_party.message}</p>}
               </div>
@@ -662,6 +675,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 <input
                   type="number" min={0} step={1} max={Number(bags) || undefined}
                   className="input-field w-full"
+                  disabled={lockFields}
                   {...register('billed_quantity', { valueAsNumber: true })}
                 />
                 {isDealer && bags > 0 && (
@@ -673,7 +687,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 <label className="mb-1 block text-sm font-medium text-heading">
                   Billed rate{isDealer ? ' *' : ''}
                 </label>
-                <input type="number" min={0} step={0.01} className="input-field w-full" {...register('billed_rate', { valueAsNumber: true })} />
+                <input type="number" min={0} step={0.01} className="input-field w-full" disabled={lockFields} {...register('billed_rate', { valueAsNumber: true })} />
                 {errors.billed_rate && <p className="mt-1 text-xs text-red-600">{errors.billed_rate.message}</p>}
               </div>
               <div>
@@ -688,7 +702,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   min={0}
                   step={0.01}
                   className="input-field w-full bg-gray-50"
-                  readOnly={isDealer && Number(billedQty) > 0 && Number(billedRate) > 0}
+                  readOnly={lockFields || (isDealer && Number(billedQty) > 0 && Number(billedRate) > 0)}
                   {...register('billed_amount', { valueAsNumber: true })}
                 />
                 {errors.billed_amount && <p className="mt-1 text-xs text-red-600">{errors.billed_amount.message}</p>}
@@ -697,7 +711,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Remarks</label>
-            <textarea rows={3} className="input-field w-full resize-y" {...register('remarks')} />
+            <textarea rows={3} className="input-field w-full resize-y" disabled={lockFields} {...register('remarks')} />
           </div>
         </div>
 

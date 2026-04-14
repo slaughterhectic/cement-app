@@ -4,7 +4,7 @@ import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import { useToastStore } from '../lib/store';
-import { ArrowLeft, Plus, CreditCard } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, Trash2 } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import PaymentForm from '../components/forms/PaymentForm';
 
@@ -142,6 +142,17 @@ export default function DealerDetail() {
     return { totalCharged, totalReceived };
   }, [ledgerEntries, openingBalance]);
 
+  const handleDeleteSubParty = async (sp: SubParty) => {
+    if (!window.confirm(`Delete sub-party "${sp.name}"? This cannot be undone.`)) return;
+    try {
+      await api.dealers.deleteSubParty(dealerId, sp.id);
+      addToast('Sub-party deleted');
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Could not delete sub-party', 'error');
+    }
+  };
+
   const handleAddSubParty = async () => {
     if (!spForm.name.trim()) { addToast('Name is required', 'error'); return; }
     setSpSaving(true);
@@ -263,6 +274,7 @@ export default function DealerDetail() {
                   <th className="px-3 py-2">Type</th>
                   <th className="px-3 py-2">Phone</th>
                   <th className="px-3 py-2">Location</th>
+                  <th className="px-3 py-2"></th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-50">
@@ -278,6 +290,16 @@ export default function DealerDetail() {
                     </td>
                     <td className="px-3 py-2 text-gray-600">{sp.phone ?? '—'}</td>
                     <td className="px-3 py-2 text-gray-600">{sp.location ?? '—'}</td>
+                    <td className="px-3 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleDeleteSubParty(sp)}
+                        className="rounded p-1 text-red-500 hover:bg-red-50"
+                        title="Delete sub-party"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>

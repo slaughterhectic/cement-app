@@ -8,7 +8,7 @@ import { useToastStore } from '../lib/store';
 import { useForm } from 'react-hook-form';
 import { z } from 'zod';
 import { zodResolver } from '@hookform/resolvers/zod';
-import { Plus, Users, Pencil } from 'lucide-react';
+import { Plus, Users, Pencil, Trash2 } from 'lucide-react';
 
 const PARTY_TYPES = [
   'dealer',
@@ -164,6 +164,17 @@ export default function Parties() {
     }
   };
 
+  const handleDelete = async (row: PartyRow) => {
+    if (!window.confirm(`Delete party "${row.name}"? This cannot be undone.`)) return;
+    try {
+      await api.parties.delete(row.id);
+      addToast('Party deleted');
+      await load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Could not delete party', 'error');
+    }
+  };
+
   const onEditSubmit = async (values: PartyFormValues) => {
     if (!editing) return;
     try {
@@ -277,15 +288,25 @@ export default function Parties() {
         header: 'Actions',
         enableSorting: false,
         cell: ({ row }) => (
-          <button
-            type="button"
-            onClick={() => openEdit(row.original)}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
-            aria-label={`Edit ${row.original.name}`}
-          >
-            <Pencil className="h-3.5 w-3.5" />
-            Edit
-          </button>
+          <div className="flex items-center gap-1">
+            <button
+              type="button"
+              onClick={() => openEdit(row.original)}
+              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              aria-label={`Edit ${row.original.name}`}
+            >
+              <Pencil className="h-3.5 w-3.5" />
+              Edit
+            </button>
+            <button
+              type="button"
+              onClick={() => handleDelete(row.original)}
+              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+              aria-label={`Delete ${row.original.name}`}
+            >
+              <Trash2 className="h-3.5 w-3.5" />
+            </button>
+          </div>
         ),
       },
     ],

@@ -53,6 +53,22 @@ router.put('/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+router.delete('/:id', async (req, res) => {
+  try {
+    const used = await getOne(
+      `SELECT 1 FROM (
+        SELECT party_id as pid FROM sales WHERE party_id=$1
+        UNION ALL SELECT party_id FROM payments WHERE party_id=$1
+        UNION ALL SELECT supplier_id FROM purchases WHERE supplier_id=$1
+      ) t LIMIT 1`,
+      [req.params.id]
+    );
+    if (used) return res.status(400).json({ error: 'Cannot delete: party has existing transactions. Remove all sales, payments, and purchases first.' });
+    await query('DELETE FROM parties WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/:id/summary', async (req, res) => {
   try {
     const party = await getOne('SELECT * FROM parties WHERE id=$1', [req.params.id]);

@@ -5,7 +5,7 @@ import { z } from 'zod';
 import { Modal } from '../ui/Modal';
 import { api } from '../../lib/api';
 import { formatDateInput, formatINR } from '../../lib/format';
-import { useToastStore } from '../../lib/store';
+import { useToastStore, useAuthStore } from '../../lib/store';
 
 const schema = z.object({
   date: z.string().min(1, 'Date is required'),
@@ -42,6 +42,9 @@ type Party = { id: number; name: string; type?: string };
 
 export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseFormProps) {
   const addToast = useToastStore((s) => s.addToast);
+  const isAdmin = useAuthStore((s) => s.isAdmin());
+  // Non-admin users can only edit invoice_number when editing a record
+  const lockFields = !!editData && !isAdmin;
   const [parties, setParties] = useState<Party[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
@@ -213,10 +216,15 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
       size="xl"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
+        {lockFields && (
+          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+            Only the <strong>invoice number</strong> can be edited. Contact an admin to change other fields.
+          </div>
+        )}
         <div className="grid gap-4 sm:grid-cols-2">
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Date *</label>
-            <input type="date" className="input-field w-full" {...register('date')} />
+            <input type="date" className="input-field w-full" disabled={lockFields} {...register('date')} />
             {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
           </div>
           <div className="relative" ref={supplierWrapRef}>
@@ -225,12 +233,13 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               type="text"
               className="input-field w-full"
               value={supplierQuery}
+              disabled={lockFields}
               onChange={(e) => {
                 setSupplierQuery(e.target.value);
                 setSupplierMenuOpen(true);
                 setValue('supplier_id', 0, { shouldValidate: true });
               }}
-              onFocus={() => setSupplierMenuOpen(true)}
+              onFocus={() => !lockFields && setSupplierMenuOpen(true)}
               placeholder="Search supplier…"
             />
             <input type="hidden" {...register('supplier_id', { valueAsNumber: true })} />
@@ -264,7 +273,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Brand *</label>
-            <select className="input-field w-full" {...register('brand_id')}>
+            <select className="input-field w-full" disabled={lockFields} {...register('brand_id')}>
               <option value={0}>Select brand</option>
               {brands.map((b) => (
                 <option key={b.id} value={b.id}>
@@ -278,12 +287,12 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Cement type</label>
-            <input type="text" className="input-field w-full" {...register('cement_type')} />
+            <input type="text" className="input-field w-full" disabled={lockFields} {...register('cement_type')} />
             <p className="mt-1 text-xs text-gray-500">Prefilled from brand; you can edit (OPC / PPC / DAMAGE).</p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Bags *</label>
-            <input type="number" min={1} step={1} className="input-field w-full" {...register('bags')} />
+            <input type="number" min={1} step={1} className="input-field w-full" disabled={lockFields} {...register('bags')} />
             {errors.bags && <p className="mt-1 text-xs text-red-600">{errors.bags.message}</p>}
           </div>
           <div>
@@ -293,6 +302,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               min={0}
               step={0.01}
               className="input-field w-full"
+              disabled={lockFields}
               {...register('purchase_rate')}
             />
             {errors.purchase_rate && (
@@ -307,6 +317,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               step={0.01}
               className="input-field w-full"
               placeholder="0"
+              disabled={lockFields}
               {...register('freight_rate')}
             />
             <p className="mt-1 text-xs text-gray-500">Optional. Transport cost per bag.</p>
@@ -349,6 +360,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               render={({ field }) => (
                 <select
                   className="input-field w-full"
+                  disabled={lockFields}
                   value={field.value || ''}
                   onChange={(e) => field.onChange(Number(e.target.value))}
                 >
@@ -365,12 +377,12 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Truck number *</label>
-            <input type="text" className="input-field w-full" placeholder="e.g. UP14AT7777" {...register('truck_number')} />
+            <input type="text" className="input-field w-full" placeholder="e.g. UP14AT7777" disabled={lockFields} {...register('truck_number')} />
             {errors.truck_number && <p className="mt-1 text-xs text-red-600">{errors.truck_number.message}</p>}
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Source location</label>
-            <input type="text" className="input-field w-full" {...register('source_location')} />
+            <input type="text" className="input-field w-full" disabled={lockFields} {...register('source_location')} />
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
@@ -378,7 +390,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Remarks</label>
-            <textarea rows={3} className="input-field w-full resize-y" {...register('remarks')} />
+            <textarea rows={3} className="input-field w-full resize-y" disabled={lockFields} {...register('remarks')} />
           </div>
         </div>
 

@@ -45,6 +45,23 @@ router.put('/:id', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+// DELETE /:id — delete a dealer (only if no transactions)
+router.delete('/:id', async (req, res) => {
+  try {
+    const used = await getOne(
+      `SELECT 1 FROM (
+        SELECT party_id as pid FROM sales WHERE party_id=$1
+        UNION ALL SELECT party_id FROM payments WHERE party_id=$1
+        UNION ALL SELECT id FROM parties WHERE parent_id=$1 LIMIT 1
+      ) t LIMIT 1`,
+      [req.params.id]
+    );
+    if (used) return res.status(400).json({ error: 'Cannot delete: dealer has existing transactions or sub-parties.' });
+    await query('DELETE FROM parties WHERE id=$1 AND type=\'dealer\'', [req.params.id]);
+    res.json({ success: true });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // GET /:id/sub-parties — list sub-parties for this dealer
 router.get('/:id/sub-parties', async (req, res) => {
   try {
@@ -53,6 +70,24 @@ router.get('/:id/sub-parties', async (req, res) => {
       [req.params.id]
     );
     res.json(subParties);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// DELETE /:id/sub-parties/:subId — remove a sub-party
+router.delete('/:id/sub-parties/:subId', async (req, res) => {
+  try {
+    const sub = await getOne('SELECT id FROM parties WHERE id=$1 AND parent_id=$2', [req.params.subId, req.params.id]);
+    if (!sub) return res.status(404).json({ error: 'Sub-party not found under this dealer' });
+    const used = await getOne(
+      `SELECT 1 FROM (
+        SELECT party_id FROM sales WHERE party_id=$1
+        UNION ALL SELECT party_id FROM payments WHERE party_id=$1
+      ) t LIMIT 1`,
+      [req.params.subId]
+    );
+    if (used) return res.status(400).json({ error: 'Cannot delete: sub-party has existing transactions.' });
+    await query('DELETE FROM parties WHERE id=$1', [req.params.subId]);
+    res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
