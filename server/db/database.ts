@@ -161,6 +161,27 @@ export async function initializeDatabase() {
       );
     `);
 
+    // Transporter tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS transporters (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS transporter_payments (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        transporter_id INTEGER NOT NULL REFERENCES transporters(id),
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'cash',
+        bank_name TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     // TruckBook tables
     await client.query(`
       CREATE TABLE IF NOT EXISTS trucks (
@@ -262,6 +283,11 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','other','supplier'));`);
 
     // Add supplier_id FK to purchases
+    // truck_trips new columns
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_id INTEGER REFERENCES transporters(id);`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS diesel_from_id INTEGER REFERENCES transporters(id);`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_commission REAL DEFAULT 0;`);
+
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES parties(id);`);
 
     // Migrate existing supplier_name values into parties table (type = supplier) and link back

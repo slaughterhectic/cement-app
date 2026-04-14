@@ -212,6 +212,19 @@ export const api = {
     delete: (id: number) => request<any>(`/drivers/${id}`, { method: 'DELETE' }),
     ledger: (id: number) => request<any>(`/drivers/${id}/ledger`),
   },
+  transporters: {
+    list: () => request<any[]>('/transporters'),
+    create: (data: { name: string; phone?: string }) =>
+      request<any>('/transporters', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) =>
+      request<any>(`/transporters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/transporters/${id}`, { method: 'DELETE' }),
+    ledger: (id: number) => request<any>(`/transporters/${id}/ledger`),
+    addPayment: (id: number, data: any) =>
+      request<any>(`/transporters/${id}/payments`, { method: 'POST', body: JSON.stringify(data) }),
+    deletePayment: (id: number, pid: number) =>
+      request<any>(`/transporters/${id}/payments/${pid}`, { method: 'DELETE' }),
+  },
   truckTrips: {
     list: (params?: Record<string, string>) => {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';

@@ -9,6 +9,8 @@ interface TripRow {
   date: string;
   truck_number: string;
   driver_name: string | null;
+  transporter_name: string | null;
+  diesel_from_name: string | null;
   material_name: string | null;
   quantity: number;
   load_from: string | null;
@@ -20,8 +22,9 @@ interface TripRow {
   driver_payment: number;
   truck_id: number;
   driver_id: number | null;
+  transporter_id: number | null;
+  diesel_from_id: number | null;
   billed_party: string | null;
-  transport_name: string | null;
   freight_rate: number;
   loading_charge: number;
   unloading_charge: number;
@@ -31,7 +34,7 @@ interface TripRow {
   toll_expense: number;
   diesel_litres: number;
   diesel_rate: number;
-  diesel_from: string | null;
+  transporter_commission: number;
   miscellaneous: number;
   odometer_start: number | null;
   odometer_end: number | null;
@@ -41,27 +44,29 @@ interface TripRow {
 
 interface Truck { id: number; truck_number: string; }
 interface Driver { id: number; name: string; }
+interface Transporter { id: number; name: string; }
 
 const emptyForm = {
   date: new Date().toISOString().split('T')[0],
   truck_id: '',
   driver_id: '',
+  transporter_id: '',
+  diesel_from_id: '',
   material_name: '',
   quantity: '',
   load_from: '',
   billed_party: '',
   billed_destination: '',
-  transport_name: '',
   freight_rate: '',
-  loading_charge: '',
-  unloading_charge: '',
   advance_litres: '',
   advance_rate: '',
   toll_expense: '',
+  loading_charge: '',
+  unloading_charge: '',
   diesel_litres: '',
   diesel_rate: '',
-  diesel_from: '',
   driver_payment: '',
+  transporter_commission: '',
   miscellaneous: '',
   odometer_start: '',
   odometer_end: '',
@@ -71,15 +76,17 @@ const emptyForm = {
 function n(v: string) { return Number(v) || 0; }
 
 function computeLive(form: typeof emptyForm) {
-  const advance_deduction = n(form.advance_litres) * n(form.advance_rate);
-  const diesel_amount = n(form.diesel_litres) * n(form.diesel_rate);
-  const total_freight = n(form.quantity) * n(form.freight_rate) + n(form.loading_charge) + n(form.unloading_charge);
-  const net_freight = total_freight - advance_deduction - n(form.toll_expense);
-  const net_profit = net_freight - diesel_amount - n(form.driver_payment) - n(form.miscellaneous);
+  const advance_deduction      = n(form.advance_litres) * n(form.advance_rate);
+  const diesel_amount          = n(form.diesel_litres) * n(form.diesel_rate);
+  const total_freight          = n(form.quantity) * n(form.freight_rate);
+  const net_profit             = total_freight
+    - n(form.loading_charge) - n(form.unloading_charge)
+    - advance_deduction - n(form.toll_expense)
+    - diesel_amount - n(form.driver_payment)
+    - n(form.transporter_commission) - n(form.miscellaneous);
   const total_km = form.odometer_end && form.odometer_start
-    ? n(form.odometer_end) - n(form.odometer_start)
-    : 0;
-  return { advance_deduction, diesel_amount, total_freight, net_freight, net_profit, total_km };
+    ? n(form.odometer_end) - n(form.odometer_start) : 0;
+  return { advance_deduction, diesel_amount, total_freight, net_profit, total_km };
 }
 
 export default function TripLog() {
@@ -88,6 +95,7 @@ export default function TripLog() {
   const [rows, setRows] = useState<TripRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
+  const [transporters, setTransporters] = useState<Transporter[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TripRow | null>(null);
@@ -108,27 +116,22 @@ export default function TripLog() {
       setRows(data);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load trips', 'error');
-    } finally {
-      setLoading(false);
-    }
+    } finally { setLoading(false); }
   }, [addToast, filterTruck, filterMonth]);
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, d] = await Promise.all([api.trucks.list(), api.drivers.list()]);
+      const [t, d, tp] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list()]);
       setTrucks(t);
       setDrivers(d);
+      setTransporters(tp);
     } catch (_) {}
   }, []);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadMeta(); }, [loadMeta]);
 
-  const openAdd = () => {
-    setEditing(null);
-    setForm(emptyForm);
-    setModalOpen(true);
-  };
+  const openAdd = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
 
   const openEdit = (row: TripRow) => {
     setEditing(row);
@@ -136,22 +139,23 @@ export default function TripLog() {
       date: row.date,
       truck_id: String(row.truck_id),
       driver_id: row.driver_id ? String(row.driver_id) : '',
+      transporter_id: row.transporter_id ? String(row.transporter_id) : '',
+      diesel_from_id: row.diesel_from_id ? String(row.diesel_from_id) : '',
       material_name: row.material_name || '',
       quantity: String(row.quantity || ''),
       load_from: row.load_from || '',
       billed_party: row.billed_party || '',
       billed_destination: row.billed_destination || '',
-      transport_name: row.transport_name || '',
       freight_rate: String(row.freight_rate || ''),
-      loading_charge: String(row.loading_charge || ''),
-      unloading_charge: String(row.unloading_charge || ''),
       advance_litres: String(row.advance_litres || ''),
       advance_rate: String(row.advance_rate || ''),
       toll_expense: String(row.toll_expense || ''),
+      loading_charge: String(row.loading_charge || ''),
+      unloading_charge: String(row.unloading_charge || ''),
       diesel_litres: String(row.diesel_litres || ''),
       diesel_rate: String(row.diesel_rate || ''),
-      diesel_from: row.diesel_from || '',
       driver_payment: String(row.driver_payment || ''),
+      transporter_commission: String(row.transporter_commission || ''),
       miscellaneous: String(row.miscellaneous || ''),
       odometer_start: row.odometer_start ? String(row.odometer_start) : '',
       odometer_end: row.odometer_end ? String(row.odometer_end) : '',
@@ -162,48 +166,41 @@ export default function TripLog() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!form.date || !form.truck_id) { addToast('Date and Truck are required', 'error'); return; }
     setSaving(true);
     try {
       const payload = {
         date: form.date,
         truck_id: Number(form.truck_id),
         driver_id: form.driver_id ? Number(form.driver_id) : null,
+        transporter_id: form.transporter_id ? Number(form.transporter_id) : null,
+        diesel_from_id: form.diesel_from_id ? Number(form.diesel_from_id) : null,
         material_name: form.material_name || null,
         quantity: n(form.quantity),
         load_from: form.load_from || null,
         billed_party: form.billed_party || null,
         billed_destination: form.billed_destination || null,
-        transport_name: form.transport_name || null,
         freight_rate: n(form.freight_rate),
-        loading_charge: n(form.loading_charge),
-        unloading_charge: n(form.unloading_charge),
         advance_litres: n(form.advance_litres),
         advance_rate: n(form.advance_rate),
         toll_expense: n(form.toll_expense),
+        loading_charge: n(form.loading_charge),
+        unloading_charge: n(form.unloading_charge),
         diesel_litres: n(form.diesel_litres),
         diesel_rate: n(form.diesel_rate),
-        diesel_from: form.diesel_from || null,
         driver_payment: n(form.driver_payment),
+        transporter_commission: n(form.transporter_commission),
         miscellaneous: n(form.miscellaneous),
         odometer_start: form.odometer_start ? n(form.odometer_start) : null,
         odometer_end: form.odometer_end ? n(form.odometer_end) : null,
         remarks: form.remarks || null,
       };
-      if (editing) {
-        await api.truckTrips.update(editing.id, payload);
-        addToast('Trip updated', 'success');
-      } else {
-        await api.truckTrips.create(payload);
-        addToast('Trip added', 'success');
-      }
+      if (editing) { await api.truckTrips.update(editing.id, payload); addToast('Trip updated', 'success'); }
+      else { await api.truckTrips.create(payload); addToast('Trip added', 'success'); }
       setModalOpen(false);
       load();
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Save failed', 'error');
-    } finally {
-      setSaving(false);
-    }
+    } finally { setSaving(false); }
   };
 
   const handleDelete = async (row: TripRow) => {
@@ -392,11 +389,18 @@ export default function TripLog() {
                           {trucks.map((t) => <option key={t.id} value={String(t.id)}>{t.truck_number}</option>)}
                         </select>
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver</label>
-                        <select className="input-field" value={form.driver_id} onChange={f('driver_id')}>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver *</label>
+                        <select className="input-field" value={form.driver_id} onChange={f('driver_id')} required>
                           <option value="">Select driver</option>
                           {drivers.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Transporter *</label>
+                        <select className="input-field" value={form.transporter_id} onChange={f('transporter_id')} required>
+                          <option value="">Select transporter</option>
+                          {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                         </select>
                       </div>
                     </div>
@@ -407,70 +411,70 @@ export default function TripLog() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Loading Details</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Material</label>
-                        <input className="input-field" value={form.material_name} onChange={f('material_name')} placeholder="e.g. Cement" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Material *</label>
+                        <input className="input-field" value={form.material_name} onChange={f('material_name')} placeholder="e.g. Cement" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Quantity (tons)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.quantity} onChange={f('quantity')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Quantity (tons) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.quantity} onChange={f('quantity')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Load From</label>
-                        <input className="input-field" value={form.load_from} onChange={f('load_from')} placeholder="Origin" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Load From *</label>
+                        <input className="input-field" value={form.load_from} onChange={f('load_from')} placeholder="Origin" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Billed Party</label>
-                        <input className="input-field" value={form.billed_party} onChange={f('billed_party')} placeholder="Party name" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Billed Party *</label>
+                        <input className="input-field" value={form.billed_party} onChange={f('billed_party')} placeholder="Party name" required />
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Destination</label>
-                        <input className="input-field" value={form.billed_destination} onChange={f('billed_destination')} placeholder="Destination" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Transport Name</label>
-                        <input className="input-field" value={form.transport_name} onChange={f('transport_name')} placeholder="Transporter" />
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Destination *</label>
+                        <input className="input-field" value={form.billed_destination} onChange={f('billed_destination')} placeholder="Destination" required />
                       </div>
                     </div>
                   </div>
 
-                  {/* 3. Freight & Deductions */}
+                  {/* 3. Freight */}
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Freight & Deductions</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Freight</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Freight Rate (₹/ton)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Freight Rate (₹/ton) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" required />
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Loading Charge (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Unloading Charge (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Toll Expense (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Diesel (Ltrs)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_litres} onChange={f('advance_litres')} placeholder="0" />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Rate (₹/L)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_rate} onChange={f('advance_rate')} placeholder="0" />
-                      </div>
-                      {/* Computed row */}
-                      <div className="col-span-2 grid grid-cols-2 gap-2">
-                        <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
-                          <span className="text-gray-500">Total Freight: </span>
-                          <span className="font-semibold text-orange-700">{formatINR(live.total_freight)}</span>
+                      <div className="flex items-end">
+                        <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs w-full">
+                          <span className="text-gray-500">Total Freight </span>
+                          <span className="text-orange-600 text-[10px]">({n(form.quantity)} × {n(form.freight_rate)})</span>
+                          <p className="font-bold text-orange-700 text-sm mt-0.5">{formatINR(live.total_freight)}</p>
                         </div>
-                        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-xs">
-                          <span className="text-gray-500">Net Freight: </span>
-                          <span className="font-semibold text-green-700">{formatINR(live.net_freight)}</span>
-                        </div>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Diesel (Ltrs) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_litres} onChange={f('advance_litres')} placeholder="0" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Rate (₹/L) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_rate} onChange={f('advance_rate')} placeholder="0" required />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel From (Transporter) *</label>
+                        <select className="input-field" value={form.diesel_from_id} onChange={f('diesel_from_id')} required>
+                          <option value="">Select transporter who provided diesel</option>
+                          {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+                        </select>
+                        {live.advance_deduction > 0 && (
+                          <p className="text-xs text-orange-600 mt-1">
+                            Advance deduction: {formatINR(live.advance_deduction)} → goes to {transporters.find(t => String(t.id) === form.diesel_from_id)?.name || '—'}'s ledger
+                          </p>
+                        )}
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Toll Expense (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Transporter Commission (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.transporter_commission} onChange={f('transporter_commission')} placeholder="0" required />
                       </div>
                     </div>
                   </div>
@@ -480,31 +484,33 @@ export default function TripLog() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Costs</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Litres</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Loading Charge (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Rate (₹/L)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Unloading Charge (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver Payment (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Litres *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Miscellaneous (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Rate (₹/L) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" required />
                       </div>
-                      <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel From</label>
-                        <input className="input-field" value={form.diesel_from} onChange={f('diesel_from')} placeholder="Pump location" />
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver Payment (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" required />
                       </div>
-                      <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
-                        <span className="text-gray-500">Diesel Cost: </span>
-                        <span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span>
-                        <span className="mx-2 text-gray-300">|</span>
-                        <span className="text-gray-500">Advance Deduction: </span>
-                        <span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Miscellaneous (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" required />
+                      </div>
+                      <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs flex flex-wrap gap-3">
+                        <span><span className="text-gray-500">Trip Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span></span>
+                        <span><span className="text-gray-500">Adv Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span></span>
+                        <span><span className="text-gray-500">Total Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount + live.advance_deduction)}</span></span>
                       </div>
                     </div>
                   </div>
@@ -514,12 +520,12 @@ export default function TripLog() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer & Remarks</p>
                     <div className="grid grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer Start (km)</label>
-                        <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer Start (km) *</label>
+                        <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer End (km)</label>
-                        <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" />
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer End (km) *</label>
+                        <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" required />
                       </div>
                       {live.total_km > 0 && (
                         <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
@@ -537,22 +543,30 @@ export default function TripLog() {
                   {/* Live Summary */}
                   <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Summary</p>
-                    <div className="grid grid-cols-4 gap-3">
-                      <div>
+                    <div className="grid grid-cols-3 gap-3 text-sm">
+                      <div className="bg-white/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Total Freight</p>
                         <p className="font-bold">{formatINR(live.total_freight)}</p>
                       </div>
-                      <div>
-                        <p className="text-xs opacity-70">Net Freight</p>
-                        <p className="font-bold">{formatINR(live.net_freight)}</p>
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Loading + Unloading</p>
+                        <p className="font-bold">−{formatINR(n(form.loading_charge) + n(form.unloading_charge))}</p>
                       </div>
-                      <div>
-                        <p className="text-xs opacity-70">Diesel Cost</p>
-                        <p className="font-bold">{formatINR(live.diesel_amount)}</p>
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Advance Diesel</p>
+                        <p className="font-bold">−{formatINR(live.advance_deduction)}</p>
                       </div>
-                      <div>
-                        <p className="text-xs opacity-70">Driver Pay</p>
-                        <p className="font-bold">{formatINR(n(form.driver_payment))}</p>
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Trip Diesel</p>
+                        <p className="font-bold">−{formatINR(live.diesel_amount)}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Driver + Misc</p>
+                        <p className="font-bold">−{formatINR(n(form.driver_payment) + n(form.miscellaneous))}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Toll + Commission</p>
+                        <p className="font-bold">−{formatINR(n(form.toll_expense) + n(form.transporter_commission))}</p>
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">

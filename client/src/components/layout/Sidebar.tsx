@@ -66,6 +66,7 @@ const truckNavItems = [
   { to: '/truckbook/trucks', label: 'Trucks', icon: Truck },
   { to: '/truckbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },
+  { to: '/truckbook/transporters', label: 'Transporters', icon: Store },
   { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
   { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];

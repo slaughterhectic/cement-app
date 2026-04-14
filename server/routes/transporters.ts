@@ -1,0 +1,146 @@
+import { Router } from 'express';
+import { getAll, getOne, query } from '../db/database';
+
+const router = Router();
+
+// GET /transporters — list with summary
+router.get('/', async (_req, res) => {
+  try {
+    const rows = await getAll(`
+      SELECT t.*,
+        COALESCE((SELECT SUM(transporter_commission) FROM truck_trips WHERE transporter_id=t.id),0) as total_commission,
+        COALESCE((SELECT SUM(advance_deduction) FROM truck_trips WHERE diesel_from_id=t.id),0) as total_advance_diesel,
+        COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE transporter_id=t.id),0) as total_paid,
+        COALESCE((SELECT COUNT(*) FROM truck_trips WHERE transporter_id=t.id),0) as trip_count
+      FROM transporters t ORDER BY t.name
+    `);
+    res.json(rows.map((r: any) => ({
+      ...r,
+      total_commission: Number(r.total_commission),
+      total_advance_diesel: Number(r.total_advance_diesel),
+      total_paid: Number(r.total_paid),
+      trip_count: Number(r.trip_count),
+      outstanding: Number(r.total_commission) + Number(r.total_advance_diesel) - Number(r.total_paid),
+    })));
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// GET /transporters/:id/ledger
+router.get('/:id/ledger', async (req, res) => {
+  try {
+    const transporter = await getOne('SELECT * FROM transporters WHERE id=$1', [req.params.id]);
+    if (!transporter) return res.status(404).json({ error: 'Transporter not found' });
+
+    // Commission entries — trips where this transporter transported goods
+    const commEntries = await getAll(`
+      SELECT tt.date, 'commission' as entry_type, tt.transporter_commission as amount,
+        t.truck_number, tt.load_from, tt.billed_destination, tt.material_name, tt.id as trip_id,
+        NULL as mode, NULL as bank_name, NULL as remarks
+      FROM truck_trips tt JOIN trucks t ON tt.truck_id=t.id
+      WHERE tt.transporter_id=$1 AND tt.transporter_commission > 0
+    `, [req.params.id]);
+
+    // Advance diesel entries — trips where this transporter provided diesel
+    const dieselEntries = await getAll(`
+      SELECT tt.date, 'advance_diesel' as entry_type, tt.advance_deduction as amount,
+        t.truck_number, tt.load_from, tt.billed_destination, tt.material_name, tt.id as trip_id,
+        NULL as mode, NULL as bank_name, NULL as remarks
+      FROM truck_trips tt JOIN trucks t ON tt.truck_id=t.id
+      WHERE tt.diesel_from_id=$1 AND tt.advance_deduction > 0
+    `, [req.params.id]);
+
+    // Payment entries
+    const paymentEntries = await getAll(`
+      SELECT date, 'payment' as entry_type, amount,
+        NULL as truck_number, NULL as load_from, NULL as billed_destination,
+        NULL as material_name, NULL as trip_id, mode, bank_name, remarks
+      FROM transporter_payments WHERE transporter_id=$1
+    `, [req.params.id]);
+
+    // Merge all and sort by date asc, then compute running balance
+    const all = [...commEntries, ...dieselEntries, ...paymentEntries]
+      .sort((a: any, b: any) => a.date.localeCompare(b.date) || a.trip_id - b.trip_id);
+
+    let balance = 0;
+    const ledger = all.map((e: any) => {
+      const amt = Number(e.amount);
+      if (e.entry_type === 'payment') {
+        balance -= amt;
+      } else {
+        balance += amt;
+      }
+      return { ...e, amount: amt, balance };
+    });
+
+    const totalEarned =
+      commEntries.reduce((s: number, r: any) => s + Number(r.amount), 0) +
+      dieselEntries.reduce((s: number, r: any) => s + Number(r.amount), 0);
+    const totalPaid = paymentEntries.reduce((s: number, r: any) => s + Number(r.amount), 0);
+
+    res.json({ transporter, ledger, totalEarned, totalPaid, outstanding: totalEarned - totalPaid });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+// POST /transporters
+router.post('/', async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
+    const row = await getOne(
+      'INSERT INTO transporters (name, phone) VALUES ($1,$2) RETURNING *',
+      [name.trim(), phone?.trim() || null]
+    );
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// PUT /transporters/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const { name, phone } = req.body;
+    const row = await getOne(
+      'UPDATE transporters SET name=$1, phone=$2 WHERE id=$3 RETURNING *',
+      [name.trim(), phone?.trim() || null, req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Transporter not found' });
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// DELETE /transporters/:id
+router.delete('/:id', async (req, res) => {
+  try {
+    const used = await getOne(
+      'SELECT 1 FROM truck_trips WHERE transporter_id=$1 OR diesel_from_id=$1 LIMIT 1',
+      [req.params.id]
+    );
+    if (used) return res.status(400).json({ error: 'Transporter has trips and cannot be deleted' });
+    await query('DELETE FROM transporters WHERE id=$1', [req.params.id]);
+    res.json({ success: true });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// POST /transporters/:id/payments
+router.post('/:id/payments', async (req, res) => {
+  try {
+    const { date, amount, mode, bank_name, remarks } = req.body;
+    if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
+    const row = await getOne(
+      `INSERT INTO transporter_payments (date, transporter_id, amount, mode, bank_name, remarks)
+       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
+      [date, req.params.id, Number(amount), mode || 'cash', bank_name || null, remarks || null]
+    );
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// DELETE /transporters/:id/payments/:pid (admin only)
+router.delete('/:id/payments/:pid', async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    await query('DELETE FROM transporter_payments WHERE id=$1 AND transporter_id=$2', [req.params.pid, req.params.id]);
+    res.json({ success: true });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+export default router;
