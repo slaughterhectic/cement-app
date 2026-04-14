@@ -51,7 +51,7 @@ router.get('/:id/ledger', async (req, res) => {
 
     // Payment entries
     const paymentEntries = await getAll(`
-      SELECT date, 'payment' as entry_type, amount,
+      SELECT id, date, 'payment' as entry_type, amount,
         NULL as truck_number, NULL as load_from, NULL as billed_destination,
         NULL as material_name, NULL as trip_id, mode, bank_name, remarks
       FROM transporter_payments WHERE transporter_id=$1

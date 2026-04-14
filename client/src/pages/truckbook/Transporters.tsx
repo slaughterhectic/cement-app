@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, X, Building2 } from 'lucide-react';
+import { Plus, Trash2, X, Building2, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -17,6 +17,7 @@ interface TransporterRow {
 }
 
 interface LedgerEntry {
+  id?: number;
   date: string;
   entry_type: 'commission' | 'advance_diesel' | 'payment';
   amount: number;
@@ -127,6 +128,19 @@ export default function Transporters() {
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed', 'error');
     } finally { setTSaving(false); }
+  };
+
+  const handleDeletePayment = async (entry: LedgerEntry, transporterId: number) => {
+    if (!entry.id) return;
+    if (!window.confirm('Delete this payment?')) return;
+    try {
+      await api.transporters.deletePayment(transporterId, entry.id);
+      addToast('Payment deleted', 'success');
+      loadLedger(transporterId);
+      loadList();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed', 'error');
+    }
   };
 
   const handleDelete = async (id: number, name: string) => {
@@ -316,37 +330,59 @@ export default function Transporters() {
                         <th className="px-4 py-2.5 font-medium text-gray-600">Date</th>
                         <th className="px-4 py-2.5 font-medium text-gray-600">Type</th>
                         <th className="px-4 py-2.5 font-medium text-gray-600">Details</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Owed</th>
+                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Received</th>
                         <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Paid</th>
                         <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Balance</th>
+                        <th className="px-4 py-2.5 font-medium text-gray-600">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ledger.ledger.length === 0 ? (
-                        <tr><td colSpan={6} className="px-4 py-8 text-center text-gray-400">No entries</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No entries</td></tr>
                       ) : (
                         ledger.ledger.map((row, i) => {
                           const meta = ENTRY_LABELS[row.entry_type] || { label: row.entry_type, color: 'text-gray-600' };
                           const isPayment = row.entry_type === 'payment';
                           return (
-                            <tr key={i} className="border-b border-card-border last:border-0 hover:bg-gray-50">
+                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? 'hover:bg-green-50/40' : 'hover:bg-blue-50/40'} transition-colors`}>
                               <td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatDate(row.date)}</td>
                               <td className="px-4 py-3">
-                                <span className={`text-xs font-semibold ${meta.color}`}>{meta.label}</span>
+                                {isPayment ? (
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                    <TrendingDown className="h-3 w-3" /> Payment
+                                  </span>
+                                ) : (
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.color === 'text-blue-600' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                                    <TrendingUp className="h-3 w-3" /> {meta.label}
+                                  </span>
+                                )}
                               </td>
-                              <td className="px-4 py-3 text-xs text-gray-500">
+                              <td className="px-4 py-3 text-xs text-gray-500 max-w-[180px]">
                                 {isPayment
-                                  ? (row.remarks || `${row.mode}${row.bank_name ? ` — ${row.bank_name}` : ''}`)
-                                  : [row.truck_number, row.load_from && row.billed_destination
-                                      ? `${row.load_from} → ${row.billed_destination}`
-                                      : row.load_from || row.billed_destination,
-                                     row.material_name].filter(Boolean).join(' | ')
+                                  ? <span>{row.mode && <span className="capitalize">{row.mode}</span>}{row.bank_name && ` · ${row.bank_name}`}{row.remarks && ` · ${row.remarks}`}</span>
+                                  : <span>{[row.truck_number, row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination, row.material_name].filter(Boolean).join(' · ')}</span>
                                 }
                               </td>
-                              <td className="px-4 py-3 text-right">{!isPayment ? formatINR(row.amount) : '—'}</td>
-                              <td className="px-4 py-3 text-right text-green-600">{isPayment ? formatINR(row.amount) : '—'}</td>
+                              <td className="px-4 py-3 text-right font-medium text-blue-700">
+                                {!isPayment ? formatINR(row.amount) : '—'}
+                              </td>
+                              <td className="px-4 py-3 text-right font-medium text-green-700">
+                                {isPayment ? formatINR(row.amount) : '—'}
+                              </td>
                               <td className={`px-4 py-3 text-right font-semibold ${row.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                 {formatINR(row.balance)}
+                              </td>
+                              <td className="px-4 py-3">
+                                {isPayment && isAdmin() && (
+                                  <button
+                                    type="button"
+                                    onClick={() => handleDeletePayment(row, selectedId!)}
+                                    className="rounded p-1 text-red-500 hover:bg-red-50 transition-colors"
+                                    title="Delete payment"
+                                  >
+                                    <Trash2 className="h-3.5 w-3.5" />
+                                  </button>
+                                )}
                               </td>
                             </tr>
                           );
