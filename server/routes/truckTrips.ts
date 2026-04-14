@@ -25,10 +25,9 @@ function computeTripFields(body: any) {
   const total_freight        = quantity * freight_rate;
   const net_freight          = total_freight
     - loading_charge - unloading_charge
-    - advance_deduction - toll_expense
-    - diesel_amount - driver_payment
-    - transporter_commission - miscellaneous;
-  const net_profit           = net_freight;   // same — net freight IS net profit
+    - toll_expense - diesel_amount
+    - driver_payment - transporter_commission - miscellaneous;
+  const net_profit           = net_freight;   // advance diesel is NOT deducted — it goes to transporter ledger only
   const total_km             = (odometer_end !== null && odometer_start !== null)
     ? odometer_end - odometer_start : 0;
 

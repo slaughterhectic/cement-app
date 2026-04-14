@@ -81,9 +81,8 @@ function computeLive(form: typeof emptyForm) {
   const total_freight          = n(form.quantity) * n(form.freight_rate);
   const net_profit             = total_freight
     - n(form.loading_charge) - n(form.unloading_charge)
-    - advance_deduction - n(form.toll_expense)
-    - diesel_amount - n(form.driver_payment)
-    - n(form.transporter_commission) - n(form.miscellaneous);
+    - n(form.toll_expense) - diesel_amount
+    - n(form.driver_payment) - n(form.transporter_commission) - n(form.miscellaneous);
   const total_km = form.odometer_end && form.odometer_start
     ? n(form.odometer_end) - n(form.odometer_start) : 0;
   return { advance_deduction, diesel_amount, total_freight, net_profit, total_km };
@@ -553,12 +552,12 @@ export default function TripLog() {
                         <p className="font-bold">−{formatINR(n(form.loading_charge) + n(form.unloading_charge))}</p>
                       </div>
                       <div className="bg-white/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">Advance Diesel</p>
-                        <p className="font-bold">−{formatINR(live.advance_deduction)}</p>
-                      </div>
-                      <div className="bg-white/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Trip Diesel</p>
                         <p className="font-bold">−{formatINR(live.diesel_amount)}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Adv Diesel (Ledger)</p>
+                        <p className="font-bold text-yellow-200">{formatINR(live.advance_deduction)}</p>
                       </div>
                       <div className="bg-white/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Driver + Misc</p>
