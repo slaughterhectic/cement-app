@@ -28,7 +28,9 @@ router.get('/summary', async (_req, res) => {
     const cashExpensesTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash'`))?.t ?? 0);
     const cashLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='disbursement'`))?.t ?? 0);
     const cashLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='repayment'`))?.t ?? 0);
-    const totalCash = imprestCash + cashReceivedTotal - cashPaidOutTotal - cashExpensesTotal - cashLoanDisbursed + cashLoanRepaid;
+    const truckCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='cash'`))?.t ?? 0);
+    const driverCashPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='cash'`))?.t ?? 0);
+    const totalCash = imprestCash + cashReceivedTotal - cashPaidOutTotal - cashExpensesTotal - cashLoanDisbursed + cashLoanRepaid - truckCashExpenses - driverCashPayments;
 
     // Banks: received = payments with direction='receive'; paid = payments with direction='pay' + expenses
     // Also include opening balances from bank_balances table for configured banks
@@ -47,7 +49,13 @@ router.get('/summary', async (_req, res) => {
     const bankExpenseRows = await getAll(`
       SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
         COALESCE(SUM(amount),0) as paid
-      FROM expenses WHERE mode='bank'
+      FROM (
+        SELECT bank_name, amount FROM expenses WHERE mode='bank'
+        UNION ALL
+        SELECT bank_name, amount FROM truck_expenses WHERE mode='bank'
+        UNION ALL
+        SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
+      ) combined
       GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
     `);
     const bankOpeningRows = await getAll(`SELECT bank_name, opening_balance FROM bank_balances`);
@@ -73,13 +81,16 @@ router.get('/summary', async (_req, res) => {
 
     const bankLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='disbursement'`))?.t ?? 0);
     const bankLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='repayment'`))?.t ?? 0);
+    const truckBankExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='bank'`))?.t ?? 0);
+    const driverBankPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='bank'`))?.t ?? 0);
 
-    // Total bank = opening balances + received payments - paid-out payments - expenses - loan disbursements + loan repayments
+    // Total bank = opening balances + received payments - paid-out payments - expenses (all sources) - loan disbursements + loan repayments
     const totalBank =
       Number((await getOne(`SELECT COALESCE(SUM(opening_balance),0) as t FROM bank_balances`))?.t ?? 0) +
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='receive'`))?.t ?? 0) -
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='pay'`))?.t ?? 0) -
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0) -
+      truckBankExpenses - driverBankPayments -
       bankLoanDisbursed + bankLoanRepaid;
 
     // Stock value

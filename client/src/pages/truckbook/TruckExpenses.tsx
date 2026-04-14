@@ -17,6 +17,7 @@ interface ExpenseRow {
 }
 
 interface Truck { id: number; truck_number: string; }
+interface Bank { id: number; bank_name: string; }
 
 const CATEGORIES = ['EMI', 'Maintenance', 'Road Tax', 'Pollution Certificate', 'Insurance', 'Fuel (bulk)', 'Other'];
 
@@ -35,6 +36,7 @@ export default function TruckExpenses() {
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -56,15 +58,16 @@ export default function TruckExpenses() {
     }
   }, [addToast, filterTruck]);
 
-  const loadTrucks = useCallback(async () => {
+  const loadMeta = useCallback(async () => {
     try {
-      const data = await api.trucks.list();
-      setTrucks(data);
+      const [t, b] = await Promise.all([api.trucks.list(), api.capital.banks()]);
+      setTrucks(t);
+      setBanks(b);
     } catch (_) {}
   }, []);
 
   useEffect(() => { load(); }, [load]);
-  useEffect(() => { loadTrucks(); }, [loadTrucks]);
+  useEffect(() => { loadMeta(); }, [loadMeta]);
 
   // Filter by month client-side
   const filteredRows = filterMonth
@@ -304,7 +307,13 @@ export default function TruckExpenses() {
                 {form.mode === 'bank' && (
                   <div>
                     <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
-                    <input className="input-field" value={form.bank_name} onChange={f('bank_name')} placeholder="Bank" />
+                    <select className="input-field" value={form.bank_name} onChange={f('bank_name')}>
+                      <option value="">Select bank</option>
+                      {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
+                    </select>
+                    {banks.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">No banks configured — add them in Settings</p>
+                    )}
                   </div>
                 )}
               </div>

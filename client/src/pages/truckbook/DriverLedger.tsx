@@ -58,6 +58,7 @@ export default function DriverLedger() {
   const [payForm, setPayForm] = useState(emptyPayForm);
   const [saving, setSaving] = useState(false);
   const [addPayOpen, setAddPayOpen] = useState(false);
+  const [banks, setBanks] = useState<{ id: number; bank_name: string }[]>([]);
   // Driver management modal
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [driverForm, setDriverForm] = useState({ name: '', phone: '', license_number: '' });
@@ -87,7 +88,10 @@ export default function DriverLedger() {
     }
   }, [addToast]);
 
-  useEffect(() => { loadDrivers(); }, [loadDrivers]);
+  useEffect(() => {
+    loadDrivers();
+    api.capital.banks().then(setBanks).catch(() => {});
+  }, [loadDrivers]);
 
   useEffect(() => {
     if (selectedId) loadLedger(selectedId);
@@ -296,8 +300,11 @@ export default function DriverLedger() {
                       {payForm.mode === 'bank' && (
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Bank Name</label>
-                          <input className="input-field" value={payForm.bank_name}
-                            onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))} placeholder="Bank" />
+                          <select className="input-field" value={payForm.bank_name}
+                            onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
+                            <option value="">Select bank</option>
+                            {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
+                          </select>
                         </div>
                       )}
                       <div className="col-span-2">

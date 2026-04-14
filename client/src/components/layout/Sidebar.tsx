@@ -28,11 +28,12 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
 import { api } from '../../lib/api';
 
-type Book = 'cement' | 'truck' | 'finance';
+type Book = 'cement' | 'truck' | 'finance' | 'settings';
 
 function detectBook(pathname: string): Book {
   if (pathname.startsWith('/truckbook')) return 'truck';
   if (pathname === '/capital' || pathname === '/finance') return 'finance';
+  if (pathname === '/settings' || pathname === '/users') return 'settings';
   return 'cement';
 }
 
@@ -48,8 +49,11 @@ const cementNavItems = [
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/import', label: 'Import', icon: Upload },
   { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
-  { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
-  { to: '/users', label: 'Users', icon: Shield, adminOnly: true },
+];
+
+const settingsNavItems = [
+  { to: '/settings', label: 'Settings', icon: Settings },
+  { to: '/users', label: 'Users', icon: Shield },
 ];
 
 const financeNavItems = [
@@ -87,6 +91,13 @@ const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string;
     activeClass: 'bg-emerald-600 text-white shadow-sm',
     hoverClass: 'hover:bg-emerald-50 hover:text-emerald-700',
     defaultRoute: '/capital',
+  },
+  settings: {
+    label: 'User & Settings',
+    dot: 'bg-violet-500',
+    activeClass: 'bg-violet-600 text-white shadow-sm',
+    hoverClass: 'hover:bg-violet-50 hover:text-violet-700',
+    defaultRoute: '/settings',
   },
 };
 
@@ -148,11 +159,15 @@ export function Sidebar() {
 
   const canSeeFinance = isAdmin() || hasPermission('view_capital') || hasPermission('view_finance');
 
-  const availableBooks: Book[] = ['cement', 'truck', ...(canSeeFinance ? (['finance'] as Book[]) : [])];
+  const availableBooks: Book[] = [
+    'cement',
+    'truck',
+    ...(canSeeFinance ? (['finance'] as Book[]) : []),
+    ...(isAdmin() ? (['settings'] as Book[]) : []),
+  ];
 
   const navItems = (book === 'cement'
     ? cementNavItems.filter((item) => {
-        if ((item as any).adminOnly) return user?.role === 'admin';
         if ((item as any).permission) return hasPermission((item as any).permission);
         return true;
       })
@@ -161,7 +176,9 @@ export function Sidebar() {
         if ((item as any).permission) return hasPermission((item as any).permission);
         return true;
       })
-    : truckNavItems) as Array<{ to: string; label: string; icon: any; badge?: boolean; adminOnly?: boolean; permission?: string }>;
+    : book === 'settings'
+    ? settingsNavItems
+    : truckNavItems) as Array<{ to: string; label: string; icon: any; badge?: boolean; permission?: string }>;
 
   const meta = BOOK_META[book];
   const displayName = user?.display_name || 'User';
