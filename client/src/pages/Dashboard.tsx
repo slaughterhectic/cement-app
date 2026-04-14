@@ -127,6 +127,8 @@ export default function Dashboard() {
   const [collection, setCollection] = useState<{ rows: any[]; daily: any[] } | null>(null);
   const [collectionView, setCollectionView] = useState<'daily' | 'monthly'>('daily');
   const [collectionLoading, setCollectionLoading] = useState(false);
+  const [collectionDate, setCollectionDate] = useState<string>(new Date().toISOString().slice(0, 10));
+  const [collectionMonth, setCollectionMonth] = useState<string>(new Date().toISOString().slice(0, 7));
 
   useEffect(() => {
     let cancelled = false;
@@ -151,11 +153,26 @@ export default function Dashboard() {
     setCollectionView(view);
     setCollectionLoading(true);
     try {
-      const currentMonth = new Date().toISOString().slice(0, 7);
-      const col = await api.reports.dailyCollection(view === 'daily' ? currentMonth : undefined, view);
+      const month = view === 'daily' ? collectionMonth : undefined;
+      const col = await api.reports.dailyCollection(month, view);
       setCollection(col as { rows: any[]; daily: any[] });
     } catch { /* keep existing data */ }
     finally { setCollectionLoading(false); }
+  };
+
+  const handleCollectionDateChange = async (date: string) => {
+    setCollectionDate(date);
+    if (!date) return;
+    const month = date.slice(0, 7);
+    if (month !== collectionMonth) {
+      setCollectionMonth(month);
+      setCollectionLoading(true);
+      try {
+        const col = await api.reports.dailyCollection(month, 'daily');
+        setCollection(col as { rows: any[]; daily: any[] });
+      } catch { /* keep existing data */ }
+      finally { setCollectionLoading(false); }
+    }
   };
 
   return (
@@ -259,31 +276,57 @@ export default function Dashboard() {
       <section className="grid gap-4 lg:grid-cols-2 items-stretch">
         {/* Collection Report */}
         <div className="card flex flex-col gap-3 overflow-hidden p-0">
-          <div className="flex items-center justify-between border-b border-card-border px-4 py-3">
-            <div className="flex items-center gap-3">
-              <h3 className="text-base font-semibold text-heading">Collection</h3>
-              {/* Inline Daily / Monthly toggle */}
-              <div className="flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-xs font-medium">
-                <button
-                  type="button"
-                  onClick={() => collectionView !== 'daily' && switchCollectionView('daily')}
-                  className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'daily' ? 'bg-white text-heading shadow-sm' : 'text-gray-500 hover:text-heading'}`}
-                >
-                  Daily
-                </button>
-                <button
-                  type="button"
-                  onClick={() => collectionView !== 'monthly' && switchCollectionView('monthly')}
-                  className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'monthly' ? 'bg-white text-heading shadow-sm' : 'text-gray-500 hover:text-heading'}`}
-                >
-                  Monthly
-                </button>
+          <div className="flex flex-col gap-2 border-b border-card-border px-4 py-3">
+            <div className="flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <h3 className="text-base font-semibold text-heading">Collection</h3>
+                {/* Inline Daily / Monthly toggle */}
+                <div className="flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-xs font-medium">
+                  <button
+                    type="button"
+                    onClick={() => collectionView !== 'daily' && switchCollectionView('daily')}
+                    className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'daily' ? 'bg-white text-heading shadow-sm' : 'text-gray-500 hover:text-heading'}`}
+                  >
+                    Daily
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => collectionView !== 'monthly' && switchCollectionView('monthly')}
+                    className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'monthly' ? 'bg-white text-heading shadow-sm' : 'text-gray-500 hover:text-heading'}`}
+                  >
+                    Monthly
+                  </button>
+                </div>
               </div>
+              {collection && (
+                <span className="text-sm font-semibold tabular-nums text-green-700">
+                  {formatINR(
+                    collectionView === 'daily' && collectionDate
+                      ? (collection.daily.find((d: any) => d.date === collectionDate) ? Number(collection.daily.find((d: any) => d.date === collectionDate).total) : 0)
+                      : collection.daily.reduce((s: number, d: any) => s + Number(d.total), 0)
+                  )}
+                </span>
+              )}
             </div>
-            {collection && (
-              <span className="text-sm font-semibold tabular-nums text-green-700">
-                {formatINR(collection.daily.reduce((s: number, d: any) => s + Number(d.total), 0))}
-              </span>
+            {/* Date filter — only in daily view */}
+            {collectionView === 'daily' && (
+              <div className="flex items-center gap-2">
+                <input
+                  type="date"
+                  className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-sm text-gray-700 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
+                  value={collectionDate}
+                  onChange={(e) => handleCollectionDateChange(e.target.value)}
+                />
+                {collectionDate && (
+                  <button
+                    type="button"
+                    onClick={() => setCollectionDate('')}
+                    className="text-xs text-gray-400 hover:text-gray-600"
+                  >
+                    Show all
+                  </button>
+                )}
+              </div>
             )}
           </div>
           {loading || collectionLoading ? (
@@ -300,7 +343,16 @@ export default function Dashboard() {
             <p className="px-4 py-6 text-center text-sm text-gray-400">
               {collectionView === 'daily' ? 'No collections recorded this month.' : 'No collection data available.'}
             </p>
-          ) : (
+          ) : (() => {
+            const filteredRows = collectionView === 'daily' && collectionDate
+              ? collection.daily.filter((d: any) => d.date === collectionDate)
+              : collection.daily.slice().reverse();
+            if (filteredRows.length === 0) return (
+              <p className="px-4 py-6 text-center text-sm text-gray-400">
+                No collections on {collectionDate ? new Date(collectionDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'selected date'}.
+              </p>
+            );
+            return (
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
@@ -313,7 +365,7 @@ export default function Dashboard() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {collection.daily.slice().reverse().map((d: any) => (
+                  {filteredRows.map((d: any) => (
                     <tr key={d.date ?? d.month} className="hover:bg-gray-50">
                       <td className="px-4 py-2 font-medium">
                         {collectionView === 'monthly' ? d.month : formatDate(d.date)}
@@ -327,7 +379,8 @@ export default function Dashboard() {
                 </tbody>
               </table>
             </div>
-          )}
+            );
+          })()}
         </div>
         <div className="h-full">
           {loading || !charts ? <ChartSkeleton /> : (
