@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, ChevronDown, ChevronUp } from 'lucide-react';
+import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -95,7 +95,6 @@ export default function TripLog() {
   const [saving, setSaving] = useState(false);
   const [filterTruck, setFilterTruck] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
-  const [expandedSection, setExpandedSection] = useState<string | null>(null);
 
   const live = computeLive(form);
 
@@ -128,7 +127,6 @@ export default function TripLog() {
   const openAdd = () => {
     setEditing(null);
     setForm(emptyForm);
-    setExpandedSection('trip');
     setModalOpen(true);
   };
 
@@ -159,7 +157,6 @@ export default function TripLog() {
       odometer_end: row.odometer_end ? String(row.odometer_end) : '',
       remarks: row.remarks || '',
     });
-    setExpandedSection('trip');
     setModalOpen(true);
   };
 
@@ -223,19 +220,6 @@ export default function TripLog() {
   const f = (field: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
-
-  type SectionKey = 'trip' | 'loading' | 'freight' | 'deductions' | 'costs' | 'odometer';
-  const sections: { key: SectionKey; label: string }[] = [
-    { key: 'trip', label: '1. Trip Info' },
-    { key: 'loading', label: '2. Loading Details' },
-    { key: 'freight', label: '3. Freight' },
-    { key: 'deductions', label: '4. Deductions' },
-    { key: 'costs', label: '5. Trip Costs' },
-    { key: 'odometer', label: '6. Odometer' },
-  ];
-
-  const toggleSection = (key: string) =>
-    setExpandedSection((prev) => (prev === key ? null : key));
 
   const totalRow = rows.reduce((acc, r) => ({
     quantity: acc.quantity + Number(r.quantity),
@@ -377,235 +361,220 @@ export default function TripLog() {
         </div>
       </div>
 
-      {/* Modal */}
+      {/* Modal — flat form, no accordions */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
-          <div className="flex min-h-full items-center justify-center px-4 py-6">
-          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
-            <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
-              <h2 className="font-semibold text-heading">{editing ? 'Edit Trip' : 'Add Trip'}</h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-                <X className="h-5 w-5 text-gray-500" />
-              </button>
-            </div>
+          <div className="flex min-h-full items-start justify-center px-4 py-6">
+            <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+              {/* Header */}
+              <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+                <h2 className="font-semibold text-heading">{editing ? 'Edit Trip' : 'Add Trip'}</h2>
+                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
+                  <X className="h-5 w-5 text-gray-500" />
+                </button>
+              </div>
 
-            <form onSubmit={handleSubmit}>
-              <div className="max-h-[68vh] overflow-y-auto p-5 flex flex-col gap-3">
-                {/* Sections */}
-                {sections.map(({ key, label }) => (
-                  <div key={key} className="rounded-lg border border-card-border overflow-hidden">
-                    <button
-                      type="button"
-                      onClick={() => toggleSection(key)}
-                      className="flex w-full items-center justify-between px-4 py-3 bg-orange-50 hover:bg-orange-100 transition-colors text-left"
-                    >
-                      <span className="font-medium text-orange-700 text-sm">{label}</span>
-                      {expandedSection === key ? <ChevronUp className="h-4 w-4 text-orange-500" /> : <ChevronDown className="h-4 w-4 text-orange-500" />}
-                    </button>
+              <form onSubmit={handleSubmit}>
+                <div className="p-5 flex flex-col gap-6">
 
-                    {expandedSection === key && (
-                      <div className="p-4 grid grid-cols-2 gap-4">
-                        {key === 'trip' && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
-                              <input type="date" className="input-field" value={form.date} onChange={f('date')} required />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Truck *</label>
-                              <select className="input-field" value={form.truck_id} onChange={f('truck_id')} required>
-                                <option value="">Select truck</option>
-                                {trucks.map((t) => <option key={t.id} value={String(t.id)}>{t.truck_number}</option>)}
-                              </select>
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Driver</label>
-                              <select className="input-field" value={form.driver_id} onChange={f('driver_id')}>
-                                <option value="">Select driver</option>
-                                {drivers.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
-                              </select>
-                            </div>
-                          </>
-                        )}
-
-                        {key === 'loading' && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Material Name</label>
-                              <input className="input-field" value={form.material_name} onChange={f('material_name')} placeholder="e.g. Cement" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Quantity (tons)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.quantity} onChange={f('quantity')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Load From</label>
-                              <input className="input-field" value={form.load_from} onChange={f('load_from')} placeholder="Origin" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Billed Party</label>
-                              <input className="input-field" value={form.billed_party} onChange={f('billed_party')} placeholder="Party name" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Billed Destination</label>
-                              <input className="input-field" value={form.billed_destination} onChange={f('billed_destination')} placeholder="Destination" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Transport Name</label>
-                              <input className="input-field" value={form.transport_name} onChange={f('transport_name')} placeholder="Transporter" />
-                            </div>
-                          </>
-                        )}
-
-                        {key === 'freight' && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Freight Rate (₹/ton)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Loading Charge (₹)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Unloading Charge (₹)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
-                            </div>
-                            <div className="col-span-2 rounded-lg bg-orange-50 p-3 border border-orange-200">
-                              <p className="text-xs text-orange-600 font-medium">
-                                Total Freight = {n(form.quantity)} × {n(form.freight_rate)} + {n(form.loading_charge)} + {n(form.unloading_charge)} = <span className="font-bold">{formatINR(live.total_freight)}</span>
-                              </p>
-                            </div>
-                          </>
-                        )}
-
-                        {key === 'deductions' && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Advance Litres</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.advance_litres} onChange={f('advance_litres')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Advance Rate (₹/L)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.advance_rate} onChange={f('advance_rate')} placeholder="0" />
-                            </div>
-                            <div className="col-span-2 rounded-lg bg-orange-50 p-2 border border-orange-200">
-                              <p className="text-xs text-orange-600">
-                                Advance Deduction = {n(form.advance_litres)}L × ₹{n(form.advance_rate)} = <span className="font-bold">{formatINR(live.advance_deduction)}</span>
-                              </p>
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Toll Expense (₹)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" />
-                            </div>
-                            <div className="col-span-2 rounded-lg bg-green-50 p-3 border border-green-200">
-                              <p className="text-xs text-green-700 font-medium">
-                                Net Freight = {formatINR(live.total_freight)} − {formatINR(live.advance_deduction)} − {formatINR(n(form.toll_expense))} = <span className="font-bold">{formatINR(live.net_freight)}</span>
-                              </p>
-                            </div>
-                          </>
-                        )}
-
-                        {key === 'costs' && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Litres</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Rate (₹/L)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" />
-                            </div>
-                            <div className="col-span-2 rounded-lg bg-orange-50 p-2 border border-orange-200">
-                              <p className="text-xs text-orange-600">
-                                Diesel = {n(form.diesel_litres)}L × ₹{n(form.diesel_rate)} = <span className="font-bold">{formatINR(live.diesel_amount)}</span>
-                              </p>
-                            </div>
-                            <div className="col-span-2">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Diesel From (location)</label>
-                              <input className="input-field" value={form.diesel_from} onChange={f('diesel_from')} placeholder="Pump location" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Driver Payment (₹)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Miscellaneous (₹)</label>
-                              <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
-                            </div>
-                          </>
-                        )}
-
-                        {key === 'odometer' && (
-                          <>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Odometer Start (km)</label>
-                              <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" />
-                            </div>
-                            <div>
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Odometer End (km)</label>
-                              <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" />
-                            </div>
-                            {live.total_km > 0 && (
-                              <div className="col-span-2 rounded-lg bg-orange-50 p-2 border border-orange-200">
-                                <p className="text-xs text-orange-600 font-medium">
-                                  Distance: <span className="font-bold">{live.total_km} km</span>
-                                </p>
-                              </div>
-                            )}
-                            <div className="col-span-2">
-                              <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
-                              <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
-                            </div>
-                          </>
-                        )}
+                  {/* 1. Trip Info */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Info</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
+                        <input type="date" className="input-field" value={form.date} onChange={f('date')} required />
                       </div>
-                    )}
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Truck *</label>
+                        <select className="input-field" value={form.truck_id} onChange={f('truck_id')} required>
+                          <option value="">Select truck</option>
+                          {trucks.map((t) => <option key={t.id} value={String(t.id)}>{t.truck_number}</option>)}
+                        </select>
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver</label>
+                        <select className="input-field" value={form.driver_id} onChange={f('driver_id')}>
+                          <option value="">Select driver</option>
+                          {drivers.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
+                        </select>
+                      </div>
+                    </div>
                   </div>
-                ))}
 
-                {/* Live Summary */}
-                <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
-                  <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Summary</p>
-                  <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-                    <div>
-                      <p className="text-xs opacity-70">Total Freight</p>
-                      <p className="font-bold">{formatINR(live.total_freight)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs opacity-70">Net Freight</p>
-                      <p className="font-bold">{formatINR(live.net_freight)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs opacity-70">Diesel Cost</p>
-                      <p className="font-bold">{formatINR(live.diesel_amount)}</p>
-                    </div>
-                    <div>
-                      <p className="text-xs opacity-70">Driver Pay</p>
-                      <p className="font-bold">{formatINR(n(form.driver_payment))}</p>
+                  {/* 2. Loading Details */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Loading Details</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Material</label>
+                        <input className="input-field" value={form.material_name} onChange={f('material_name')} placeholder="e.g. Cement" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Quantity (tons)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.quantity} onChange={f('quantity')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Load From</label>
+                        <input className="input-field" value={form.load_from} onChange={f('load_from')} placeholder="Origin" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Billed Party</label>
+                        <input className="input-field" value={form.billed_party} onChange={f('billed_party')} placeholder="Party name" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Destination</label>
+                        <input className="input-field" value={form.billed_destination} onChange={f('billed_destination')} placeholder="Destination" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Transport Name</label>
+                        <input className="input-field" value={form.transport_name} onChange={f('transport_name')} placeholder="Transporter" />
+                      </div>
                     </div>
                   </div>
-                  <div className="mt-3 pt-3 border-t border-white/20">
-                    <div className="flex items-center justify-between">
+
+                  {/* 3. Freight & Deductions */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Freight & Deductions</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Freight Rate (₹/ton)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Loading Charge (₹)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Unloading Charge (₹)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Toll Expense (₹)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Diesel (Ltrs)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_litres} onChange={f('advance_litres')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Rate (₹/L)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_rate} onChange={f('advance_rate')} placeholder="0" />
+                      </div>
+                      {/* Computed row */}
+                      <div className="col-span-2 grid grid-cols-2 gap-2">
+                        <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
+                          <span className="text-gray-500">Total Freight: </span>
+                          <span className="font-semibold text-orange-700">{formatINR(live.total_freight)}</span>
+                        </div>
+                        <div className="rounded-lg bg-green-50 border border-green-200 px-3 py-2 text-xs">
+                          <span className="text-gray-500">Net Freight: </span>
+                          <span className="font-semibold text-green-700">{formatINR(live.net_freight)}</span>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 4. Trip Costs */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Costs</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Litres</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Rate (₹/L)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver Payment (₹)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Miscellaneous (₹)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
+                      </div>
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel From</label>
+                        <input className="input-field" value={form.diesel_from} onChange={f('diesel_from')} placeholder="Pump location" />
+                      </div>
+                      <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
+                        <span className="text-gray-500">Diesel Cost: </span>
+                        <span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span>
+                        <span className="mx-2 text-gray-300">|</span>
+                        <span className="text-gray-500">Advance Deduction: </span>
+                        <span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* 5. Odometer & Remarks */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer & Remarks</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer Start (km)</label>
+                        <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer End (km)</label>
+                        <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" />
+                      </div>
+                      {live.total_km > 0 && (
+                        <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
+                          <span className="text-gray-500">Distance: </span>
+                          <span className="font-semibold text-orange-700">{live.total_km} km</span>
+                        </div>
+                      )}
+                      <div className="col-span-2">
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
+                        <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Live Summary */}
+                  <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
+                    <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Summary</p>
+                    <div className="grid grid-cols-4 gap-3">
+                      <div>
+                        <p className="text-xs opacity-70">Total Freight</p>
+                        <p className="font-bold">{formatINR(live.total_freight)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs opacity-70">Net Freight</p>
+                        <p className="font-bold">{formatINR(live.net_freight)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs opacity-70">Diesel Cost</p>
+                        <p className="font-bold">{formatINR(live.diesel_amount)}</p>
+                      </div>
+                      <div>
+                        <p className="text-xs opacity-70">Driver Pay</p>
+                        <p className="font-bold">{formatINR(n(form.driver_payment))}</p>
+                      </div>
+                    </div>
+                    <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
                       <span className="text-sm font-medium">Net Profit</span>
-                      <span className={`text-lg font-bold ${live.net_profit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+                      <span className={`text-xl font-bold ${live.net_profit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
                         {formatINR(live.net_profit)}
                       </span>
                     </div>
                   </div>
-                </div>
-              </div>
 
-              <div className="flex justify-end gap-3 border-t border-card-border px-5 py-4">
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
-                  Cancel
-                </button>
-                <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 transition-colors">
-                  {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}
-                </button>
-              </div>
-            </form>
-          </div>
+                </div>
+
+                <div className="flex justify-end gap-3 border-t border-card-border px-5 py-4">
+                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 transition-colors">
+                    {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
       )}
