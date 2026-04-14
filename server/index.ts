@@ -24,6 +24,7 @@ import driversRouter from './routes/drivers';
 import truckTripsRouter from './routes/truckTrips';
 import driverPaymentsRouter from './routes/driverPayments';
 import truckExpensesRouter from './routes/truckExpenses';
+import requestsRouter from './routes/requests';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -64,6 +65,7 @@ app.use('/api/drivers', driversRouter);
 app.use('/api/truck-trips', truckTripsRouter);
 app.use('/api/driver-payments', driverPaymentsRouter);
 app.use('/api/truck-expenses', truckExpensesRouter);
+app.use('/api/requests', requestsRouter);
 
 // Godown CRUD
 app.get('/api/godowns', async (_req, res) => {

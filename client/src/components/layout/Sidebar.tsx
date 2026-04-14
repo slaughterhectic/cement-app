@@ -11,6 +11,7 @@ import {
   LayoutDashboard,
   LogOut,
   MapPin,
+  MessageSquare,
   Package,
   Receipt,
   Settings,
@@ -25,6 +26,7 @@ import {
 } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
+import { api } from '../../lib/api';
 
 type Book = 'cement' | 'truck' | 'finance';
 
@@ -45,6 +47,7 @@ const cementNavItems = [
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/import', label: 'Import', icon: Upload },
+  { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
   { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
   { to: '/users', label: 'Users', icon: Shield, adminOnly: true },
 ];
@@ -60,6 +63,7 @@ const truckNavItems = [
   { to: '/truckbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },
   { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
+  { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];
 
 const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string; hoverClass: string; defaultRoute: string }> = {
@@ -99,11 +103,26 @@ export function Sidebar() {
   const [book, setBook] = useState<Book>(() => detectBook(location.pathname));
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
+  const [pendingCount, setPendingCount] = useState(0);
 
   // Auto-switch book when navigating directly to a URL
   useEffect(() => {
     setBook(detectBook(location.pathname));
   }, [location.pathname]);
+
+  // Poll pending request count for badge
+  useEffect(() => {
+    let active = true;
+    const fetchCount = async () => {
+      try {
+        const rows: any[] = await api.requests.list();
+        if (active) setPendingCount(rows.filter((r) => r.status === 'pending').length);
+      } catch (_) {}
+    };
+    fetchCount();
+    const timer = setInterval(fetchCount, 60_000);
+    return () => { active = false; clearInterval(timer); };
+  }, []);
 
   // Close book menu on outside click
   useEffect(() => {
@@ -131,18 +150,18 @@ export function Sidebar() {
 
   const availableBooks: Book[] = ['cement', 'truck', ...(canSeeFinance ? (['finance'] as Book[]) : [])];
 
-  const navItems = book === 'cement'
+  const navItems = (book === 'cement'
     ? cementNavItems.filter((item) => {
-        if (item.adminOnly) return user?.role === 'admin';
-        if (item.permission) return hasPermission(item.permission);
+        if ((item as any).adminOnly) return user?.role === 'admin';
+        if ((item as any).permission) return hasPermission((item as any).permission);
         return true;
       })
     : book === 'finance'
     ? financeNavItems.filter((item) => {
-        if (item.permission) return hasPermission(item.permission);
+        if ((item as any).permission) return hasPermission((item as any).permission);
         return true;
       })
-    : truckNavItems;
+    : truckNavItems) as Array<{ to: string; label: string; icon: any; badge?: boolean; adminOnly?: boolean; permission?: string }>;
 
   const meta = BOOK_META[book];
   const displayName = user?.display_name || 'User';
@@ -215,7 +234,7 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {navItems.map(({ to, label, icon: Icon }) => (
+        {navItems.map(({ to, label, icon: Icon, badge }) => (
           <NavLink
             key={to}
             to={to}
@@ -229,8 +248,20 @@ export function Sidebar() {
               ].join(' ')
             }
           >
-            <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />
-            {!collapsed && <span className="truncate">{label}</span>}
+            <div className="relative shrink-0">
+              <Icon className="h-5 w-5" strokeWidth={2} />
+              {badge && pendingCount > 0 && (
+                <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
+                  {pendingCount > 9 ? '9+' : pendingCount}
+                </span>
+              )}
+            </div>
+            {!collapsed && <span className="truncate flex-1">{label}</span>}
+            {!collapsed && badge && pendingCount > 0 && (
+              <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
+                {pendingCount}
+              </span>
+            )}
           </NavLink>
         ))}
       </nav>

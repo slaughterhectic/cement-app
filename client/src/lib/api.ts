@@ -237,6 +237,16 @@ export const api = {
     create: (data: any) => request<any>('/truck-expenses', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-expenses/${id}`, { method: 'DELETE' }),
   },
+  requests: {
+    list: () => request<any[]>('/requests'),
+    create: (data: { title: string; message?: string }) =>
+      request<any>('/requests', { method: 'POST', body: JSON.stringify(data) }),
+    complete: (id: number, admin_note?: string) =>
+      request<any>(`/requests/${id}/complete`, { method: 'PATCH', body: JSON.stringify({ admin_note }) }),
+    reopen: (id: number) =>
+      request<any>(`/requests/${id}/reopen`, { method: 'PATCH', body: JSON.stringify({}) }),
+    delete: (id: number) => request<any>(`/requests/${id}`, { method: 'DELETE' }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();

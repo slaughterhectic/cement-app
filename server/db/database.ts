@@ -242,6 +242,21 @@ export async function initializeDatabase() {
       );
     `);
 
+    // Requests table
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS requests (
+        id SERIAL PRIMARY KEY,
+        title TEXT NOT NULL,
+        message TEXT,
+        status TEXT CHECK(status IN ('pending', 'completed')) DEFAULT 'pending',
+        created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        completed_by INTEGER REFERENCES users(id),
+        completed_at TIMESTAMPTZ,
+        admin_note TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     // Add 'supplier' to parties type check
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check;`);
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','other','supplier'));`);
