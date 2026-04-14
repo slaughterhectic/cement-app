@@ -379,8 +379,9 @@ export default function TripLog() {
 
       {/* Modal */}
       {modalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4 py-6 overflow-y-auto">
-          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl my-auto">
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
+          <div className="flex min-h-full items-center justify-center px-4 py-6">
+          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
             <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
               <h2 className="font-semibold text-heading">{editing ? 'Edit Trip' : 'Add Trip'}</h2>
               <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
@@ -389,7 +390,7 @@ export default function TripLog() {
             </div>
 
             <form onSubmit={handleSubmit}>
-              <div className="max-h-[65vh] overflow-y-auto p-5 flex flex-col gap-3">
+              <div className="max-h-[68vh] overflow-y-auto p-5 flex flex-col gap-3">
                 {/* Sections */}
                 {sections.map(({ key, label }) => (
                   <div key={key} className="rounded-lg border border-card-border overflow-hidden">
@@ -604,6 +605,7 @@ export default function TripLog() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>
       )}

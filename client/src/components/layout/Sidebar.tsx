@@ -1,10 +1,13 @@
+import { useEffect, useRef, useState } from 'react';
 import {
   BarChart3,
   Building2,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   CreditCard,
   FileText,
+  Landmark,
   LayoutDashboard,
   LogOut,
   MapPin,
@@ -19,10 +22,17 @@ import {
   Upload,
   Users,
   Wallet,
-  Landmark,
 } from 'lucide-react';
-import { NavLink, useNavigate } from 'react-router-dom';
+import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
+
+type Book = 'cement' | 'truck' | 'finance';
+
+function detectBook(pathname: string): Book {
+  if (pathname.startsWith('/truckbook')) return 'truck';
+  if (pathname === '/capital' || pathname === '/finance') return 'finance';
+  return 'cement';
+}
 
 const cementNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'view_dashboard' },
@@ -34,11 +44,14 @@ const cementNavItems = [
   { to: '/payments', label: 'Payments', icon: CreditCard },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
-  { to: '/capital', label: 'Capital', icon: Wallet, permission: 'view_capital' },
-  { to: '/finance', label: 'Finance', icon: Landmark, permission: 'view_finance' },
   { to: '/import', label: 'Import', icon: Upload },
   { to: '/settings', label: 'Settings', icon: Settings, adminOnly: true },
   { to: '/users', label: 'Users', icon: Shield, adminOnly: true },
+];
+
+const financeNavItems = [
+  { to: '/capital', label: 'Capital', icon: Wallet, permission: 'view_capital' },
+  { to: '/finance', label: 'Finance', icon: Landmark, permission: 'view_finance' },
 ];
 
 const truckNavItems = [
@@ -49,25 +62,89 @@ const truckNavItems = [
   { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
 ];
 
+const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string; hoverClass: string; defaultRoute: string }> = {
+  cement: {
+    label: 'CementBook',
+    dot: 'bg-brand-500',
+    activeClass: 'bg-brand-500 text-white shadow-sm',
+    hoverClass: 'hover:bg-surface hover:text-heading',
+    defaultRoute: '/dashboard',
+  },
+  truck: {
+    label: 'TruckBook',
+    dot: 'bg-orange-500',
+    activeClass: 'bg-orange-500 text-white shadow-sm',
+    hoverClass: 'hover:bg-orange-50 hover:text-orange-700',
+    defaultRoute: '/truckbook',
+  },
+  finance: {
+    label: 'FinanceBook',
+    dot: 'bg-emerald-500',
+    activeClass: 'bg-emerald-600 text-white shadow-sm',
+    hoverClass: 'hover:bg-emerald-50 hover:text-emerald-700',
+    defaultRoute: '/capital',
+  },
+};
+
 export function Sidebar() {
   const navigate = useNavigate();
+  const location = useLocation();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
+  const isAdmin = useAuthStore((s) => s.isAdmin);
   const hasPermission = useAuthStore((s) => s.hasPermission);
+
+  const [book, setBook] = useState<Book>(() => detectBook(location.pathname));
+  const [menuOpen, setMenuOpen] = useState(false);
+  const menuRef = useRef<HTMLDivElement>(null);
+
+  // Auto-switch book when navigating directly to a URL
+  useEffect(() => {
+    setBook(detectBook(location.pathname));
+  }, [location.pathname]);
+
+  // Close book menu on outside click
+  useEffect(() => {
+    function handleClick(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setMenuOpen(false);
+      }
+    }
+    if (menuOpen) document.addEventListener('mousedown', handleClick);
+    return () => document.removeEventListener('mousedown', handleClick);
+  }, [menuOpen]);
 
   const handleLogout = () => {
     logout();
     navigate('/login');
   };
 
-  const visibleCementItems = cementNavItems.filter((item) => {
-    if (item.adminOnly) return user?.role === 'admin';
-    if (item.permission) return hasPermission(item.permission);
-    return true;
-  });
+  const switchBook = (b: Book) => {
+    setBook(b);
+    setMenuOpen(false);
+    navigate(BOOK_META[b].defaultRoute);
+  };
 
+  const canSeeFinance = isAdmin() || hasPermission('view_capital') || hasPermission('view_finance');
+
+  const availableBooks: Book[] = ['cement', 'truck', ...(canSeeFinance ? (['finance'] as Book[]) : [])];
+
+  const navItems = book === 'cement'
+    ? cementNavItems.filter((item) => {
+        if (item.adminOnly) return user?.role === 'admin';
+        if (item.permission) return hasPermission(item.permission);
+        return true;
+      })
+    : book === 'finance'
+    ? financeNavItems.filter((item) => {
+        if (item.permission) return hasPermission(item.permission);
+        return true;
+      })
+    : truckNavItems;
+
+  const meta = BOOK_META[book];
   const displayName = user?.display_name || 'User';
   const initial = displayName.charAt(0).toUpperCase();
 
@@ -77,6 +154,7 @@ export function Sidebar() {
         collapsed ? 'w-[72px]' : 'w-[220px]'
       }`}
     >
+      {/* Logo */}
       <div
         className={`flex shrink-0 items-center gap-2 border-b border-card-border py-4 ${
           collapsed ? 'justify-center px-2' : 'px-4'
@@ -92,58 +170,62 @@ export function Sidebar() {
         )}
       </div>
 
+      {/* Book Switcher */}
+      <div className={`shrink-0 border-b border-card-border ${collapsed ? 'px-2 py-2' : 'px-3 py-2'}`}>
+        {collapsed ? (
+          <div
+            className={`mx-auto h-3 w-3 rounded-full ${meta.dot}`}
+            title={meta.label}
+          />
+        ) : (
+          <div className="relative" ref={menuRef}>
+            <button
+              type="button"
+              onClick={() => setMenuOpen((o) => !o)}
+              className="flex w-full items-center justify-between rounded-lg border border-card-border bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+            >
+              <span className="flex items-center gap-2">
+                <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
+                {meta.label}
+              </span>
+              <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+            </button>
+
+            {menuOpen && (
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-card-border bg-white shadow-lg overflow-hidden">
+                {availableBooks.map((b) => (
+                  <button
+                    key={b}
+                    type="button"
+                    onClick={() => switchBook(b)}
+                    className={`flex w-full items-center gap-2 px-3 py-2.5 text-xs font-medium transition-colors ${
+                      b === book ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50'
+                    }`}
+                  >
+                    <span className={`h-2 w-2 rounded-full ${BOOK_META[b].dot}`} />
+                    {BOOK_META[b].label}
+                    {b === book && <span className="ml-auto text-gray-400">✓</span>}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Nav */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {/* CementBook section */}
-        {!collapsed && (
-          <p className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
-            CementBook
-          </p>
-        )}
-        {collapsed && (
-          <div className="my-1 mx-auto h-px w-8 bg-brand-200" />
-        )}
-        {visibleCementItems.map(({ to, label, icon: Icon }) => (
+        {navItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
+            end={to === '/truckbook' || to === '/dashboard'}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               [
                 'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
                 collapsed ? 'justify-center px-2' : 'px-3',
-                isActive
-                  ? 'bg-brand-500 text-white shadow-sm'
-                  : 'text-heading/80 hover:bg-surface hover:text-heading',
-              ].join(' ')
-            }
-          >
-            <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />
-            {!collapsed && <span className="truncate">{label}</span>}
-          </NavLink>
-        ))}
-
-        {/* Divider */}
-        <div className={`my-2 ${collapsed ? 'mx-auto h-px w-8 bg-orange-200' : 'mx-1 h-px bg-orange-200'}`} />
-
-        {/* TruckBook section */}
-        {!collapsed && (
-          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-orange-400">
-            TruckBook
-          </p>
-        )}
-        {truckNavItems.map(({ to, label, icon: Icon }) => (
-          <NavLink
-            key={to}
-            to={to}
-            end={to === '/truckbook'}
-            title={collapsed ? label : undefined}
-            className={({ isActive }) =>
-              [
-                'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
-                collapsed ? 'justify-center px-2' : 'px-3',
-                isActive
-                  ? 'bg-orange-500 text-white shadow-sm'
-                  : 'text-heading/80 hover:bg-orange-50 hover:text-orange-700',
+                isActive ? meta.activeClass : `text-heading/80 ${meta.hoverClass}`,
               ].join(' ')
             }
           >
@@ -153,6 +235,7 @@ export function Sidebar() {
         ))}
       </nav>
 
+      {/* Footer */}
       <div className="shrink-0 border-t border-card-border p-2">
         <button
           type="button"
