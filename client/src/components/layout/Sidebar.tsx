@@ -4,8 +4,10 @@ import {
   ChevronLeft,
   ChevronRight,
   CreditCard,
+  FileText,
   LayoutDashboard,
   LogOut,
+  MapPin,
   Package,
   Receipt,
   Settings,
@@ -13,6 +15,7 @@ import {
   ShoppingCart,
   Store,
   TrendingUp,
+  Truck,
   Upload,
   Users,
   Wallet,
@@ -21,7 +24,7 @@ import {
 import { NavLink, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
 
-const navItems = [
+const cementNavItems = [
   { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard, permission: 'view_dashboard' },
   { to: '/purchases', label: 'Purchases', icon: ShoppingCart },
   { to: '/sales', label: 'Sales', icon: TrendingUp },
@@ -38,6 +41,14 @@ const navItems = [
   { to: '/users', label: 'Users', icon: Shield, adminOnly: true },
 ];
 
+const truckNavItems = [
+  { to: '/truckbook', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/truckbook/trucks', label: 'Trucks', icon: Truck },
+  { to: '/truckbook/trips', label: 'Trip Log', icon: FileText },
+  { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },
+  { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
+];
+
 export function Sidebar() {
   const navigate = useNavigate();
   const collapsed = useSidebarStore((s) => s.collapsed);
@@ -51,7 +62,7 @@ export function Sidebar() {
     navigate('/login');
   };
 
-  const visibleItems = navItems.filter((item) => {
+  const visibleCementItems = cementNavItems.filter((item) => {
     if (item.adminOnly) return user?.role === 'admin';
     if (item.permission) return hasPermission(item.permission);
     return true;
@@ -82,7 +93,16 @@ export function Sidebar() {
       </div>
 
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {visibleItems.map(({ to, label, icon: Icon }) => (
+        {/* CementBook section */}
+        {!collapsed && (
+          <p className="px-3 pt-1 pb-1 text-[10px] font-semibold uppercase tracking-widest text-gray-400">
+            CementBook
+          </p>
+        )}
+        {collapsed && (
+          <div className="my-1 mx-auto h-px w-8 bg-brand-200" />
+        )}
+        {visibleCementItems.map(({ to, label, icon: Icon }) => (
           <NavLink
             key={to}
             to={to}
@@ -94,6 +114,36 @@ export function Sidebar() {
                 isActive
                   ? 'bg-brand-500 text-white shadow-sm'
                   : 'text-heading/80 hover:bg-surface hover:text-heading',
+              ].join(' ')
+            }
+          >
+            <Icon className="h-5 w-5 shrink-0" strokeWidth={2} />
+            {!collapsed && <span className="truncate">{label}</span>}
+          </NavLink>
+        ))}
+
+        {/* Divider */}
+        <div className={`my-2 ${collapsed ? 'mx-auto h-px w-8 bg-orange-200' : 'mx-1 h-px bg-orange-200'}`} />
+
+        {/* TruckBook section */}
+        {!collapsed && (
+          <p className="px-3 pb-1 text-[10px] font-semibold uppercase tracking-widest text-orange-400">
+            TruckBook
+          </p>
+        )}
+        {truckNavItems.map(({ to, label, icon: Icon }) => (
+          <NavLink
+            key={to}
+            to={to}
+            end={to === '/truckbook'}
+            title={collapsed ? label : undefined}
+            className={({ isActive }) =>
+              [
+                'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
+                collapsed ? 'justify-center px-2' : 'px-3',
+                isActive
+                  ? 'bg-orange-500 text-white shadow-sm'
+                  : 'text-heading/80 hover:bg-orange-50 hover:text-orange-700',
               ].join(' ')
             }
           >

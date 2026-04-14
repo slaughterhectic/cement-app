@@ -161,6 +161,87 @@ export async function initializeDatabase() {
       );
     `);
 
+    // TruckBook tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS trucks (
+        id SERIAL PRIMARY KEY,
+        truck_number TEXT NOT NULL UNIQUE,
+        purchase_date TEXT,
+        total_value REAL DEFAULT 0,
+        down_payment REAL DEFAULT 0,
+        financed_amount REAL DEFAULT 0,
+        emi_amount REAL DEFAULT 0,
+        emi_tenure INTEGER,
+        lender_name TEXT,
+        is_active INTEGER DEFAULT 1,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS drivers (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT,
+        license_number TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS truck_trips (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        truck_id INTEGER NOT NULL REFERENCES trucks(id),
+        driver_id INTEGER REFERENCES drivers(id),
+        material_name TEXT,
+        quantity REAL DEFAULT 0,
+        load_from TEXT,
+        billed_party TEXT,
+        billed_destination TEXT,
+        transport_name TEXT,
+        freight_rate REAL DEFAULT 0,
+        loading_charge REAL DEFAULT 0,
+        unloading_charge REAL DEFAULT 0,
+        advance_litres REAL DEFAULT 0,
+        advance_rate REAL DEFAULT 0,
+        advance_deduction REAL DEFAULT 0,
+        toll_expense REAL DEFAULT 0,
+        diesel_litres REAL DEFAULT 0,
+        diesel_rate REAL DEFAULT 0,
+        diesel_amount REAL DEFAULT 0,
+        diesel_from TEXT,
+        driver_payment REAL DEFAULT 0,
+        miscellaneous REAL DEFAULT 0,
+        odometer_start INTEGER,
+        odometer_end INTEGER,
+        total_km INTEGER,
+        total_freight REAL DEFAULT 0,
+        net_freight REAL DEFAULT 0,
+        net_profit REAL DEFAULT 0,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS truck_expenses (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        truck_id INTEGER REFERENCES trucks(id),
+        category TEXT,
+        description TEXT,
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'cash',
+        bank_name TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+      CREATE TABLE IF NOT EXISTS driver_payments (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        driver_id INTEGER NOT NULL REFERENCES drivers(id),
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'cash',
+        bank_name TEXT,
+        trip_id INTEGER REFERENCES truck_trips(id),
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
     // Add 'supplier' to parties type check
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check;`);
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','other','supplier'));`);

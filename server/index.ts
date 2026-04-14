@@ -19,6 +19,11 @@ import loansRouter from './routes/loans';
 import dealersRouter from './routes/dealers';
 import expenseCategoriesRouter from './routes/expenseCategories';
 import partyLoansRouter from './routes/partyLoans';
+import trucksRouter from './routes/trucks';
+import driversRouter from './routes/drivers';
+import truckTripsRouter from './routes/truckTrips';
+import driverPaymentsRouter from './routes/driverPayments';
+import truckExpensesRouter from './routes/truckExpenses';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -54,6 +59,11 @@ app.use('/api/loans', loansRouter);
 app.use('/api/dealers', dealersRouter);
 app.use('/api/expense-categories', expenseCategoriesRouter);
 app.use('/api/party-loans', partyLoansRouter);
+app.use('/api/trucks', trucksRouter);
+app.use('/api/drivers', driversRouter);
+app.use('/api/truck-trips', truckTripsRouter);
+app.use('/api/driver-payments', driverPaymentsRouter);
+app.use('/api/truck-expenses', truckExpensesRouter);
 
 // Godown CRUD
 app.get('/api/godowns', async (_req, res) => {

@@ -21,6 +21,11 @@ import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
 import ResetPassword from './pages/ResetPassword';
 import { useAuthStore } from './lib/store';
+import TruckDashboard from './pages/truckbook/TruckDashboard';
+import Trucks from './pages/truckbook/Trucks';
+import TripLog from './pages/truckbook/TripLog';
+import DriverLedger from './pages/truckbook/DriverLedger';
+import TruckExpenses from './pages/truckbook/TruckExpenses';
 
 function Protected({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.isAuthenticated);
@@ -70,6 +75,12 @@ export default function App() {
           <Route path="/import" element={<ImportPage />} />
           <Route path="/settings" element={<AdminOnly><Settings /></AdminOnly>} />
           <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
+          {/* TruckBook routes */}
+          <Route path="/truckbook" element={<TruckDashboard />} />
+          <Route path="/truckbook/trucks" element={<Trucks />} />
+          <Route path="/truckbook/trips" element={<TripLog />} />
+          <Route path="/truckbook/drivers" element={<DriverLedger />} />
+          <Route path="/truckbook/expenses" element={<TruckExpenses />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

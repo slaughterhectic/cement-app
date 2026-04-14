@@ -198,6 +198,45 @@ export const api = {
     create: (data: any) => request<any>('/party-loans', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/party-loans/${id}`, { method: 'DELETE' }),
   },
+  trucks: {
+    list: () => request<any[]>('/trucks'),
+    dashboard: () => request<any>('/trucks/dashboard'),
+    create: (data: any) => request<any>('/trucks', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/trucks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/trucks/${id}`, { method: 'DELETE' }),
+  },
+  drivers: {
+    list: () => request<any[]>('/drivers'),
+    create: (data: any) => request<any>('/drivers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/drivers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/drivers/${id}`, { method: 'DELETE' }),
+    ledger: (id: number) => request<any>(`/drivers/${id}/ledger`),
+  },
+  truckTrips: {
+    list: (params?: Record<string, string>) => {
+      const q = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<any[]>(`/truck-trips${q}`);
+    },
+    create: (data: any) => request<any>('/truck-trips', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/truck-trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/truck-trips/${id}`, { method: 'DELETE' }),
+  },
+  driverPayments: {
+    list: (params?: Record<string, string>) => {
+      const q = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<any[]>(`/driver-payments${q}`);
+    },
+    create: (data: any) => request<any>('/driver-payments', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/driver-payments/${id}`, { method: 'DELETE' }),
+  },
+  truckExpenses: {
+    list: (params?: Record<string, string>) => {
+      const q = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<any[]>(`/truck-expenses${q}`);
+    },
+    create: (data: any) => request<any>('/truck-expenses', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/truck-expenses/${id}`, { method: 'DELETE' }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();
