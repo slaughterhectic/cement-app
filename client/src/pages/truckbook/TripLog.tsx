@@ -509,7 +509,6 @@ export default function TripLog() {
                       <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs flex flex-wrap gap-3">
                         <span><span className="text-gray-500">Trip Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span></span>
                         <span><span className="text-gray-500">Adv Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span></span>
-                        <span><span className="text-gray-500">Total Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount + live.advance_deduction)}</span></span>
                       </div>
                     </div>
                   </div>
