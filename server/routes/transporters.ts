@@ -10,7 +10,8 @@ router.get('/', async (_req, res) => {
       SELECT t.*,
         COALESCE((SELECT SUM(transporter_commission) FROM truck_trips WHERE transporter_id=t.id),0) as total_commission,
         COALESCE((SELECT SUM(advance_deduction) FROM truck_trips WHERE diesel_from_id=t.id),0) as total_advance_diesel,
-        COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE transporter_id=t.id),0) as total_paid,
+        COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE transporter_id=t.id AND COALESCE(payment_type,'paid')='paid'),0) as total_paid,
+        COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE transporter_id=t.id AND payment_type='received'),0) as total_received,
         COALESCE((SELECT COUNT(*) FROM truck_trips WHERE transporter_id=t.id),0) as trip_count
       FROM transporters t ORDER BY t.name
     `);
@@ -19,8 +20,9 @@ router.get('/', async (_req, res) => {
       total_commission: Number(r.total_commission),
       total_advance_diesel: Number(r.total_advance_diesel),
       total_paid: Number(r.total_paid),
+      total_received: Number(r.total_received),
       trip_count: Number(r.trip_count),
-      outstanding: Number(r.total_commission) + Number(r.total_advance_diesel) - Number(r.total_paid),
+      outstanding: Number(r.total_commission) + Number(r.total_advance_diesel) - Number(r.total_paid) - Number(r.total_received),
     })));
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
@@ -53,7 +55,8 @@ router.get('/:id/ledger', async (req, res) => {
     const paymentEntries = await getAll(`
       SELECT id, date, 'payment' as entry_type, amount,
         NULL as truck_number, NULL as load_from, NULL as billed_destination,
-        NULL as material_name, NULL as trip_id, mode, bank_name, remarks
+        NULL as material_name, NULL as trip_id, mode, bank_name, remarks,
+        COALESCE(payment_type, 'paid') as payment_type
       FROM transporter_payments WHERE transporter_id=$1
     `, [req.params.id]);
 
@@ -65,6 +68,7 @@ router.get('/:id/ledger', async (req, res) => {
     const ledger = all.map((e: any) => {
       const amt = Number(e.amount);
       if (e.entry_type === 'payment') {
+        // both 'paid' (we paid them) and 'received' (they paid us) reduce what we owe
         balance -= amt;
       } else {
         balance += amt;
@@ -75,9 +79,14 @@ router.get('/:id/ledger', async (req, res) => {
     const totalEarned =
       commEntries.reduce((s: number, r: any) => s + Number(r.amount), 0) +
       dieselEntries.reduce((s: number, r: any) => s + Number(r.amount), 0);
-    const totalPaid = paymentEntries.reduce((s: number, r: any) => s + Number(r.amount), 0);
+    const totalPaid = paymentEntries
+      .filter((r: any) => (r.payment_type || 'paid') === 'paid')
+      .reduce((s: number, r: any) => s + Number(r.amount), 0);
+    const totalReceived = paymentEntries
+      .filter((r: any) => r.payment_type === 'received')
+      .reduce((s: number, r: any) => s + Number(r.amount), 0);
 
-    res.json({ transporter, ledger, totalEarned, totalPaid, outstanding: totalEarned - totalPaid });
+    res.json({ transporter, ledger, totalEarned, totalPaid, totalReceived, outstanding: totalEarned - totalPaid - totalReceived });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
@@ -123,12 +132,12 @@ router.delete('/:id', async (req, res) => {
 // POST /transporters/:id/payments
 router.post('/:id/payments', async (req, res) => {
   try {
-    const { date, amount, mode, bank_name, remarks } = req.body;
+    const { date, amount, mode, bank_name, remarks, payment_type } = req.body;
     if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
     const row = await getOne(
-      `INSERT INTO transporter_payments (date, transporter_id, amount, mode, bank_name, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-      [date, req.params.id, Number(amount), mode || 'cash', bank_name || null, remarks || null]
+      `INSERT INTO transporter_payments (date, transporter_id, amount, mode, bank_name, remarks, payment_type)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [date, req.params.id, Number(amount), mode || 'cash', bank_name || null, remarks || null, payment_type || 'paid']
     );
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: e.message }); }

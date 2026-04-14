@@ -20,6 +20,7 @@ interface LedgerEntry {
   id?: number;
   date: string;
   entry_type: 'commission' | 'advance_diesel' | 'payment';
+  payment_type?: 'paid' | 'received';
   amount: number;
   truck_number: string | null;
   load_from: string | null;
@@ -36,12 +37,14 @@ interface LedgerData {
   ledger: LedgerEntry[];
   totalEarned: number;
   totalPaid: number;
+  totalReceived: number;
   outstanding: number;
 }
 
 const emptyPayForm = {
   date: new Date().toISOString().split('T')[0],
   amount: '',
+  payment_type: 'paid' as 'paid' | 'received',
   mode: 'cash' as 'cash' | 'bank',
   bank_name: '',
   remarks: '',
@@ -59,6 +62,7 @@ export default function Transporters() {
   const [addPayOpen, setAddPayOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [banks, setBanks] = useState<{ id: number; bank_name: string }[]>([]);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
 
   // Add transporter modal
   const [modalOpen, setModalOpen] = useState(false);
@@ -86,6 +90,7 @@ export default function Transporters() {
   useEffect(() => {
     loadList();
     api.capital.banks().then(setBanks).catch(() => {});
+    api.imprest.handlers().then((rows: any[]) => setCashHandlers(rows.map((r) => r.handler_name))).catch(() => {});
   }, [loadList]);
 
   useEffect(() => {
@@ -101,6 +106,7 @@ export default function Transporters() {
       await api.transporters.addPayment(selectedId, {
         date: payForm.date,
         amount: Number(payForm.amount),
+        payment_type: payForm.payment_type,
         mode: payForm.mode,
         bank_name: payForm.bank_name || null,
         remarks: payForm.remarks || null,
@@ -242,15 +248,19 @@ export default function Transporters() {
           ) : ledger ? (
             <>
               {/* Summary cards */}
-              <div className="grid grid-cols-3 gap-4">
+              <div className="grid grid-cols-4 gap-3">
                 <div className="card p-4 text-center bg-blue-50 border-blue-200">
-                  <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Total Owed</p>
+                  <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Total Receivable</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalEarned)}</p>
                   <p className="text-xs text-blue-500 mt-0.5">Commission + Diesel</p>
                 </div>
-                <div className="card p-4 text-center bg-green-50 border-green-200">
-                  <p className="text-xs text-green-600 font-medium uppercase tracking-wide">Total Paid</p>
+                <div className="card p-4 text-center bg-orange-50 border-orange-200">
+                  <p className="text-xs text-orange-600 font-medium uppercase tracking-wide">Paid Out</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalPaid)}</p>
+                </div>
+                <div className="card p-4 text-center bg-green-50 border-green-200">
+                  <p className="text-xs text-green-600 font-medium uppercase tracking-wide">Received</p>
+                  <p className="text-lg font-bold text-heading">{formatINR(ledger.totalReceived ?? 0)}</p>
                 </div>
                 <div className={`card p-4 text-center ${ledger.outstanding > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
                   <p className={`text-xs font-medium uppercase tracking-wide ${ledger.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>Outstanding</p>
@@ -273,6 +283,31 @@ export default function Transporters() {
                 </div>
                 {addPayOpen && (
                   <form onSubmit={handleAddPayment} className="mt-3 pt-3 border-t border-card-border">
+                    {/* Direction toggle */}
+                    <div className="flex gap-2 mb-3">
+                      <button
+                        type="button"
+                        onClick={() => setPayForm((p) => ({ ...p, payment_type: 'paid' }))}
+                        className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                          payForm.payment_type === 'paid'
+                            ? 'bg-red-500 border-red-500 text-white'
+                            : 'border-card-border text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        Paid to Transporter
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setPayForm((p) => ({ ...p, payment_type: 'received' }))}
+                        className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
+                          payForm.payment_type === 'received'
+                            ? 'bg-green-500 border-green-500 text-white'
+                            : 'border-card-border text-gray-600 hover:bg-gray-50'
+                        }`}
+                      >
+                        Received from Transporter
+                      </button>
+                    </div>
                     <div className="grid grid-cols-2 gap-3">
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
@@ -287,12 +322,12 @@ export default function Transporters() {
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Mode</label>
                         <select className="input-field" value={payForm.mode}
-                          onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank' }))}>
+                          onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '' }))}>
                           <option value="cash">Cash</option>
                           <option value="bank">Bank</option>
                         </select>
                       </div>
-                      {payForm.mode === 'bank' && (
+                      {payForm.mode === 'bank' ? (
                         <div>
                           <label className="block text-xs font-medium text-gray-600 mb-1">Bank</label>
                           <select className="input-field" value={payForm.bank_name}
@@ -301,7 +336,16 @@ export default function Transporters() {
                             {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
                           </select>
                         </div>
-                      )}
+                      ) : cashHandlers.length > 0 ? (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Cash Handler</label>
+                          <select className="input-field" value={payForm.bank_name}
+                            onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
+                            <option value="">Select handler</option>
+                            {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
+                          </select>
+                        </div>
+                      ) : null}
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
                         <input className="input-field" value={payForm.remarks}
@@ -310,8 +354,8 @@ export default function Transporters() {
                     </div>
                     <div className="flex justify-end gap-2 mt-3">
                       <button type="button" onClick={() => setAddPayOpen(false)} className="text-sm text-gray-500 hover:text-gray-700">Cancel</button>
-                      <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60">
-                        {saving ? 'Saving…' : 'Record Payment'}
+                      <button type="submit" disabled={saving} className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 transition-colors ${payForm.payment_type === 'received' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}`}>
+                        {saving ? 'Saving…' : payForm.payment_type === 'received' ? 'Record Receipt' : 'Record Payment'}
                       </button>
                     </div>
                   </form>
@@ -343,14 +387,22 @@ export default function Transporters() {
                         ledger.ledger.map((row, i) => {
                           const meta = ENTRY_LABELS[row.entry_type] || { label: row.entry_type, color: 'text-gray-600' };
                           const isPayment = row.entry_type === 'payment';
+                          const isPaid = isPayment && (row.payment_type ?? 'paid') === 'paid';
+                          const isReceived = isPayment && row.payment_type === 'received';
                           return (
-                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? 'hover:bg-green-50/40' : 'hover:bg-blue-50/40'} transition-colors`}>
+                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? (isReceived ? 'hover:bg-green-50/40' : 'hover:bg-red-50/40') : 'hover:bg-blue-50/40'} transition-colors`}>
                               <td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatDate(row.date)}</td>
                               <td className="px-4 py-3">
                                 {isPayment ? (
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
-                                    <TrendingDown className="h-3 w-3" /> Payment
-                                  </span>
+                                  isReceived ? (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                      <TrendingDown className="h-3 w-3" /> Received
+                                    </span>
+                                  ) : (
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                      <TrendingUp className="h-3 w-3" /> Paid
+                                    </span>
+                                  )
                                 ) : (
                                   <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.color === 'text-blue-600' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
                                     <TrendingUp className="h-3 w-3" /> {meta.label}
@@ -367,7 +419,7 @@ export default function Transporters() {
                                 {!isPayment ? formatINR(row.amount) : '—'}
                               </td>
                               <td className="px-4 py-3 text-right font-medium text-green-700">
-                                {isPayment ? formatINR(row.amount) : '—'}
+                                {isReceived ? formatINR(row.amount) : (isPaid ? <span className="text-red-600">{formatINR(row.amount)}</span> : '—')}
                               </td>
                               <td className={`px-4 py-3 text-right font-semibold ${row.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
                                 {formatINR(row.balance)}

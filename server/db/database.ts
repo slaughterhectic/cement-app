@@ -287,6 +287,8 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_id INTEGER REFERENCES transporters(id);`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS diesel_from_id INTEGER REFERENCES transporters(id);`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_commission REAL DEFAULT 0;`);
+    // transporter_payments new columns
+    await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
 
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES parties(id);`);
 
