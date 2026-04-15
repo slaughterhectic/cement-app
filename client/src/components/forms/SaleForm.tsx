@@ -371,8 +371,12 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
         await api.sales.update(editData.id, payload);
         addToast('Sale updated', 'success');
       } else {
-        await api.sales.create(payload);
-        addToast('Sale recorded', 'success');
+        const result = await api.sales.create(payload);
+        if ((result as any).pending) {
+          addToast('Entry sent for admin approval', 'info');
+        } else {
+          addToast('Sale recorded', 'success');
+        }
       }
       onSuccess();
       onClose();

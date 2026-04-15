@@ -28,6 +28,7 @@ import DriverLedger from './pages/truckbook/DriverLedger';
 import TruckExpenses from './pages/truckbook/TruckExpenses';
 import Requests from './pages/Requests';
 import Transporters from './pages/truckbook/Transporters';
+import PendingApprovals from './pages/PendingApprovals';
 
 function Protected({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.isAuthenticated);
@@ -85,6 +86,7 @@ export default function App() {
           <Route path="/truckbook/expenses" element={<TruckExpenses />} />
           <Route path="/truckbook/transporters" element={<Transporters />} />
           <Route path="/requests" element={<Requests />} />
+          <Route path="/pending-approvals" element={<PendingApprovals />} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

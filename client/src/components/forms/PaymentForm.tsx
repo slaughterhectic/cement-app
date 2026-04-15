@@ -188,7 +188,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   const onSubmit = async (values: PaymentFormValues) => {
     setSubmitting(true);
     try {
-      await api.payments.create({
+      const result = await api.payments.create({
         date: values.date,
         party_id: values.party_id,
         amount: values.amount,
@@ -197,7 +197,11 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         remarks: values.remarks?.trim() || null,
         direction,
       });
-      addToast(direction === 'pay' ? 'Payment to supplier recorded' : 'Payment received recorded', 'success');
+      if ((result as any).pending) {
+        addToast('Entry sent for admin approval', 'info');
+      } else {
+        addToast(direction === 'pay' ? 'Payment to supplier recorded' : 'Payment received recorded', 'success');
+      }
       onSuccess();
       onClose();
     } catch (e) {

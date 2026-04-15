@@ -278,6 +278,7 @@ export async function initializeDatabase() {
       );
     `);
 
+
     // Add 'supplier' to parties type check
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check;`);
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','other','supplier'));`);
@@ -289,6 +290,11 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_commission REAL DEFAULT 0;`);
     // transporter_payments new columns
     await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
+    // driver_payments new columns
+    await client.query(`ALTER TABLE driver_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
+    // trucks new columns
+    await client.query(`ALTER TABLE trucks ADD COLUMN IF NOT EXISTS doc_expiry_date TEXT;`);
+    await client.query(`ALTER TABLE trucks ADD COLUMN IF NOT EXISTS drive_link TEXT;`);
 
     await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS supplier_id INTEGER REFERENCES parties(id);`);
 
@@ -393,6 +399,22 @@ export async function initializeDatabase() {
         [u.username, hash, u.role, u.display_name]
       );
     }
+
+    // Pending entries — entries submitted by non-admin users with a past/future date, awaiting admin approval
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS pending_entries (
+        id SERIAL PRIMARY KEY,
+        entry_type TEXT NOT NULL CHECK(entry_type IN ('sale', 'purchase', 'payment', 'expense')),
+        entry_data JSONB NOT NULL,
+        status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
+        created_by INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+        created_by_name TEXT NOT NULL DEFAULT '',
+        reviewed_by INTEGER REFERENCES users(id),
+        reviewed_at TIMESTAMPTZ,
+        admin_note TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
 
     console.log('Database schema initialized');
   } finally {

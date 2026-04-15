@@ -260,6 +260,15 @@ export const api = {
       request<any>(`/requests/${id}/reopen`, { method: 'PATCH', body: JSON.stringify({}) }),
     delete: (id: number) => request<any>(`/requests/${id}`, { method: 'DELETE' }),
   },
+  pendingEntries: {
+    list: () => request<any[]>('/pending-entries'),
+    count: () => request<{ count: number }>('/pending-entries/count'),
+    approve: (id: number, admin_note?: string) =>
+      request<any>(`/pending-entries/${id}/approve`, { method: 'POST', body: JSON.stringify({ admin_note }) }),
+    reject: (id: number, admin_note?: string) =>
+      request<any>(`/pending-entries/${id}/reject`, { method: 'POST', body: JSON.stringify({ admin_note }) }),
+    delete: (id: number) => request<any>(`/pending-entries/${id}`, { method: 'DELETE' }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();

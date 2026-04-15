@@ -196,8 +196,12 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         await api.purchases.update(editData.id, payload);
         addToast('Purchase updated', 'success');
       } else {
-        await api.purchases.create(payload);
-        addToast('Purchase recorded', 'success');
+        const result = await api.purchases.create(payload);
+        if ((result as any).pending) {
+          addToast('Entry sent for admin approval', 'info');
+        } else {
+          addToast('Purchase recorded', 'success');
+        }
       }
       onSuccess();
       onClose();

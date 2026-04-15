@@ -5,6 +5,7 @@ import {
   ChevronDown,
   ChevronLeft,
   ChevronRight,
+  ClipboardCheck,
   CreditCard,
   FileText,
   Landmark,
@@ -48,6 +49,7 @@ const cementNavItems = [
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/import', label: 'Import', icon: Upload },
+  { to: '/pending-approvals', label: 'Approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
   { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];
 
@@ -68,6 +70,7 @@ const truckNavItems = [
   { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },
   { to: '/truckbook/transporters', label: 'Transporters', icon: Store },
   { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
+  { to: '/pending-approvals', label: 'Approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
   { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];
 
@@ -116,6 +119,7 @@ export function Sidebar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const [pendingCount, setPendingCount] = useState(0);
+  const [approvalsCount, setApprovalsCount] = useState(0);
 
   // Auto-switch book when navigating directly to a URL
   useEffect(() => {
@@ -133,6 +137,20 @@ export function Sidebar() {
     };
     fetchCount();
     const timer = setInterval(fetchCount, 60_000);
+    return () => { active = false; clearInterval(timer); };
+  }, []);
+
+  // Poll pending approvals count for badge
+  useEffect(() => {
+    let active = true;
+    const fetchApprovals = async () => {
+      try {
+        const res = await api.pendingEntries.count();
+        if (active) setApprovalsCount(res.count);
+      } catch (_) {}
+    };
+    fetchApprovals();
+    const timer = setInterval(fetchApprovals, 60_000);
     return () => { active = false; clearInterval(timer); };
   }, []);
 
@@ -179,7 +197,7 @@ export function Sidebar() {
       })
     : book === 'settings'
     ? settingsNavItems
-    : truckNavItems) as Array<{ to: string; label: string; icon: any; badge?: boolean; permission?: string }>;
+    : truckNavItems) as Array<{ to: string; label: string; icon: any; badge?: boolean; badgeKey?: string; permission?: string }>;
 
   const meta = BOOK_META[book];
   const displayName = user?.display_name || 'User';
@@ -252,7 +270,9 @@ export function Sidebar() {
 
       {/* Nav */}
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
-        {navItems.map(({ to, label, icon: Icon, badge }) => (
+        {navItems.map(({ to, label, icon: Icon, badge, badgeKey }) => {
+          const badgeCount = badgeKey === 'approvals' ? approvalsCount : (badge ? pendingCount : 0);
+          return (
           <NavLink
             key={to}
             to={to}
@@ -268,20 +288,21 @@ export function Sidebar() {
           >
             <div className="relative shrink-0">
               <Icon className="h-5 w-5" strokeWidth={2} />
-              {badge && pendingCount > 0 && (
+              {badgeCount > 0 && (
                 <span className="absolute -top-1.5 -right-1.5 flex h-4 w-4 items-center justify-center rounded-full bg-red-500 text-[9px] font-bold text-white">
-                  {pendingCount > 9 ? '9+' : pendingCount}
+                  {badgeCount > 9 ? '9+' : badgeCount}
                 </span>
               )}
             </div>
             {!collapsed && <span className="truncate flex-1">{label}</span>}
-            {!collapsed && badge && pendingCount > 0 && (
+            {!collapsed && badgeCount > 0 && (
               <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
-                {pendingCount}
+                {badgeCount}
               </span>
             )}
           </NavLink>
-        ))}
+        );
+        })}
       </nav>
 
       {/* Footer */}

@@ -99,7 +99,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
   const onSubmit = async (values: ExpenseFormValues) => {
     setSubmitting(true);
     try {
-      await api.expenses.create({
+      const result = await api.expenses.create({
         date: values.date,
         description: values.description.trim(),
         amount: values.amount,
@@ -107,7 +107,11 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
         mode: values.mode,
         bank_name: values.bank_name || null,
       });
-      addToast('Expense recorded', 'success');
+      if ((result as any).pending) {
+        addToast('Entry sent for admin approval', 'info');
+      } else {
+        addToast('Expense recorded', 'success');
+      }
       onSuccess();
       onClose();
     } catch (e) {

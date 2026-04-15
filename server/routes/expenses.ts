@@ -30,6 +30,18 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { date, amount, category, description, bank_name, mode } = req.body;
   try {
+    // Non-admin users entering a past/future date need admin approval
+    const today = new Date().toISOString().split('T')[0];
+    if (req.user?.role !== 'admin' && date !== today) {
+      const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
+      const pending = await getOne(
+        `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name)
+         VALUES ('expense', $1::jsonb, $2, $3) RETURNING id`,
+        [JSON.stringify(req.body), req.user!.id, user?.display_name || req.user!.username]
+      );
+      return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
+    }
+
     const result = await getOne(
       'INSERT INTO expenses (date, amount, category, description, bank_name, mode) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
       [date, amount, category, description, bank_name, mode]
