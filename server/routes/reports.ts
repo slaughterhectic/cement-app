@@ -70,13 +70,16 @@ router.get('/outstanding', async (_req, res) => {
       SELECT p.id, p.name, p.location, p.district, p.phone,
         (COALESCE(p.opening_balance,0)
          + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)) as outstanding,
+         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)) as outstanding,
         (SELECT MAX(date) FROM sales WHERE party_id=p.id) as last_sale,
         (SELECT MAX(date) FROM payments WHERE party_id=p.id) as last_payment
       FROM parties p
-      WHERE (COALESCE(p.opening_balance,0)
+      WHERE p.type != 'supplier'
+        AND (COALESCE(p.opening_balance,0)
          + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)) > 0
+         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)) > 0
       ORDER BY outstanding DESC
     `);
     res.json(parties);

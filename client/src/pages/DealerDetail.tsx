@@ -98,15 +98,15 @@ export default function DealerDetail() {
 
   const tableRows = useMemo<LedgerTableRow[]>(() => {
     const rows: LedgerTableRow[] = [];
-    if (openingBalance > 0) {
+    if (openingBalance !== 0) {
       rows.push({
         rowKey: 'opening',
         sno: '—',
         date: null,
         particulars: 'Opening Balance',
         qty: 0, rate: 0,
-        debit: openingBalance,
-        credit: 0,
+        debit: openingBalance > 0 ? openingBalance : 0,
+        credit: openingBalance < 0 ? Math.abs(openingBalance) : 0,
         balance: openingBalance,
       });
     }
@@ -134,7 +134,7 @@ export default function DealerDetail() {
 
   const summary = useMemo(() => {
     let totalCharged = openingBalance > 0 ? openingBalance : 0;
-    let totalReceived = 0;
+    let totalReceived = openingBalance < 0 ? Math.abs(openingBalance) : 0;
     for (const e of ledgerEntries) {
       totalCharged += Number(e.debit) || 0;
       totalReceived += Number(e.credit) || 0;

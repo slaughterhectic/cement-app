@@ -116,7 +116,7 @@ export default function PartyLedger() {
 
   const tableRows = useMemo<LedgerTableRow[]>(() => {
     const rows: LedgerTableRow[] = [];
-    if (openingBalance > 0) {
+    if (openingBalance !== 0) {
       rows.push({
         rowKey: 'opening',
         sno: '—',
@@ -124,8 +124,8 @@ export default function PartyLedger() {
         particulars: 'Opening Balance',
         qty: 0,
         rate: 0,
-        debit: openingBalance,
-        credit: 0,
+        debit: openingBalance > 0 ? openingBalance : 0,
+        credit: openingBalance < 0 ? Math.abs(openingBalance) : 0,
         balance: openingBalance,
       });
     }
@@ -156,6 +156,7 @@ export default function PartyLedger() {
     let totalCharged = 0;
     let totalReceived = 0;
     if (openingBalance > 0) totalCharged += openingBalance;
+    else if (openingBalance < 0) totalReceived += Math.abs(openingBalance);
     for (const e of ledgerEntries) {
       const qty = Number(e.qty) || 0;
       const debit = Number(e.debit) || 0;

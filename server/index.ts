@@ -132,7 +132,8 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       SELECT COALESCE(SUM(GREATEST(0,
         COALESCE(p.opening_balance,0)
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-        - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)
+        + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
+        - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)
       )),0) as total FROM parties p WHERE p.type != 'supplier'
     `);
     // Outstanding payable = sum of POSITIVE supplier balances (we owe them)
@@ -225,11 +226,14 @@ app.get('/api/dashboard/charts', async (_req, res) => {
       SELECT p.id, p.name,
         (COALESCE(p.opening_balance, 0)
          + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)) as outstanding
+         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)) as outstanding
       FROM parties p
-      WHERE (COALESCE(p.opening_balance, 0)
+      WHERE p.type != 'supplier'
+        AND (COALESCE(p.opening_balance, 0)
          + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)) > 0
+         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)) > 0
       ORDER BY outstanding DESC LIMIT 10
     `);
 

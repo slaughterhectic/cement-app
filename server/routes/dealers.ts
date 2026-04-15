@@ -12,7 +12,8 @@ router.get('/', async (_req, res) => {
         COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as total_paid,
         COALESCE(p.opening_balance, 0)
           + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-          - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as outstanding,
+          + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
+          - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0) as outstanding,
         (SELECT COUNT(*) FROM parties sp WHERE sp.parent_id = p.id) as sub_party_count
       FROM parties p WHERE p.type = 'dealer' ORDER BY p.name
     `);
@@ -120,11 +121,19 @@ router.get('/:id/ledger', async (req, res) => {
       WHERE s.party_id = $1
     `, [dealer.id]);
 
-    // Payments = credit (dealer paid us)
+    // Payments — direction decides column:
+    //   direction='pay'     → DEBIT  (we paid dealer / gave advance)
+    //   direction='receive' → CREDIT (dealer paid us)
     const payments = await getAll(`
       SELECT p.date,
-        ('Payment - ' || COALESCE(p.mode, 'bank') || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END) as particulars,
-        0 as qty, 0 as rate, 0 as debit, p.amount as credit, 'payment' as entry_type, p.id
+        ('Payment - ' || COALESCE(p.mode, 'bank')
+          || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END
+          || CASE WHEN p.direction='pay' THEN ' [Paid to them]' ELSE ' [Received]' END
+        ) as particulars,
+        0 as qty, 0 as rate,
+        CASE WHEN p.direction = 'pay' THEN p.amount ELSE 0 END as debit,
+        CASE WHEN p.direction = 'receive' OR p.direction IS NULL THEN p.amount ELSE 0 END as credit,
+        'payment' as entry_type, p.id
       FROM payments p WHERE p.party_id = $1
     `, [dealer.id]);
 

@@ -12,13 +12,16 @@ router.get('/', async (_req, res) => {
         COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as total_paid,
         CASE
           WHEN p.type = 'supplier' THEN
+            -- Supplier: opening + purchases - all payments (both pay and receive reduce what we owe)
             COALESCE(p.opening_balance, 0)
             + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
             - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
           ELSE
+            -- Non-supplier: opening + sales + paid_to_them(advances) - received_from_them
             COALESCE(p.opening_balance, 0)
             + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
-            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
+            + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
         END as outstanding,
         (SELECT MAX(d) FROM (
           SELECT date as d FROM sales WHERE party_id = p.id
@@ -85,9 +88,16 @@ router.get('/:id/summary', async (req, res) => {
         COALESCE((SELECT SUM(bags) FROM purchases WHERE supplier_id=$1), 0) as total_purchase_bags
     `, [party.id]);
 
+    const paidToThem = isSupplier ? Number(totals.total_paid) : await getOne(
+      `SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND direction='pay'`, [party.id]
+    ).then((r: any) => Number(r.v));
+    const receivedFromThem = isSupplier ? 0 : await getOne(
+      `SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND (direction='receive' OR direction IS NULL)`, [party.id]
+    ).then((r: any) => Number(r.v));
+
     const outstanding = isSupplier
       ? (party.opening_balance || 0) + Number(totals.total_purchases) - Number(totals.total_paid)
-      : (party.opening_balance || 0) + Number(totals.total_sales) - Number(totals.total_paid);
+      : (party.opening_balance || 0) + Number(totals.total_sales) + paidToThem - receivedFromThem;
 
     res.json({
       ...party,
@@ -137,11 +147,19 @@ router.get('/:id/ledger', async (req, res) => {
         WHERE s.party_id = $1
       `, [party.id]);
 
-      // Payments = credit (customer paid us)
+      // Payments — direction decides column:
+      //   direction='pay'     → DEBIT  (we paid them / gave advance; increases what they owe us)
+      //   direction='receive' → CREDIT (they paid us; reduces what they owe us)
       const payments = await getAll(`
         SELECT p.date,
-          ('Payment - ' || COALESCE(p.mode, 'bank') || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END) as particulars,
-          0 as qty, 0 as rate, 0 as debit, p.amount as credit, 'payment' as entry_type, p.id
+          ('Payment - ' || COALESCE(p.mode, 'bank')
+            || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END
+            || CASE WHEN p.direction='pay' THEN ' [Paid to them]' ELSE ' [Received]' END
+          ) as particulars,
+          0 as qty, 0 as rate,
+          CASE WHEN p.direction = 'pay' THEN p.amount ELSE 0 END as debit,
+          CASE WHEN p.direction = 'receive' OR p.direction IS NULL THEN p.amount ELSE 0 END as credit,
+          'payment' as entry_type, p.id
         FROM payments p WHERE p.party_id = $1
       `, [party.id]);
 

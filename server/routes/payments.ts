@@ -15,10 +15,12 @@ async function getOutstanding(partyId: number): Promise<number> {
     `, [partyId, party.opening_balance || 0]);
     return Number(r.outstanding);
   }
+  // Non-supplier: direction='pay' (we paid them) adds to outstanding; direction='receive' reduces it
   const r = await getOne(`
     SELECT COALESCE($2::real, 0)
          + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=$1), 0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1), 0) as outstanding
+         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1 AND direction='pay'), 0)
+         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1 AND (direction='receive' OR direction IS NULL)), 0) as outstanding
   `, [partyId, party.opening_balance || 0]);
   return Number(r.outstanding);
 }
@@ -52,7 +54,8 @@ router.get('/parties-with-dues', async (_req, res) => {
           ELSE
             COALESCE(p.opening_balance, 0)
             + COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id = p.id), 0)
-            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
+            + COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id AND pm.direction = 'pay'), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id AND (pm.direction = 'receive' OR pm.direction IS NULL)), 0)
         END as outstanding
       FROM parties p
       WHERE (
@@ -64,7 +67,8 @@ router.get('/parties-with-dues', async (_req, res) => {
           ELSE
             COALESCE(p.opening_balance, 0)
             + COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id = p.id), 0)
-            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
+            + COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id AND pm.direction = 'pay'), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id AND (pm.direction = 'receive' OR pm.direction IS NULL)), 0)
         END
       ) > 0
       ORDER BY p.name
