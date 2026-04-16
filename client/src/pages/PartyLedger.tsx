@@ -115,18 +115,21 @@ export default function PartyLedger() {
   }, [load]);
 
   const tableRows = useMemo<LedgerTableRow[]>(() => {
+    const isSupplierParty = party?.type === 'supplier';
     const rows: LedgerTableRow[] = [];
     if (openingBalance !== 0) {
       rows.push({
         rowKey: 'opening',
         sno: '—',
         date: null,
-        particulars: 'Opening Balance',
+        // For suppliers: opening = advance already paid by us → DEBIT, balance starts negative
+        // For non-suppliers: opening > 0 = they owe us → DEBIT; < 0 = we owe them → CREDIT
+        particulars: isSupplierParty ? 'Opening Balance (Advance Paid)' : 'Opening Balance',
         qty: 0,
         rate: 0,
-        debit: openingBalance > 0 ? openingBalance : 0,
-        credit: openingBalance < 0 ? Math.abs(openingBalance) : 0,
-        balance: openingBalance,
+        debit: isSupplierParty ? openingBalance : (openingBalance > 0 ? openingBalance : 0),
+        credit: isSupplierParty ? 0 : (openingBalance < 0 ? Math.abs(openingBalance) : 0),
+        balance: isSupplierParty ? -openingBalance : openingBalance,
       });
     }
     for (const e of ledgerEntries) {
@@ -143,20 +146,29 @@ export default function PartyLedger() {
       });
     }
     return rows;
-  }, [openingBalance, ledgerEntries]);
+  }, [openingBalance, ledgerEntries, party?.type]);
 
   const outstanding = useMemo(() => {
-    if (ledgerEntries.length === 0) return openingBalance;
+    if (ledgerEntries.length === 0) {
+      // Supplier: no transactions → they owe us the advance (negative = they owe us)
+      return party?.type === 'supplier' ? -(openingBalance) : openingBalance;
+    }
     const last = ledgerEntries[ledgerEntries.length - 1];
     return Number(last?.balance) || 0;
-  }, [ledgerEntries, openingBalance]);
+  }, [ledgerEntries, openingBalance, party?.type]);
 
   const summary = useMemo(() => {
+    const isSupplierParty = party?.type === 'supplier';
     let totalBags = 0;
     let totalCharged = 0;
     let totalReceived = 0;
-    if (openingBalance > 0) totalCharged += openingBalance;
-    else if (openingBalance < 0) totalReceived += Math.abs(openingBalance);
+    if (isSupplierParty) {
+      // Supplier: opening = advance paid by us → goes into debit (totalCharged = total paid out)
+      if (openingBalance > 0) totalCharged += openingBalance;
+    } else {
+      if (openingBalance > 0) totalCharged += openingBalance;
+      else if (openingBalance < 0) totalReceived += Math.abs(openingBalance);
+    }
     for (const e of ledgerEntries) {
       const qty = Number(e.qty) || 0;
       const debit = Number(e.debit) || 0;
@@ -166,7 +178,7 @@ export default function PartyLedger() {
       totalReceived += credit;
     }
     return { totalBags, totalCharged, totalReceived, outstanding };
-  }, [ledgerEntries, openingBalance]);
+  }, [ledgerEntries, openingBalance, party?.type]);
 
   const isSupplier = party?.type === 'supplier';
 
@@ -230,13 +242,18 @@ export default function PartyLedger() {
       },
       {
         accessorKey: 'balance',
-        header: isSupplier ? 'Balance (We Owe)' : 'Balance (They Owe)',
+        header: isSupplier ? 'Balance' : 'Balance (They Owe)',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
-          const cls = n > 0
-            ? `font-semibold ${isSupplier ? 'text-orange-600' : 'text-outstanding'}`
-            : 'font-medium text-profit';
-          return <span className={cls}>{formatINR(n)}</span>;
+          let cls: string;
+          if (isSupplier) {
+            // positive = we owe them (orange/payable), negative = they owe us (green/profit)
+            cls = n > 0 ? 'font-semibold text-orange-600' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-gray-400';
+          } else {
+            cls = n > 0 ? 'font-semibold text-outstanding' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-gray-400';
+          }
+          const display = isSupplier && n < 0 ? `(${formatINR(Math.abs(n))})` : formatINR(n);
+          return <span className={cls}>{display}</span>;
         },
       },
     ],
@@ -325,6 +342,13 @@ export default function PartyLedger() {
                       {party?.type === 'supplier' ? 'We owe them (payable)' : 'They owe us (receivable)'}
                     </p>
                   </div>
+                ) : outstanding < 0 ? (
+                  <div>
+                    <p className="text-2xl font-bold text-profit">{formatINR(Math.abs(outstanding))}</p>
+                    <p className="text-sm font-semibold mt-0.5 text-profit/80">
+                      {party?.type === 'supplier' ? 'They owe us (overpaid advance)' : 'We owe them (advance)'}
+                    </p>
+                  </div>
                 ) : (
                   <p className="text-2xl font-bold text-profit">Settled</p>
                 )}
@@ -392,13 +416,19 @@ export default function PartyLedger() {
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
             {party?.type === 'supplier' ? 'Total Purchases' : 'Total Charged'}
           </p>
-          <p className="mt-1 text-xl font-semibold text-heading">{formatINR(summary.totalCharged)}</p>
+          {/* For suppliers: purchases go into credit column (totalReceived); for non-suppliers: totalCharged */}
+          <p className="mt-1 text-xl font-semibold text-heading">
+            {formatINR(party?.type === 'supplier' ? summary.totalReceived : summary.totalCharged)}
+          </p>
         </div>
         <div className="card">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
-            {party?.type === 'supplier' ? 'Total Paid to Supplier' : 'Total Received'}
+            {party?.type === 'supplier' ? 'Total Paid (incl. advance)' : 'Total Received'}
           </p>
-          <p className="mt-1 text-xl font-semibold text-emerald-700">{formatINR(summary.totalReceived)}</p>
+          {/* For suppliers: payments + opening advance go into debit column (totalCharged); for non-suppliers: totalReceived */}
+          <p className="mt-1 text-xl font-semibold text-emerald-700">
+            {formatINR(party?.type === 'supplier' ? summary.totalCharged : summary.totalReceived)}
+          </p>
         </div>
         <div className="card">
           <p className="text-xs font-medium uppercase tracking-wide text-gray-500">

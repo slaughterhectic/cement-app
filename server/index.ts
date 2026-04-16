@@ -141,10 +141,11 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       )),0) as total FROM parties p WHERE p.type != 'supplier'
     `);
     // Outstanding payable = sum of POSITIVE supplier balances (we owe them)
+    // opening_balance for suppliers = advance already paid by us (reduces what we owe)
     const payableCalc = await getOne(`
       SELECT COALESCE(SUM(GREATEST(0,
-        COALESCE(p.opening_balance,0)
-        + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
+        COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
+        - COALESCE(p.opening_balance,0)
         - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id),0)
       )),0) as total FROM parties p WHERE p.type = 'supplier'
     `);

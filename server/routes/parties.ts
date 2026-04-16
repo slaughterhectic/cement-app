@@ -12,9 +12,9 @@ router.get('/', async (_req, res) => {
         COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as total_paid,
         CASE
           WHEN p.type = 'supplier' THEN
-            -- Supplier: opening + purchases - all payments (both pay and receive reduce what we owe)
-            COALESCE(p.opening_balance, 0)
-            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            -- Supplier: purchases - opening_advance - all payments (opening = advance already paid by us)
+            COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            - COALESCE(p.opening_balance, 0)
             - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
           ELSE
             -- Non-supplier: opening + sales + paid_to_them(advances) - received_from_them
@@ -96,7 +96,7 @@ router.get('/:id/summary', async (req, res) => {
     ).then((r: any) => Number(r.v));
 
     const outstanding = isSupplier
-      ? (party.opening_balance || 0) + Number(totals.total_purchases) - Number(totals.total_paid)
+      ? Number(totals.total_purchases) - (party.opening_balance || 0) - Number(totals.total_paid)
       : (party.opening_balance || 0) + Number(totals.total_sales) + paidToThem - receivedFromThem;
 
     res.json({
@@ -187,7 +187,9 @@ router.get('/:id/ledger', async (req, res) => {
       return a.date.localeCompare(b.date);
     });
 
-    let balance = party.opening_balance || 0;
+    // For suppliers: opening_balance = advance already paid by us → starts as negative (they owe us)
+    // For non-suppliers: opening_balance = what they already owe us → starts as positive
+    let balance = isSupplier ? -(party.opening_balance || 0) : (party.opening_balance || 0);
     const ledgerWithBalance = ledger.map((entry: any, idx: number) => {
       if (isSupplier) {
         // credit increases balance (we owe more), debit decreases (we paid)

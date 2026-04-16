@@ -8,9 +8,10 @@ async function getOutstanding(partyId: number): Promise<number> {
   const party = await getOne('SELECT type, opening_balance FROM parties WHERE id=$1', [partyId]);
   if (!party) return 0;
   if (party.type === 'supplier') {
+    // opening_balance = advance already paid by us, so it REDUCES what we owe them
     const r = await getOne(`
-      SELECT COALESCE($2::real, 0)
-           + COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE supplier_id=$1), 0)
+      SELECT COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE supplier_id=$1), 0)
+           - COALESCE($2::real, 0)
            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=$1), 0) as outstanding
     `, [partyId, party.opening_balance || 0]);
     return Number(r.outstanding);
@@ -48,8 +49,9 @@ router.get('/parties-with-dues', async (_req, res) => {
       SELECT p.id, p.name, p.type,
         CASE
           WHEN p.type = 'supplier' THEN
-            COALESCE(p.opening_balance, 0)
-            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            -- opening_balance = advance paid by us, so subtract it (reduces what we owe)
+            COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            - COALESCE(p.opening_balance, 0)
             - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
           ELSE
             COALESCE(p.opening_balance, 0)
@@ -61,8 +63,8 @@ router.get('/parties-with-dues', async (_req, res) => {
       WHERE (
         CASE
           WHEN p.type = 'supplier' THEN
-            COALESCE(p.opening_balance, 0)
-            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            - COALESCE(p.opening_balance, 0)
             - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id), 0)
           ELSE
             COALESCE(p.opening_balance, 0)
