@@ -221,7 +221,8 @@ export default function TripLog() {
     quantity: acc.quantity + Number(r.quantity),
     net_freight: acc.net_freight + Number(r.net_freight),
     net_profit: acc.net_profit + Number(r.net_profit),
-  }), { quantity: 0, net_freight: 0, net_profit: 0 });
+    total_fuel: acc.total_fuel + Number(r.diesel_amount) + Number(r.toll_expense),
+  }), { quantity: 0, net_freight: 0, net_profit: 0, total_fuel: 0 });
 
   return (
     <div className="flex flex-col gap-6">
@@ -277,7 +278,7 @@ export default function TripLog() {
 
       {/* Summary Strip */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
           <div className="card p-4 text-center border-orange-200 bg-orange-50">
             <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Total Qty</p>
             <p className="text-xl font-bold text-heading">{totalRow.quantity.toFixed(1)} T</p>
@@ -285,6 +286,10 @@ export default function TripLog() {
           <div className="card p-4 text-center border-orange-200 bg-orange-50">
             <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Net Freight</p>
             <p className="text-xl font-bold text-heading">{formatINR(totalRow.net_freight)}</p>
+          </div>
+          <div className="card p-4 text-center border-orange-200 bg-orange-50">
+            <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Total Fuel + Toll</p>
+            <p className="text-xl font-bold text-red-600">{formatINR(totalRow.total_fuel)}</p>
           </div>
           <div className="card p-4 text-center border-orange-200 bg-orange-50">
             <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Net Profit</p>
