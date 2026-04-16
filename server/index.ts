@@ -126,6 +126,9 @@ app.get('/api/dashboard/stats', async (_req, res) => {
     const monthSales = await getOne(
       `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date >= $1`, [monthStart]
     );
+    const monthExpenses = await getOne(
+      `SELECT COALESCE(SUM(amount), 0) as amount FROM expenses WHERE date >= $1`, [monthStart]
+    );
 
     // Outstanding receivable = sum of POSITIVE customer balances (they owe us)
     const outstandingCalc = await getOne(`
@@ -155,31 +158,39 @@ app.get('/api/dashboard/stats', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
-    // Capital: bank = all payments received (mode=bank) - expenses (mode=bank) + opening balances
+    // Bank = opening + received (direction=receive) - paid_out (direction=pay) - expenses
     const bankCalc = await getOne(`
       SELECT
         (SELECT COALESCE(SUM(opening_balance),0) FROM bank_balances)
-        + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='bank')
+        + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='bank' AND (direction='receive' OR direction IS NULL))
+        - (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='bank' AND direction='pay')
         - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='bank') as total
     `);
-    // Cash = cash payments received - cash expenses + imprest net balance
+    // Cash = opening + received (direction=receive) - paid_out (direction=pay) - expenses + imprest
     const cashCalc = await getOne(`
       SELECT
-        (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash')
+        (SELECT COALESCE(SUM(opening_balance),0) FROM imprest_handlers)
+        + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash' AND (direction='receive' OR direction IS NULL))
+        - (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash' AND direction='pay')
         - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='cash')
-        + (SELECT COALESCE(SUM(opening_balance),0) FROM imprest_handlers)
         + (SELECT COALESCE(SUM(credit),0) FROM imprest_transactions)
         - (SELECT COALESCE(SUM(debit),0) FROM imprest_transactions) as total
     `);
-    // Bank/cash breakdown for dashboard
-    const bankReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank'`);
-    const cashReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='cash'`);
-    const bankPaid = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='bank'`);
-    const cashPaid = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM expenses WHERE mode='cash'`);
+    // Bank/cash breakdown for dashboard — received = direction=receive, paid = direction=pay + expenses
+    const bankReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank' AND (direction='receive' OR direction IS NULL)`);
+    const cashReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='cash' AND (direction='receive' OR direction IS NULL)`);
+    const bankPaid = await getOne(`
+      SELECT COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank' AND direction='pay'),0)
+           + COALESCE((SELECT SUM(amount) FROM expenses WHERE mode='bank'),0) as total
+    `);
+    const cashPaid = await getOne(`
+      SELECT COALESCE((SELECT SUM(amount) FROM payments WHERE mode='cash' AND direction='pay'),0)
+           + COALESCE((SELECT SUM(amount) FROM expenses WHERE mode='cash'),0) as total
+    `);
 
     res.json({
       todaySales: { bags: Number(todaySales.bags), amount: Number(todaySales.amount) },
-      monthProfit: Number(monthSales.amount) - Number(monthPurchases.amount),
+      monthProfit: Number(monthSales.amount) - Number(monthPurchases.amount) - Number(monthExpenses.amount),
       outstanding: Number(outstandingCalc.total),
       outstandingReceivable: Number(outstandingCalc.total),
       outstandingPayable: Number(payableCalc.total),

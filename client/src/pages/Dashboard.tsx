@@ -189,7 +189,7 @@ export default function Dashboard() {
         ) : (
           <>
             <KPICard title="Today's Sales" value={formatINR(stats.todaySales.amount)} subtitle={`${formatNumber(stats.todaySales.bags)} bags sold`} icon={TrendingUp} color="sale" />
-            <KPICard title="This Month's Profit" value={formatINR(stats.monthProfit)} subtitle="Sales − purchases" icon={IndianRupee} color="profit" />
+            <KPICard title="This Month's Profit" value={formatINR(stats.monthProfit)} subtitle="Sales − purchases − expenses" icon={IndianRupee} color="profit" />
             <KPICard title="Stock Value" value={formatINR(stats.stockValue.value)} subtitle={`${formatNumber(stats.stockValue.bags)} bags`} icon={Package} color="purchase" />
           </>
         )}
@@ -224,7 +224,7 @@ export default function Dashboard() {
                 <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.bankReceived)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Total expenses (bank)</span>
+                <span>Total paid out (bank)</span>
                 <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.bankPaid)}</span>
               </div>
               <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
@@ -246,7 +246,7 @@ export default function Dashboard() {
                 <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.cashReceived)}</span>
               </div>
               <div className="flex justify-between text-gray-600">
-                <span>Imprest debits</span>
+                <span>Total paid out (cash)</span>
                 <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.cashPaid)}</span>
               </div>
               <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
