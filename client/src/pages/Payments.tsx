@@ -17,6 +17,7 @@ export type PaymentRow = {
   mode: string;
   bank_name: string | null;
   remarks: string | null;
+  direction: string | null;
 };
 
 function modeBadge(mode: string) {
@@ -91,8 +92,11 @@ export default function Payments() {
         id: 'direction',
         header: 'Type',
         cell: ({ row }) => {
-          const isSupplier = row.original.party_type === 'supplier';
-          return isSupplier ? (
+          const { party_type, direction } = row.original;
+          // Supplier payments are always outgoing (we pay them)
+          // For non-suppliers: direction='pay' means we paid them; direction='receive'/'null' means we received
+          const isPaidOut = party_type === 'supplier' || direction === 'pay';
+          return isPaidOut ? (
             <span className="inline-flex rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">
               Paid Out
             </span>
