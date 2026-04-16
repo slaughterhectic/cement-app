@@ -39,13 +39,15 @@ function Protected({ children }: { children: ReactNode }) {
 
 function HasAccess({ permission, children }: { permission: string; children: ReactNode }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
-  if (!hasPermission(permission)) return <Navigate to="/no-access" replace />;
+  const isAdmin = useAuthStore((s) => s.isAdmin);
+  if (!isAdmin() && !hasPermission(permission)) return <Navigate to="/no-access" replace />;
   return <>{children}</>;
 }
 
 function BookGuard({ permission, fallback, children }: { permission: string; fallback: string; children: ReactNode }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
-  if (!hasPermission(permission)) return <Navigate to={fallback} replace />;
+  const isAdmin = useAuthStore((s) => s.isAdmin);
+  if (!isAdmin() && !hasPermission(permission)) return <Navigate to={fallback} replace />;
   return <>{children}</>;
 }
 
