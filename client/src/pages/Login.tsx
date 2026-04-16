@@ -30,7 +30,8 @@ export default function Login() {
       } else if (permissions.includes('access_cementbook')) {
         navigate('/purchases');
       } else if (permissions.includes('access_truckbook')) {
-        navigate('/truckbook');
+        // Go to trucks list — dashboard requires view_truckbook_dashboard separately
+        navigate(permissions.includes('view_truckbook_dashboard') ? '/truckbook' : '/truckbook/trucks');
       } else {
         navigate('/no-access');
       }

@@ -103,7 +103,7 @@ export default function App() {
           }
         >
           {/* CementBook routes — require access_cementbook */}
-          <Route path="/dashboard" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_dashboard"><Dashboard /></HasAccess></BookGuard>} />
+          <Route path="/dashboard" element={<BookGuard permission="access_cementbook" fallback="/no-access"><BookGuard permission="view_dashboard" fallback="/purchases"><Dashboard /></BookGuard></BookGuard>} />
           <Route path="/purchases" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Purchases /></BookGuard>} />
           <Route path="/sales" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Sales /></BookGuard>} />
           <Route path="/stock" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Stock /></BookGuard>} />
@@ -118,7 +118,7 @@ export default function App() {
           <Route path="/finance" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_finance"><Finance /></HasAccess></BookGuard>} />
           <Route path="/import" element={<BookGuard permission="access_cementbook" fallback="/no-access"><ImportPage /></BookGuard>} />
           {/* TruckBook routes — require access_truckbook */}
-          <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><HasAccess permission="view_truckbook_dashboard"><TruckDashboard /></HasAccess></BookGuard>} />
+          <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><BookGuard permission="view_truckbook_dashboard" fallback="/truckbook/trucks"><TruckDashboard /></BookGuard></BookGuard>} />
           <Route path="/truckbook/trucks" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Trucks /></BookGuard>} />
           <Route path="/truckbook/trips" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripLog /></BookGuard>} />
           <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />
