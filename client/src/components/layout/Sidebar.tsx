@@ -179,8 +179,8 @@ export function Sidebar() {
   const canSeeFinance = isAdmin() || hasPermission('view_capital') || hasPermission('view_finance');
 
   const availableBooks: Book[] = [
-    'cement',
-    'truck',
+    ...(isAdmin() || hasPermission('access_cementbook') ? (['cement'] as Book[]) : []),
+    ...(isAdmin() || hasPermission('access_truckbook') ? (['truck'] as Book[]) : []),
     ...(canSeeFinance ? (['finance'] as Book[]) : []),
     ...(isAdmin() ? (['settings'] as Book[]) : []),
   ];

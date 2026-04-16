@@ -5,6 +5,8 @@ import { useToastStore } from '../lib/store';
 import Modal from '../components/ui/Modal';
 
 const ALL_PERMISSIONS = [
+  { key: 'access_cementbook', label: 'CementBook Access', group: 'Book Access' },
+  { key: 'access_truckbook', label: 'TruckBook Access', group: 'Book Access' },
   { key: 'view_dashboard', label: 'View Dashboard', group: 'Pages' },
   { key: 'view_capital', label: 'View Capital', group: 'Pages' },
   { key: 'view_finance', label: 'View Finance', group: 'Pages' },
@@ -345,7 +347,7 @@ export default function UserManagement() {
               <h2 className="text-lg font-semibold text-heading">Permissions — {permUser.display_name}</h2>
               <button type="button" onClick={() => setPermUserId(null)} className="rounded p-1 hover:bg-gray-100"><X className="h-5 w-5" /></button>
             </div>
-            {['Pages', 'Delete', 'Other'].map((group) => (
+            {['Book Access', 'Pages', 'Delete', 'Other'].map((group) => (
               <div key={group} className="mb-4">
                 <h3 className="mb-2 text-sm font-semibold text-gray-500 uppercase tracking-wide">{group}</h3>
                 <div className="space-y-2">

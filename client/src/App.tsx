@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom';
+import { BrowserRouter, Navigate, Route, Routes, useNavigate } from 'react-router-dom';
 import { AppLayout } from './components/layout/AppLayout';
 import Landing from './pages/Landing';
 import Login from './pages/Login';
@@ -29,6 +29,7 @@ import TruckExpenses from './pages/truckbook/TruckExpenses';
 import Requests from './pages/Requests';
 import Transporters from './pages/truckbook/Transporters';
 import PendingApprovals from './pages/PendingApprovals';
+import { Building2, Truck, LogOut } from 'lucide-react';
 
 function Protected({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.isAuthenticated);
@@ -38,14 +39,51 @@ function Protected({ children }: { children: ReactNode }) {
 
 function HasAccess({ permission, children }: { permission: string; children: ReactNode }) {
   const hasPermission = useAuthStore((s) => s.hasPermission);
-  if (!hasPermission(permission)) return <Navigate to="/purchases" replace />;
+  if (!hasPermission(permission)) return <Navigate to="/no-access" replace />;
+  return <>{children}</>;
+}
+
+function BookGuard({ permission, fallback, children }: { permission: string; fallback: string; children: ReactNode }) {
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  if (!hasPermission(permission)) return <Navigate to={fallback} replace />;
   return <>{children}</>;
 }
 
 function AdminOnly({ children }: { children: ReactNode }) {
   const isAdmin = useAuthStore((s) => s.isAdmin);
-  if (!isAdmin()) return <Navigate to="/purchases" replace />;
+  if (!isAdmin()) return <Navigate to="/no-access" replace />;
   return <>{children}</>;
+}
+
+function NoAccessPage() {
+  const logout = useAuthStore((s) => s.logout);
+  const navigate = useNavigate();
+  const user = useAuthStore((s) => s.user);
+  return (
+    <div className="flex min-h-screen flex-col items-center justify-center bg-gray-50 px-4">
+      <div className="w-full max-w-sm text-center">
+        <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100">
+          <div className="flex gap-2">
+            <Building2 className="h-7 w-7 text-gray-300" />
+            <Truck className="h-7 w-7 text-gray-300" />
+          </div>
+        </div>
+        <h1 className="text-xl font-bold text-gray-800">No Pages Assigned</h1>
+        <p className="mt-2 text-sm text-gray-500">
+          Hi <span className="font-medium text-gray-700">{user?.display_name || 'there'}</span>, your account doesn't have access to any section yet.
+        </p>
+        <p className="mt-1 text-sm text-gray-500">Please contact the admin to get access.</p>
+        <button
+          type="button"
+          onClick={() => { logout(); navigate('/login'); }}
+          className="mt-8 inline-flex items-center gap-2 rounded-lg bg-gray-800 px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-900 transition-colors"
+        >
+          <LogOut className="h-4 w-4" />
+          Sign out
+        </button>
+      </div>
+    </div>
+  );
 }
 
 export default function App() {
@@ -55,6 +93,8 @@ export default function App() {
         <Route path="/" element={<Landing />} />
         <Route path="/login" element={<Login />} />
         <Route path="/reset-password" element={<ResetPassword />} />
+        {/* No-access page — authenticated but no book assigned */}
+        <Route path="/no-access" element={<Protected><NoAccessPage /></Protected>} />
         <Route
           element={
             <Protected>
@@ -62,31 +102,34 @@ export default function App() {
             </Protected>
           }
         >
-          <Route path="/dashboard" element={<HasAccess permission="view_dashboard"><Dashboard /></HasAccess>} />
-          <Route path="/purchases" element={<Purchases />} />
-          <Route path="/sales" element={<Sales />} />
-          <Route path="/stock" element={<Stock />} />
-          <Route path="/parties" element={<Parties />} />
-          <Route path="/parties/:id" element={<PartyLedger />} />
-          <Route path="/dealers" element={<Dealers />} />
-          <Route path="/dealers/:id" element={<DealerDetail />} />
-          <Route path="/payments" element={<Payments />} />
-          <Route path="/expenses" element={<Expenses />} />
-          <Route path="/reports" element={<Reports />} />
-          <Route path="/capital" element={<HasAccess permission="view_capital"><Capital /></HasAccess>} />
-          <Route path="/finance" element={<HasAccess permission="view_finance"><Finance /></HasAccess>} />
-          <Route path="/import" element={<ImportPage />} />
-          <Route path="/settings" element={<AdminOnly><Settings /></AdminOnly>} />
-          <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
-          {/* TruckBook routes */}
-          <Route path="/truckbook" element={<TruckDashboard />} />
-          <Route path="/truckbook/trucks" element={<Trucks />} />
-          <Route path="/truckbook/trips" element={<TripLog />} />
-          <Route path="/truckbook/drivers" element={<DriverLedger />} />
-          <Route path="/truckbook/expenses" element={<TruckExpenses />} />
-          <Route path="/truckbook/transporters" element={<Transporters />} />
+          {/* CementBook routes — require access_cementbook */}
+          <Route path="/dashboard" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_dashboard"><Dashboard /></HasAccess></BookGuard>} />
+          <Route path="/purchases" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Purchases /></BookGuard>} />
+          <Route path="/sales" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Sales /></BookGuard>} />
+          <Route path="/stock" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Stock /></BookGuard>} />
+          <Route path="/parties" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Parties /></BookGuard>} />
+          <Route path="/parties/:id" element={<BookGuard permission="access_cementbook" fallback="/no-access"><PartyLedger /></BookGuard>} />
+          <Route path="/dealers" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Dealers /></BookGuard>} />
+          <Route path="/dealers/:id" element={<BookGuard permission="access_cementbook" fallback="/no-access"><DealerDetail /></BookGuard>} />
+          <Route path="/payments" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Payments /></BookGuard>} />
+          <Route path="/expenses" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Expenses /></BookGuard>} />
+          <Route path="/reports" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Reports /></BookGuard>} />
+          <Route path="/capital" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_capital"><Capital /></HasAccess></BookGuard>} />
+          <Route path="/finance" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_finance"><Finance /></HasAccess></BookGuard>} />
+          <Route path="/import" element={<BookGuard permission="access_cementbook" fallback="/no-access"><ImportPage /></BookGuard>} />
+          {/* TruckBook routes — require access_truckbook */}
+          <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckDashboard /></BookGuard>} />
+          <Route path="/truckbook/trucks" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Trucks /></BookGuard>} />
+          <Route path="/truckbook/trips" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripLog /></BookGuard>} />
+          <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />
+          <Route path="/truckbook/expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckExpenses /></BookGuard>} />
+          <Route path="/truckbook/transporters" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Transporters /></BookGuard>} />
+          {/* Shared routes — require at least one book */}
           <Route path="/requests" element={<Requests />} />
           <Route path="/pending-approvals" element={<PendingApprovals />} />
+          {/* Admin only */}
+          <Route path="/settings" element={<AdminOnly><Settings /></AdminOnly>} />
+          <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />
         </Route>
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>

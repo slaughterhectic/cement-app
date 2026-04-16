@@ -25,7 +25,15 @@ export default function Login() {
     try {
       const { token, user, permissions } = await api.auth.login(username.trim(), password);
       setAuth(token, user, permissions);
-      navigate(user.role === 'admin' ? '/dashboard' : '/purchases');
+      if (user.role === 'admin') {
+        navigate('/dashboard');
+      } else if (permissions.includes('access_cementbook')) {
+        navigate('/purchases');
+      } else if (permissions.includes('access_truckbook')) {
+        navigate('/truckbook');
+      } else {
+        navigate('/no-access');
+      }
     } catch (err: any) {
       setError(err.message || 'Invalid credentials');
     } finally {
