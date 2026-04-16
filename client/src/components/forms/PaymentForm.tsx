@@ -232,7 +232,9 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               }`}
             >
               <p className="font-semibold">Receive</p>
-              <p className="text-xs mt-0.5 opacity-80">Money came in — reduces their due</p>
+              <p className="text-xs mt-0.5 opacity-80">
+                {selectedParty?.type === 'supplier' ? 'Supplier refunded / sent money' : 'Money came in from party'}
+              </p>
             </button>
             <button
               type="button"
@@ -244,7 +246,9 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               }`}
             >
               <p className="font-semibold">Pay</p>
-              <p className="text-xs mt-0.5 opacity-80">Money went out — reduces our due</p>
+              <p className="text-xs mt-0.5 opacity-80">
+                {selectedParty?.type === 'supplier' ? 'We paid the supplier' : 'We paid / gave advance to party'}
+              </p>
             </button>
           </div>
         </div>
@@ -284,6 +288,10 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
                       setPartyMenuOpen(false);
                       clearErrors('party_id');
                       clearErrors('amount');
+                      // Auto-set direction based on party type (unless forced from parent)
+                      if (!forceDirection) {
+                        setDirection(p.type === 'supplier' ? 'pay' : 'receive');
+                      }
                     }}
                   >
                     <div className="flex items-center gap-2 min-w-0">
