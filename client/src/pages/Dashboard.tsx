@@ -189,7 +189,7 @@ export default function Dashboard() {
         ) : (
           <>
             <KPICard title="Today's Sales" value={formatINR(stats.todaySales.amount)} subtitle={`${formatNumber(stats.todaySales.bags)} bags sold`} icon={TrendingUp} color="sale" />
-            <KPICard title="This Month's Profit" value={formatINR(stats.monthProfit)} subtitle="Sales − purchases − expenses" icon={IndianRupee} color="profit" />
+            <KPICard title="Net Profit" value={formatINR(stats.monthProfit)} subtitle="Stock + sales − purchases − expenses" icon={IndianRupee} color="profit" />
             <KPICard title="Stock Value" value={formatINR(stats.stockValue.value)} subtitle={`${formatNumber(stats.stockValue.bags)} bags`} icon={Package} color="purchase" />
           </>
         )}

@@ -126,9 +126,10 @@ app.get('/api/dashboard/stats', async (_req, res) => {
     const monthSales = await getOne(
       `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date >= $1`, [monthStart]
     );
-    const monthExpenses = await getOne(
-      `SELECT COALESCE(SUM(amount), 0) as amount FROM expenses WHERE date >= $1`, [monthStart]
-    );
+    // All-time totals for net profit
+    const totalSales = await getOne(`SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales`);
+    const totalPurchases = await getOne(`SELECT COALESCE(SUM(purchase_amount), 0) as amount FROM purchases`);
+    const totalExpenses = await getOne(`SELECT COALESCE(SUM(amount), 0) as amount FROM expenses`);
 
     // Outstanding receivable = sum of POSITIVE customer balances (they owe us)
     const outstandingCalc = await getOne(`
@@ -190,7 +191,9 @@ app.get('/api/dashboard/stats', async (_req, res) => {
 
     res.json({
       todaySales: { bags: Number(todaySales.bags), amount: Number(todaySales.amount) },
-      monthProfit: Number(monthSales.amount) - Number(monthPurchases.amount) - Number(monthExpenses.amount),
+      // Net Profit = Stock Value + Total Sales - Total Purchases - Total Expenses
+      // (stock value represents unsold inventory still held as asset)
+      monthProfit: Number(stockCalc.value) + Number(totalSales.amount) - Number(totalPurchases.amount) - Number(totalExpenses.amount),
       outstanding: Number(outstandingCalc.total),
       outstandingReceivable: Number(outstandingCalc.total),
       outstandingPayable: Number(payableCalc.total),
