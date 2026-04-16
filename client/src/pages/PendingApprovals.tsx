@@ -95,7 +95,7 @@ function EntrySummary({ type, data }: { type: string; data: Record<string, any> 
   return null;
 }
 
-export default function PendingApprovals() {
+export default function PendingApprovals({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' }) {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin)();
 
@@ -111,13 +111,13 @@ export default function PendingApprovals() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await api.pendingEntries.list());
+      setRows(await api.pendingEntries.list(source));
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, source]);
 
   useEffect(() => { load(); }, [load]);
 

@@ -118,15 +118,18 @@ export default function App() {
           <Route path="/finance" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_finance"><Finance /></HasAccess></BookGuard>} />
           <Route path="/import" element={<BookGuard permission="access_cementbook" fallback="/no-access"><ImportPage /></BookGuard>} />
           {/* TruckBook routes — require access_truckbook */}
-          <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckDashboard /></BookGuard>} />
+          <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><HasAccess permission="view_truckbook_dashboard"><TruckDashboard /></HasAccess></BookGuard>} />
           <Route path="/truckbook/trucks" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Trucks /></BookGuard>} />
           <Route path="/truckbook/trips" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripLog /></BookGuard>} />
           <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />
           <Route path="/truckbook/expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckExpenses /></BookGuard>} />
           <Route path="/truckbook/transporters" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Transporters /></BookGuard>} />
-          {/* Shared routes — require at least one book */}
-          <Route path="/requests" element={<Requests />} />
-          <Route path="/pending-approvals" element={<PendingApprovals />} />
+          {/* CementBook requests/approvals */}
+          <Route path="/requests" element={<Requests source="cementbook" />} />
+          <Route path="/pending-approvals" element={<PendingApprovals source="cementbook" />} />
+          {/* TruckBook requests/approvals */}
+          <Route path="/truckbook/requests" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Requests source="truckbook" /></BookGuard>} />
+          <Route path="/truckbook/pending-approvals" element={<BookGuard permission="access_truckbook" fallback="/no-access"><PendingApprovals source="truckbook" /></BookGuard>} />
           {/* Admin only */}
           <Route path="/settings" element={<AdminOnly><Settings /></AdminOnly>} />
           <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />

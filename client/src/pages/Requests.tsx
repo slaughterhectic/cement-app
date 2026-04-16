@@ -23,7 +23,7 @@ function formatDateTime(ts: string) {
     + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function Requests() {
+export default function Requests({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' }) {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const user = useAuthStore((s) => s.user);
@@ -49,13 +49,13 @@ export default function Requests() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await api.requests.list());
+      setRows(await api.requests.list(source));
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load requests', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, source]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -64,7 +64,7 @@ export default function Requests() {
     if (!newTitle.trim()) return;
     setSaving(true);
     try {
-      await api.requests.create({ title: newTitle.trim(), message: newMessage.trim() || undefined });
+      await api.requests.create({ title: newTitle.trim(), message: newMessage.trim() || undefined, source });
       addToast('Request submitted', 'success');
       setNewOpen(false);
       setNewTitle('');

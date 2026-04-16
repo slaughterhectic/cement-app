@@ -98,6 +98,7 @@ export const api = {
       return request<any[]>(`/stock/movement${q}`);
     },
     godown: () => request<any[]>('/stock/godown'),
+    godownProfit: () => request<any[]>('/stock/godown-profit'),
   },
   parties: {
     list: () => request<any[]>('/parties'),
@@ -251,8 +252,8 @@ export const api = {
     delete: (id: number) => request<any>(`/truck-expenses/${id}`, { method: 'DELETE' }),
   },
   requests: {
-    list: () => request<any[]>('/requests'),
-    create: (data: { title: string; message?: string }) =>
+    list: (source?: string) => request<any[]>(`/requests${source ? `?source=${source}` : ''}`),
+    create: (data: { title: string; message?: string; source?: string }) =>
       request<any>('/requests', { method: 'POST', body: JSON.stringify(data) }),
     complete: (id: number, admin_note?: string) =>
       request<any>(`/requests/${id}/complete`, { method: 'PATCH', body: JSON.stringify({ admin_note }) }),
@@ -261,8 +262,8 @@ export const api = {
     delete: (id: number) => request<any>(`/requests/${id}`, { method: 'DELETE' }),
   },
   pendingEntries: {
-    list: () => request<any[]>('/pending-entries'),
-    count: () => request<{ count: number }>('/pending-entries/count'),
+    list: (source?: string) => request<any[]>(`/pending-entries${source ? `?source=${source}` : ''}`),
+    count: (source?: string) => request<{ count: number }>(`/pending-entries/count${source ? `?source=${source}` : ''}`),
     approve: (id: number, admin_note?: string) =>
       request<any>(`/pending-entries/${id}/approve`, { method: 'POST', body: JSON.stringify({ admin_note }) }),
     reject: (id: number, admin_note?: string) =>

@@ -3,19 +3,31 @@ import { getAll, getOne, query } from '../db/database';
 
 const router = Router();
 
-// GET /api/requests — admin sees all, user sees own
+// GET /api/requests — admin sees all, user sees own; ?source= filters by book
 router.get('/', async (req, res) => {
   try {
     const isAdmin = req.user?.role === 'admin';
+    const source = req.query.source as string | undefined;
+    const params: any[] = [];
+    let where = '';
+
+    if (isAdmin) {
+      if (source) { where = 'WHERE r.source = $1'; params.push(source); }
+    } else {
+      params.push(req.user!.id);
+      where = `WHERE r.created_by = $1${source ? ` AND r.source = $2` : ''}`;
+      if (source) params.push(source);
+    }
+
     const rows = await getAll(
       `SELECT r.*, u.display_name as created_by_name,
               cu.display_name as completed_by_name
        FROM requests r
        JOIN users u ON r.created_by = u.id
        LEFT JOIN users cu ON r.completed_by = cu.id
-       ${isAdmin ? '' : 'WHERE r.created_by = $1'}
+       ${where}
        ORDER BY r.created_at DESC`,
-      isAdmin ? [] : [req.user!.id]
+      params
     );
     res.json(rows);
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -24,12 +36,13 @@ router.get('/', async (req, res) => {
 // POST /api/requests — any authenticated user
 router.post('/', async (req, res) => {
   try {
-    const { title, message } = req.body;
+    const { title, message, source } = req.body;
     if (!title?.trim()) return res.status(400).json({ error: 'Title is required' });
+    const src = source === 'truckbook' ? 'truckbook' : 'cementbook';
     const row = await getOne(
-      `INSERT INTO requests (title, message, created_by)
-       VALUES ($1, $2, $3) RETURNING *`,
-      [title.trim(), message?.trim() || null, req.user!.id]
+      `INSERT INTO requests (title, message, created_by, source)
+       VALUES ($1, $2, $3, $4) RETURNING *`,
+      [title.trim(), message?.trim() || null, req.user!.id, src]
     );
     res.json(row);
   } catch (e: any) { res.status(500).json({ error: e.message }); }

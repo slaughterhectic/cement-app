@@ -61,6 +61,26 @@ router.get('/movement', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+router.get('/godown-profit', async (_req, res) => {
+  try {
+    const rows = await getAll(`
+      SELECT g.id, g.name,
+        COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE godown_id = g.id), 0) as total_purchase,
+        COALESCE((SELECT SUM(sale_amount) FROM sales WHERE godown_id = g.id), 0) as total_sale
+      FROM godowns g
+      ORDER BY g.name
+    `);
+    const result = rows.map((r: any) => ({
+      id: Number(r.id),
+      name: r.name,
+      total_purchase: Number(r.total_purchase),
+      total_sale: Number(r.total_sale),
+      profit: Number(r.total_sale) - Number(r.total_purchase),
+    }));
+    res.json(result);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.get('/godown', async (_req, res) => {
   try {
     const stock = await getAll(`

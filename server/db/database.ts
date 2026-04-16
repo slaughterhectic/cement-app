@@ -416,6 +416,10 @@ export async function initializeDatabase() {
       );
     `);
 
+    // Add source column to requests and pending_entries to separate CementBook / TruckBook
+    await client.query(`ALTER TABLE requests ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'cementbook';`);
+    await client.query(`ALTER TABLE pending_entries ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'cementbook';`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

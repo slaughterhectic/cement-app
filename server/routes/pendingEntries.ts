@@ -19,9 +19,10 @@ async function getStock(brandId: number, godownId?: number): Promise<number> {
 }
 
 // GET /api/pending-entries
-// Admin: all entries; User: own entries only
+// Admin: all entries; User: own entries only; ?source= filters by book
 router.get('/', async (req, res) => {
   try {
+    const source = (req.query.source as string) || 'cementbook';
     let rows: any[];
     if (req.user!.role === 'admin') {
       rows = await getAll(`
@@ -29,21 +30,22 @@ router.get('/', async (req, res) => {
         FROM pending_entries pe
         LEFT JOIN users u ON pe.created_by = u.id
         LEFT JOIN users rv ON pe.reviewed_by = rv.id
+        WHERE pe.source = $1
         ORDER BY
           CASE pe.status WHEN 'pending' THEN 0 ELSE 1 END,
           pe.created_at DESC
-      `);
+      `, [source]);
     } else {
       rows = await getAll(`
         SELECT pe.*, u.display_name as created_by_name, rv.display_name as reviewed_by_name
         FROM pending_entries pe
         LEFT JOIN users u ON pe.created_by = u.id
         LEFT JOIN users rv ON pe.reviewed_by = rv.id
-        WHERE pe.created_by = $1
+        WHERE pe.created_by = $1 AND pe.source = $2
         ORDER BY
           CASE pe.status WHEN 'pending' THEN 0 ELSE 1 END,
           pe.created_at DESC
-      `, [req.user!.id]);
+      `, [req.user!.id, source]);
     }
 
     // Enrich entry_data with display names
@@ -71,14 +73,15 @@ router.get('/', async (req, res) => {
   }
 });
 
-// GET /api/pending-entries/count — fast badge count
+// GET /api/pending-entries/count — fast badge count; ?source= filters by book
 router.get('/count', async (req, res) => {
   try {
+    const source = (req.query.source as string) || 'cementbook';
     let r: any;
     if (req.user!.role === 'admin') {
-      r = await getOne(`SELECT COUNT(*) as count FROM pending_entries WHERE status='pending'`);
+      r = await getOne(`SELECT COUNT(*) as count FROM pending_entries WHERE status='pending' AND source=$1`, [source]);
     } else {
-      r = await getOne(`SELECT COUNT(*) as count FROM pending_entries WHERE status='pending' AND created_by=$1`, [req.user!.id]);
+      r = await getOne(`SELECT COUNT(*) as count FROM pending_entries WHERE status='pending' AND created_by=$1 AND source=$2`, [req.user!.id, source]);
     }
     res.json({ count: Number(r.count) });
   } catch (e: any) {

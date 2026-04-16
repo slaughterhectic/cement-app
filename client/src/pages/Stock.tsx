@@ -42,6 +42,14 @@ type GodownStockRow = {
   stock: number;
 };
 
+type GodownProfitRow = {
+  id: number;
+  name: string;
+  total_purchase: number;
+  total_sale: number;
+  profit: number;
+};
+
 function toStockType(t: string): StockType {
   if (t === 'PPC' || t === 'DAMAGE') return t;
   return 'OPC';
@@ -116,6 +124,7 @@ export default function Stock() {
 
   const [godownStock, setGodownStock] = useState<GodownStockRow[]>([]);
   const [godownLoading, setGodownLoading] = useState(true);
+  const [godownProfit, setGodownProfit] = useState<Map<number, GodownProfitRow>>(new Map());
 
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [godowns, setGodowns] = useState<{ id: number; name: string; location?: string | null }[]>([]);
@@ -149,8 +158,16 @@ export default function Stock() {
   const loadGodownStock = useCallback(async () => {
     setGodownLoading(true);
     try {
-      const rows = (await api.stock.godown()) as GodownStockRow[];
+      const [rows, profitRows] = await Promise.all([
+        api.stock.godown() as Promise<GodownStockRow[]>,
+        api.stock.godownProfit() as Promise<GodownProfitRow[]>,
+      ]);
       setGodownStock(Array.isArray(rows) ? rows : []);
+      const profitMap = new Map<number, GodownProfitRow>();
+      for (const r of (Array.isArray(profitRows) ? profitRows : [])) {
+        profitMap.set(r.id, r);
+      }
+      setGodownProfit(profitMap);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load godown stock', 'error');
       setGodownStock([]);
@@ -402,10 +419,33 @@ export default function Stock() {
                     </li>
                   ))}
                 </ul>
-                <p className="mt-3 border-t border-card-border pt-3 text-xs text-gray-500">
-                  Est. value (brand avg rate):{' '}
-                  <span className="font-medium text-heading">{formatINR(godownEstValue(g.brands))}</span>
-                </p>
+                <div className="mt-3 border-t border-card-border pt-3 space-y-1.5 text-xs text-gray-500">
+                  <div className="flex justify-between">
+                    <span>Est. stock value</span>
+                    <span className="font-medium text-heading">{formatINR(godownEstValue(g.brands))}</span>
+                  </div>
+                  {godownProfit.get(g.id) && (() => {
+                    const p = godownProfit.get(g.id)!;
+                    return (
+                      <>
+                        <div className="flex justify-between">
+                          <span>Total purchases</span>
+                          <span className="font-medium text-gray-700">{formatINR(p.total_purchase)}</span>
+                        </div>
+                        <div className="flex justify-between">
+                          <span>Total sales</span>
+                          <span className="font-medium text-gray-700">{formatINR(p.total_sale)}</span>
+                        </div>
+                        <div className="flex justify-between border-t border-card-border pt-1.5">
+                          <span className="font-semibold">Profit</span>
+                          <span className={`font-bold ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                            {p.profit >= 0 ? '' : '-'}{formatINR(Math.abs(p.profit))}
+                          </span>
+                        </div>
+                      </>
+                    );
+                  })()}
+                </div>
               </div>
             ))}
           </div>

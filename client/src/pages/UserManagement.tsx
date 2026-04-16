@@ -7,7 +7,8 @@ import Modal from '../components/ui/Modal';
 const ALL_PERMISSIONS = [
   { key: 'access_cementbook', label: 'CementBook Access', group: 'Book Access' },
   { key: 'access_truckbook', label: 'TruckBook Access', group: 'Book Access' },
-  { key: 'view_dashboard', label: 'View Dashboard', group: 'Pages' },
+  { key: 'view_dashboard', label: 'View Dashboard (CementBook)', group: 'Pages' },
+  { key: 'view_truckbook_dashboard', label: 'View Dashboard (TruckBook)', group: 'Pages' },
   { key: 'view_capital', label: 'View Capital', group: 'Pages' },
   { key: 'view_finance', label: 'View Finance', group: 'Pages' },
   { key: 'delete_purchases', label: 'Delete Purchases', group: 'Delete' },

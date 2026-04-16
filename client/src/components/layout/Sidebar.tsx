@@ -64,14 +64,14 @@ const financeNavItems = [
 ];
 
 const truckNavItems = [
-  { to: '/truckbook', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/truckbook', label: 'Dashboard', icon: LayoutDashboard, permission: 'view_truckbook_dashboard' },
   { to: '/truckbook/trucks', label: 'Trucks', icon: Truck },
   { to: '/truckbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },
   { to: '/truckbook/transporters', label: 'Transporters', icon: Store },
   { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
-  { to: '/pending-approvals', label: 'Approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
-  { to: '/requests', label: 'Requests', icon: MessageSquare, badge: true },
+  { to: '/truckbook/pending-approvals', label: 'Approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
+  { to: '/truckbook/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];
 
 const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string; hoverClass: string; defaultRoute: string }> = {
@@ -126,33 +126,35 @@ export function Sidebar() {
     setBook(detectBook(location.pathname));
   }, [location.pathname]);
 
-  // Poll pending request count for badge
+  // Poll pending request count for badge — scoped to current book
   useEffect(() => {
     let active = true;
+    const source = book === 'truck' ? 'truckbook' : 'cementbook';
     const fetchCount = async () => {
       try {
-        const rows: any[] = await api.requests.list();
+        const rows: any[] = await api.requests.list(source);
         if (active) setPendingCount(rows.filter((r) => r.status === 'pending').length);
       } catch (_) {}
     };
     fetchCount();
     const timer = setInterval(fetchCount, 60_000);
     return () => { active = false; clearInterval(timer); };
-  }, []);
+  }, [book]);
 
-  // Poll pending approvals count for badge
+  // Poll pending approvals count for badge — scoped to current book
   useEffect(() => {
     let active = true;
+    const source = book === 'truck' ? 'truckbook' : 'cementbook';
     const fetchApprovals = async () => {
       try {
-        const res = await api.pendingEntries.count();
+        const res = await api.pendingEntries.count(source);
         if (active) setApprovalsCount(res.count);
       } catch (_) {}
     };
     fetchApprovals();
     const timer = setInterval(fetchApprovals, 60_000);
     return () => { active = false; clearInterval(timer); };
-  }, []);
+  }, [book]);
 
   // Close book menu on outside click
   useEffect(() => {
@@ -197,7 +199,10 @@ export function Sidebar() {
       })
     : book === 'settings'
     ? settingsNavItems
-    : truckNavItems) as Array<{ to: string; label: string; icon: any; badge?: boolean; badgeKey?: string; permission?: string }>;
+    : truckNavItems.filter((item) => {
+        if ((item as any).permission) return isAdmin() || hasPermission((item as any).permission);
+        return true;
+      })) as Array<{ to: string; label: string; icon: any; badge?: boolean; badgeKey?: string; permission?: string }>;
 
   const meta = BOOK_META[book];
   const displayName = user?.display_name || 'User';
