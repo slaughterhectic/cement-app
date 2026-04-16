@@ -16,6 +16,7 @@ interface AuthState {
   logout: () => void;
   hasPermission: (perm: string) => boolean;
   isAdmin: () => boolean;
+  refreshPermissions: () => Promise<void>;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -45,6 +46,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return state.permissions.includes(perm);
   },
   isAdmin: () => get().user?.role === 'admin',
+  refreshPermissions: async () => {
+    const { token, user } = get();
+    if (!token || !user) return;
+    try {
+      const res = await fetch('/api/auth/me', {
+        headers: { Authorization: `Bearer ${token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      const perms: string[] = data.permissions ?? [];
+      localStorage.setItem('cb_perms', JSON.stringify(perms));
+      set({ permissions: perms });
+    } catch {
+      // silently ignore — stale permissions are better than crashing
+    }
+  },
 }));
 
 interface ToastState {
