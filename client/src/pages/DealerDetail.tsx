@@ -4,9 +4,10 @@ import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import { useToastStore } from '../lib/store';
-import { ArrowLeft, Plus, CreditCard, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, Trash2, FileDown } from 'lucide-react';
 import { Modal } from '../components/ui/Modal';
 import PaymentForm from '../components/forms/PaymentForm';
+import { openLedgerPdf } from '../lib/ledgerPdf';
 
 type LedgerEntry = {
   sno: number;
@@ -144,6 +145,40 @@ export default function DealerDetail() {
     return { totalCharged, totalReceived };
   }, [ledgerEntries, openingBalance]);
 
+  const handleDownloadPdf = useCallback(() => {
+    if (!dealer) return;
+    const ok = openLedgerPdf({
+      title: 'Dealer Ledger Statement',
+      partyName: dealer.name,
+      partyType: 'dealer',
+      partyPhone: dealer.phone,
+      partyLocation: dealer.location,
+      partyDistrict: dealer.district,
+      isSupplier: false,
+      rows: tableRows.map((r) => ({
+        sno: r.sno,
+        date: r.date,
+        particulars: r.particulars,
+        qty: r.qty,
+        rate: r.rate,
+        debit: r.debit,
+        credit: r.credit,
+        balance: r.balance,
+      })),
+      totals: {
+        totalDebit: summary.totalCharged,
+        totalCredit: summary.totalReceived,
+        outstanding,
+      },
+      debitLabel: 'Debit (Dr)',
+      creditLabel: 'Credit (Cr)',
+      balanceLabel: 'Balance',
+    });
+    if (!ok) {
+      addToast('Please allow popups to download the ledger PDF', 'error');
+    }
+  }, [dealer, tableRows, summary, outstanding, addToast]);
+
   const handleDeleteSubParty = async (sp: SubParty) => {
     if (!window.confirm(`Delete sub-party "${sp.name}"? This cannot be undone.`)) return;
     try {
@@ -224,13 +259,22 @@ export default function DealerDetail() {
             {dealer.phone && <span>{dealer.phone}</span>}
           </div>
         </div>
-        <button
-          type="button"
-          onClick={() => setPaymentOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
-        >
-          <CreditCard className="h-4 w-4" /> Record Payment
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={handleDownloadPdf}
+            className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          >
+            <FileDown className="h-4 w-4" /> Download PDF
+          </button>
+          <button
+            type="button"
+            onClick={() => setPaymentOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            <CreditCard className="h-4 w-4" /> Record Payment
+          </button>
+        </div>
       </div>
 
       {/* Summary cards */}

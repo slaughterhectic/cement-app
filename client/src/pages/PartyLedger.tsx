@@ -4,10 +4,11 @@ import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import { useToastStore } from '../lib/store';
-import { ArrowLeft, Plus, CreditCard } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, FileDown } from 'lucide-react';
 import SaleForm from '../components/forms/SaleForm';
 import PaymentForm from '../components/forms/PaymentForm';
 import PurchaseForm from '../components/forms/PurchaseForm';
+import { openLedgerPdf } from '../lib/ledgerPdf';
 
 type LedgerEntry = {
   sno: number;
@@ -265,6 +266,41 @@ export default function PartyLedger() {
 
   const exportName = party ? `${safeExportBaseName(party.name)}_ledger` : 'ledger';
 
+  const handleDownloadPdf = useCallback(() => {
+    if (!party) return;
+    const ok = openLedgerPdf({
+      title: 'Ledger Statement',
+      partyName: party.name,
+      partyType: party.type,
+      partyPhone: party.phone,
+      partyLocation: party.location,
+      partyDistrict: party.district,
+      isSupplier,
+      rows: tableRows.map((r) => ({
+        sno: r.sno,
+        date: r.date,
+        particulars: r.particulars,
+        qty: r.qty,
+        rate: r.rate,
+        debit: r.debit,
+        credit: r.credit,
+        balance: r.balance,
+      })),
+      totals: {
+        totalBags: summary.totalBags,
+        totalDebit: summary.totalCharged,
+        totalCredit: summary.totalReceived,
+        outstanding: summary.outstanding,
+      },
+      debitLabel: isSupplier ? 'Paid by Us' : 'Charged (Dr)',
+      creditLabel: isSupplier ? 'Goods Received (Cr)' : 'Received (Cr)',
+      balanceLabel: isSupplier ? 'Balance' : 'Balance (They Owe)',
+    });
+    if (!ok) {
+      addToast('Please allow popups to download the ledger PDF', 'error');
+    }
+  }, [party, isSupplier, tableRows, summary, addToast]);
+
   const onSaleSuccess = () => {
     load();
   };
@@ -385,6 +421,15 @@ export default function PartyLedger() {
               >
                 <CreditCard className="h-4 w-4" />
                 {party?.type === 'supplier' ? 'Record Payment (to supplier)' : 'Record Payment'}
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={!party}
+                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+              >
+                <FileDown className="h-4 w-4" />
+                Download PDF
               </button>
             </div>
           </>
