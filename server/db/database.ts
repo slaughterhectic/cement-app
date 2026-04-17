@@ -419,6 +419,9 @@ export async function initializeDatabase() {
     // Add source column to requests and pending_entries to separate CementBook / TruckBook
     await client.query(`ALTER TABLE requests ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'cementbook';`);
     await client.query(`ALTER TABLE pending_entries ADD COLUMN IF NOT EXISTS source TEXT NOT NULL DEFAULT 'cementbook';`);
+    await client.query(
+      `CREATE INDEX IF NOT EXISTS idx_pending_entries_source_status_created ON pending_entries (source, status, created_at DESC)`
+    );
 
     console.log('Database schema initialized');
   } finally {

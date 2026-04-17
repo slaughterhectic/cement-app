@@ -13,7 +13,8 @@ router.get('/', async (_req, res) => {
         COALESCE(p.opening_balance, 0)
           + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
           + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
-          - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0) as outstanding,
+          - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
+          - COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE supplier_id = p.id), 0) as outstanding,
         (SELECT COUNT(*) FROM parties sp WHERE sp.parent_id = p.id) as sub_party_count
       FROM parties p WHERE p.type = 'dealer' ORDER BY p.name
     `);
@@ -137,7 +138,22 @@ router.get('/:id/ledger', async (req, res) => {
       FROM payments p WHERE p.party_id = $1
     `, [dealer.id]);
 
-    const entries = [...sales, ...payments];
+    // Purchases from dealer = credit (we bought from them, reduces their outstanding)
+    const purchases = await getAll(`
+      SELECT pu.date,
+        ('Purchase - ' || cb.name
+          || CASE WHEN pu.invoice_number IS NOT NULL THEN ' (Inv: ' || pu.invoice_number || ')' ELSE '' END
+        ) as particulars,
+        pu.bags as qty, pu.purchase_rate as rate,
+        0 as debit,
+        pu.purchase_amount as credit,
+        'purchase' as entry_type, pu.id
+      FROM purchases pu
+      JOIN cement_brands cb ON pu.brand_id = cb.id
+      WHERE pu.supplier_id = $1
+    `, [dealer.id]);
+
+    const entries = [...sales, ...payments, ...purchases];
 
     const ledger = entries.sort((a: any, b: any) => {
       if (a.date === b.date) {

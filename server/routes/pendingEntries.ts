@@ -48,23 +48,67 @@ router.get('/', async (req, res) => {
       `, [req.user!.id, source]);
     }
 
-    // Enrich entry_data with display names
+    // Enrich entry_data with display names (batched — avoids N+1 round-trips to the DB)
+    const partyIds = new Set<number>();
+    const brandIds = new Set<number>();
+    for (const pe of rows) {
+      const data = pe.entry_data || {};
+      if (pe.entry_type === 'sale') {
+        const pid = data.party_id != null ? Number(data.party_id) : NaN;
+        const bid = data.brand_id != null ? Number(data.brand_id) : NaN;
+        if (Number.isFinite(pid)) partyIds.add(pid);
+        if (Number.isFinite(bid)) brandIds.add(bid);
+      } else if (pe.entry_type === 'purchase') {
+        const sid = data.supplier_id != null ? Number(data.supplier_id) : NaN;
+        const bid = data.brand_id != null ? Number(data.brand_id) : NaN;
+        if (Number.isFinite(sid)) partyIds.add(sid);
+        if (Number.isFinite(bid)) brandIds.add(bid);
+      } else if (pe.entry_type === 'payment') {
+        const pid = data.party_id != null ? Number(data.party_id) : NaN;
+        if (Number.isFinite(pid)) partyIds.add(pid);
+      }
+    }
+
+    const partyNames = new Map<number, string>();
+    const brandNames = new Map<number, string>();
+    try {
+      if (partyIds.size > 0) {
+        const pr = await getAll(`SELECT id, name FROM parties WHERE id = ANY($1::int[])`, [Array.from(partyIds)]);
+        for (const p of pr) partyNames.set(Number(p.id), p.name);
+      }
+      if (brandIds.size > 0) {
+        const br = await getAll(`SELECT id, name FROM cement_brands WHERE id = ANY($1::int[])`, [Array.from(brandIds)]);
+        for (const b of br) brandNames.set(Number(b.id), b.name);
+      }
+    } catch (_) { /* enrich below with nulls if batch lookup fails */ }
+
     for (const pe of rows) {
       const data = pe.entry_data || {};
       try {
         if (pe.entry_type === 'sale') {
-          const party = data.party_id ? await getOne('SELECT name FROM parties WHERE id=$1', [data.party_id]) : null;
-          const brand = data.brand_id ? await getOne('SELECT name FROM cement_brands WHERE id=$1', [data.brand_id]) : null;
-          pe.entry_data = { ...data, party_name: party?.name ?? null, brand_name: brand?.name ?? null };
+          const pid = data.party_id != null ? Number(data.party_id) : NaN;
+          const bid = data.brand_id != null ? Number(data.brand_id) : NaN;
+          pe.entry_data = {
+            ...data,
+            party_name: Number.isFinite(pid) ? partyNames.get(pid) ?? null : null,
+            brand_name: Number.isFinite(bid) ? brandNames.get(bid) ?? null : null,
+          };
         } else if (pe.entry_type === 'purchase') {
-          const brand = data.brand_id ? await getOne('SELECT name FROM cement_brands WHERE id=$1', [data.brand_id]) : null;
-          const party = data.supplier_id ? await getOne('SELECT name FROM parties WHERE id=$1', [data.supplier_id]) : null;
-          pe.entry_data = { ...data, brand_name: brand?.name ?? null, supplier_name: party?.name ?? data.supplier_name ?? null };
+          const sid = data.supplier_id != null ? Number(data.supplier_id) : NaN;
+          const bid = data.brand_id != null ? Number(data.brand_id) : NaN;
+          pe.entry_data = {
+            ...data,
+            brand_name: Number.isFinite(bid) ? brandNames.get(bid) ?? null : null,
+            supplier_name: Number.isFinite(sid) ? partyNames.get(sid) ?? data.supplier_name ?? null : data.supplier_name ?? null,
+          };
         } else if (pe.entry_type === 'payment') {
-          const party = data.party_id ? await getOne('SELECT name FROM parties WHERE id=$1', [data.party_id]) : null;
-          pe.entry_data = { ...data, party_name: party?.name ?? null };
+          const pid = data.party_id != null ? Number(data.party_id) : NaN;
+          pe.entry_data = {
+            ...data,
+            party_name: Number.isFinite(pid) ? partyNames.get(pid) ?? null : null,
+          };
         }
-      } catch (_) { /* leave as-is if lookup fails */ }
+      } catch (_) { /* leave as-is if merge fails */ }
     }
 
     res.json(rows);
