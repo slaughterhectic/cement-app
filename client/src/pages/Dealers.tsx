@@ -35,6 +35,7 @@ const dealerSchema = z.object({
   location: z.string().optional(),
   district: z.string().optional(),
   opening_balance: z.coerce.number().min(0),
+  opening_balance_type: z.enum(['dr', 'cr']).default('dr'),
 });
 
 type DealerFormValues = z.infer<typeof dealerSchema>;
@@ -69,14 +70,17 @@ export default function Dealers() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<DealerFormValues>({
     resolver: zodResolver(dealerSchema),
-    defaultValues: { name: '', phone: '', location: '', district: '', opening_balance: 0 },
+    defaultValues: { name: '', phone: '', location: '', district: '', opening_balance: 0, opening_balance_type: 'dr' },
   });
+  const obType = watch('opening_balance_type');
 
   const openCreate = () => {
-    reset({ name: '', phone: '', location: '', district: '', opening_balance: 0 });
+    reset({ name: '', phone: '', location: '', district: '', opening_balance: 0, opening_balance_type: 'dr' });
     setCreateOpen(true);
   };
 
@@ -88,6 +92,7 @@ export default function Dealers() {
       location: row.location ?? '',
       district: row.district ?? '',
       opening_balance: row.opening_balance ?? 0,
+      opening_balance_type: (row as any).opening_balance_type || 'dr',
     });
     setEditOpen(true);
   };
@@ -100,6 +105,7 @@ export default function Dealers() {
         location: values.location?.trim() || null,
         district: values.district?.trim() || null,
         opening_balance: values.opening_balance,
+        opening_balance_type: values.opening_balance_type,
       });
       addToast('Dealer created');
       setCreateOpen(false);
@@ -129,6 +135,7 @@ export default function Dealers() {
         location: values.location?.trim() || null,
         district: values.district?.trim() || null,
         opening_balance: values.opening_balance,
+        opening_balance_type: values.opening_balance_type,
       });
       addToast('Dealer updated');
       setEditOpen(false);
@@ -247,7 +254,24 @@ export default function Dealers() {
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-heading">Opening balance</label>
-        <input className="input-field" type="number" min={0} step="1" {...register('opening_balance')} />
+        <div className="flex gap-2">
+          <input className="input-field flex-1" type="number" min={0} step="1" {...register('opening_balance')} />
+          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-medium">
+            <button type="button"
+              onClick={() => setValue('opening_balance_type', 'dr')}
+              className={`px-3 py-2 ${obType === 'dr' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              Dr
+            </button>
+            <button type="button"
+              onClick={() => setValue('opening_balance_type', 'cr')}
+              className={`px-3 py-2 ${obType === 'cr' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              Cr
+            </button>
+          </div>
+        </div>
+        <p className="mt-1 text-xs text-gray-500">
+          {obType === 'dr' ? 'Dr — They owe us (debit)' : 'Cr — We owe them (credit)'}
+        </p>
         {errors.opening_balance && (
           <p className="mt-1 text-xs text-red-600">{errors.opening_balance.message}</p>
         )}

@@ -99,15 +99,17 @@ export default function DealerDetail() {
   const tableRows = useMemo<LedgerTableRow[]>(() => {
     const rows: LedgerTableRow[] = [];
     if (openingBalance !== 0) {
+      const obType = (dealer as any)?.opening_balance_type || 'dr';
+      const isDr = obType === 'dr';
       rows.push({
         rowKey: 'opening',
         sno: '—',
         date: null,
-        particulars: 'Opening Balance',
+        particulars: `Opening Balance (${isDr ? 'Dr' : 'Cr'})`,
         qty: 0, rate: 0,
-        debit: openingBalance > 0 ? openingBalance : 0,
-        credit: openingBalance < 0 ? Math.abs(openingBalance) : 0,
-        balance: openingBalance,
+        debit: isDr ? openingBalance : 0,
+        credit: isDr ? 0 : openingBalance,
+        balance: isDr ? openingBalance : -openingBalance,
       });
     }
     for (const e of ledgerEntries) {

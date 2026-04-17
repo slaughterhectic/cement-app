@@ -10,7 +10,8 @@ router.get('/', async (_req, res) => {
       SELECT p.*,
         COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0) as total_sales,
         COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as total_paid,
-        COALESCE(p.opening_balance, 0)
+        CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
+             ELSE -COALESCE(p.opening_balance,0) END
           + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
           + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
           - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
@@ -24,11 +25,11 @@ router.get('/', async (_req, res) => {
 
 // POST / — create a new dealer
 router.post('/', async (req, res) => {
-  const { name, phone, location, district, opening_balance } = req.body;
+  const { name, phone, location, district, opening_balance, opening_balance_type } = req.body;
   try {
     const result = await getOne(
-      'INSERT INTO parties (name, phone, location, district, type, opening_balance) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [name, phone || null, location || null, district || null, 'dealer', opening_balance || 0]
+      'INSERT INTO parties (name, phone, location, district, type, opening_balance, opening_balance_type) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *',
+      [name, phone || null, location || null, district || null, 'dealer', opening_balance || 0, opening_balance_type || 'dr']
     );
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
@@ -36,11 +37,11 @@ router.post('/', async (req, res) => {
 
 // PUT /:id — update dealer
 router.put('/:id', async (req, res) => {
-  const { name, phone, location, district, opening_balance } = req.body;
+  const { name, phone, location, district, opening_balance, opening_balance_type } = req.body;
   try {
     const result = await getOne(
-      'UPDATE parties SET name=$1, phone=$2, location=$3, district=$4, opening_balance=$5 WHERE id=$6 AND type=\'dealer\' RETURNING *',
-      [name, phone || null, location || null, district || null, opening_balance || 0, req.params.id]
+      'UPDATE parties SET name=$1, phone=$2, location=$3, district=$4, opening_balance=$5, opening_balance_type=$6 WHERE id=$7 AND type=\'dealer\' RETURNING *',
+      [name, phone || null, location || null, district || null, opening_balance || 0, opening_balance_type || 'dr', req.params.id]
     );
     if (!result) return res.status(404).json({ error: 'Dealer not found' });
     res.json(result);
@@ -164,7 +165,8 @@ router.get('/:id/ledger', async (req, res) => {
       return a.date.localeCompare(b.date);
     });
 
-    let balance = dealer.opening_balance || 0;
+    const obType = dealer.opening_balance_type || 'dr';
+    let balance = obType === 'dr' ? (dealer.opening_balance || 0) : -(dealer.opening_balance || 0);
     const ledgerWithBalance = ledger.map((entry: any, idx: number) => {
       // debit increases balance (dealer owes more), credit decreases (they paid)
       balance = balance + Number(entry.debit || 0) - Number(entry.credit || 0);

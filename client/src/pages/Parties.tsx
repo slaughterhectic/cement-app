@@ -50,6 +50,7 @@ const partySchema = z.object({
   district: z.string().optional(),
   type: z.enum(PARTY_TYPES),
   opening_balance: z.coerce.number().min(0),
+  opening_balance_type: z.enum(['dr', 'cr']).default('dr'),
 });
 
 type PartyFormValues = z.infer<typeof partySchema>;
@@ -108,6 +109,8 @@ export default function Parties() {
     register,
     handleSubmit,
     reset,
+    watch,
+    setValue,
     formState: { errors },
   } = useForm<PartyFormValues>({
     resolver: zodResolver(partySchema),
@@ -118,8 +121,11 @@ export default function Parties() {
       district: '',
       type: 'dealer',
       opening_balance: 0,
+      opening_balance_type: 'dr',
     },
   });
+  const obType = watch('opening_balance_type');
+  const watchedType = watch('type');
 
   const openCreate = () => {
     reset({
@@ -129,6 +135,7 @@ export default function Parties() {
       district: '',
       type: 'dealer',
       opening_balance: 0,
+      opening_balance_type: 'dr',
     });
     setCreateOpen(true);
   };
@@ -142,6 +149,7 @@ export default function Parties() {
       district: row.district ?? '',
       type: (PARTY_TYPES.includes(row.type as PartyType) ? row.type : 'other') as PartyType,
       opening_balance: row.opening_balance ?? 0,
+      opening_balance_type: (row as any).opening_balance_type || 'dr',
     });
     setEditOpen(true);
   };
@@ -155,6 +163,7 @@ export default function Parties() {
         district: values.district?.trim() || null,
         type: values.type,
         opening_balance: values.opening_balance,
+        opening_balance_type: values.opening_balance_type,
       });
       addToast('Party created');
       setCreateOpen(false);
@@ -185,6 +194,7 @@ export default function Parties() {
         district: values.district?.trim() || null,
         type: values.type,
         opening_balance: values.opening_balance,
+        opening_balance_type: values.opening_balance_type,
       });
       addToast('Party updated');
       setEditOpen(false);
@@ -373,7 +383,26 @@ export default function Parties() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Opening balance</label>
-            <input className="input-field" type="number" min={0} step="1" {...register('opening_balance')} />
+            <div className="flex gap-2">
+              <input className="input-field flex-1" type="number" min={0} step="1" {...register('opening_balance')} />
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-medium">
+                <button type="button"
+                  onClick={() => setValue('opening_balance_type', 'dr')}
+                  className={`px-3 py-2 ${obType === 'dr' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  Dr
+                </button>
+                <button type="button"
+                  onClick={() => setValue('opening_balance_type', 'cr')}
+                  className={`px-3 py-2 ${obType === 'cr' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  Cr
+                </button>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              {obType === 'dr'
+                ? (watchedType === 'supplier' ? 'Dr — They owe us (advance paid)' : 'Dr — They owe us (debit)')
+                : (watchedType === 'supplier' ? 'Cr — We owe them (credit)' : 'Cr — We owe them (credit)')}
+            </p>
             {errors.opening_balance && (
               <p className="mt-1 text-xs text-red-600">{errors.opening_balance.message}</p>
             )}
@@ -433,7 +462,26 @@ export default function Parties() {
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Opening balance</label>
-            <input className="input-field" type="number" min={0} step="1" {...register('opening_balance')} />
+            <div className="flex gap-2">
+              <input className="input-field flex-1" type="number" min={0} step="1" {...register('opening_balance')} />
+              <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-medium">
+                <button type="button"
+                  onClick={() => setValue('opening_balance_type', 'dr')}
+                  className={`px-3 py-2 ${obType === 'dr' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  Dr
+                </button>
+                <button type="button"
+                  onClick={() => setValue('opening_balance_type', 'cr')}
+                  className={`px-3 py-2 ${obType === 'cr' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+                  Cr
+                </button>
+              </div>
+            </div>
+            <p className="mt-1 text-xs text-gray-500">
+              {obType === 'dr'
+                ? (watchedType === 'supplier' ? 'Dr — They owe us (advance paid)' : 'Dr — They owe us (debit)')
+                : (watchedType === 'supplier' ? 'Cr — We owe them (credit)' : 'Cr — We owe them (credit)')}
+            </p>
             {errors.opening_balance && (
               <p className="mt-1 text-xs text-red-600">{errors.opening_balance.message}</p>
             )}

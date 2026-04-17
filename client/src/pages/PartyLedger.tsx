@@ -118,18 +118,21 @@ export default function PartyLedger() {
     const isSupplierParty = party?.type === 'supplier';
     const rows: LedgerTableRow[] = [];
     if (openingBalance !== 0) {
+      const obType = (party as any)?.opening_balance_type || (isSupplierParty ? 'cr' : 'dr');
+      const isDr = obType === 'dr';
+      // Dr = they owe us → debit column; Cr = we owe them → credit column
       rows.push({
         rowKey: 'opening',
         sno: '—',
         date: null,
-        // For suppliers: opening = advance already paid by us → DEBIT, balance starts negative
-        // For non-suppliers: opening > 0 = they owe us → DEBIT; < 0 = we owe them → CREDIT
-        particulars: isSupplierParty ? 'Opening Balance (Advance Paid)' : 'Opening Balance',
+        particulars: `Opening Balance (${isDr ? 'Dr' : 'Cr'})`,
         qty: 0,
         rate: 0,
-        debit: isSupplierParty ? openingBalance : (openingBalance > 0 ? openingBalance : 0),
-        credit: isSupplierParty ? 0 : (openingBalance < 0 ? Math.abs(openingBalance) : 0),
-        balance: isSupplierParty ? -openingBalance : openingBalance,
+        debit: isDr ? openingBalance : 0,
+        credit: isDr ? 0 : openingBalance,
+        balance: isDr
+          ? (isSupplierParty ? -openingBalance : openingBalance)
+          : (isSupplierParty ? openingBalance : -openingBalance),
       });
     }
     for (const e of ledgerEntries) {
