@@ -17,11 +17,12 @@ router.get('/', async (_req, res) => {
             - COALESCE(p.opening_balance, 0)
             - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
           ELSE
-            -- Non-supplier: opening + sales + paid_to_them(advances) - received_from_them
+            -- Non-supplier: opening + sales + paid_to_them(advances) - received_from_them - purchases_from_them
             COALESCE(p.opening_balance, 0)
             + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
             + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
             - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
+            - COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
         END as outstanding,
         (SELECT MAX(d) FROM (
           SELECT date as d FROM sales WHERE party_id = p.id
