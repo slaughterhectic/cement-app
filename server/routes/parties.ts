@@ -16,7 +16,9 @@ router.get('/', async (_req, res) => {
             CASE WHEN COALESCE(p.opening_balance_type,'cr') = 'cr' THEN COALESCE(p.opening_balance,0)
                  ELSE -COALESCE(p.opening_balance,0) END
             + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
-            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0)
+            + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'receive'), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'pay' OR direction IS NULL)), 0)
+            - COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
           ELSE
             -- Non-supplier outstanding = they owe us (positive). dr opening = they owe us, cr = we owe them
             CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
@@ -91,19 +93,19 @@ router.get('/:id/summary', async (req, res) => {
         COALESCE((SELECT SUM(bags) FROM purchases WHERE supplier_id=$1), 0) as total_purchase_bags
     `, [party.id]);
 
-    const paidToThem = isSupplier ? Number(totals.total_paid) : await getOne(
-      `SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND direction='pay'`, [party.id]
-    ).then((r: any) => Number(r.v));
-    const receivedFromThem = isSupplier ? 0 : await getOne(
-      `SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND (direction='receive' OR direction IS NULL)`, [party.id]
-    ).then((r: any) => Number(r.v));
+    const paidToThem = isSupplier
+      ? await getOne(`SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND (direction='pay' OR direction IS NULL)`, [party.id]).then((r: any) => Number(r.v))
+      : await getOne(`SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND direction='pay'`, [party.id]).then((r: any) => Number(r.v));
+    const receivedFromThem = isSupplier
+      ? await getOne(`SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND direction='receive'`, [party.id]).then((r: any) => Number(r.v))
+      : await getOne(`SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND (direction='receive' OR direction IS NULL)`, [party.id]).then((r: any) => Number(r.v));
 
     const obType = party.opening_balance_type || (isSupplier ? 'cr' : 'dr');
     const effOpening = obType === (isSupplier ? 'cr' : 'dr')
       ? (party.opening_balance || 0)
       : -(party.opening_balance || 0);
     const outstanding = isSupplier
-      ? effOpening + Number(totals.total_purchases) - Number(totals.total_paid)
+      ? effOpening + Number(totals.total_purchases) + receivedFromThem - paidToThem - Number(totals.total_sales)
       : effOpening + Number(totals.total_sales) + paidToThem - receivedFromThem;
 
     res.json({
@@ -136,15 +138,31 @@ router.get('/:id/ledger', async (req, res) => {
         WHERE pu.supplier_id = $1
       `, [party.id]);
 
-      // Payments = debit (we paid them)
+      // Sales = debit (we sold to them, they owe us)
+      const sales = await getAll(`
+        SELECT s.date, cb.name as particulars, s.bags as qty, s.sale_rate as rate,
+          s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
+        FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
+        WHERE s.party_id = $1
+      `, [party.id]);
+
+      // Payments — direction decides column:
+      //   direction='pay' or null → DEBIT  (we paid them)
+      //   direction='receive'     → CREDIT (they paid us for sales)
       const payments = await getAll(`
         SELECT p.date,
-          ('Payment - ' || COALESCE(p.mode, 'bank') || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END) as particulars,
-          0 as qty, 0 as rate, p.amount as debit, 0 as credit, 'payment' as entry_type, p.id
+          ('Payment - ' || COALESCE(p.mode, 'bank')
+            || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END
+            || CASE WHEN p.direction='receive' THEN ' [Received]' ELSE ' [Paid to them]' END
+          ) as particulars,
+          0 as qty, 0 as rate,
+          CASE WHEN p.direction = 'receive' THEN 0 ELSE p.amount END as debit,
+          CASE WHEN p.direction = 'receive' THEN p.amount ELSE 0 END as credit,
+          'payment' as entry_type, p.id
         FROM payments p WHERE p.party_id = $1
       `, [party.id]);
 
-      entries = [...purchases, ...payments];
+      entries = [...purchases, ...sales, ...payments];
     } else {
       // Sales = debit (customer owes us)
       const sales = await getAll(`
