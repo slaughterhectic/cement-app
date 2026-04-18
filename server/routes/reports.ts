@@ -66,20 +66,32 @@ router.get('/brands', async (_req, res) => {
 
 router.get('/outstanding', async (_req, res) => {
   try {
+    // Must match the per-party outstanding formula used in /api/parties and /api/dealers
+    // and the running balance shown in the dealer/party ledger.
+    //   effOpening = (opening_balance_type='dr' ? +opening : -opening)
+    //   outstanding = effOpening
+    //                 + sum(sales.sale_amount)
+    //                 + sum(payments where direction='pay')         -- advances we paid
+    //                 - sum(payments where direction='receive' or NULL)
+    //                 - sum(purchases.purchase_amount)              -- if dealer also supplies us
     const parties = await getAll(`
-      SELECT p.id, p.name, p.location, p.district, p.phone,
-        (COALESCE(p.opening_balance,0)
-         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)) as outstanding,
-        (SELECT MAX(date) FROM sales WHERE party_id=p.id) as last_sale,
-        (SELECT MAX(date) FROM payments WHERE party_id=p.id) as last_payment
-      FROM parties p
-      WHERE p.type != 'supplier'
-        AND (COALESCE(p.opening_balance,0)
-         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
-         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)) > 0
+      WITH calc AS (
+        SELECT p.id, p.name, p.location, p.district, p.phone,
+          (CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr'
+                THEN COALESCE(p.opening_balance,0)
+                ELSE -COALESCE(p.opening_balance,0) END
+           + COALESCE((SELECT SUM(sale_amount)     FROM sales     WHERE party_id   = p.id), 0)
+           + COALESCE((SELECT SUM(amount)          FROM payments  WHERE party_id   = p.id AND direction = 'pay'), 0)
+           - COALESCE((SELECT SUM(amount)          FROM payments  WHERE party_id   = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
+           - COALESCE((SELECT SUM(purchase_amount) FROM purchases WHERE supplier_id = p.id), 0)
+          ) as outstanding,
+          (SELECT MAX(date) FROM sales    WHERE party_id = p.id) as last_sale,
+          (SELECT MAX(date) FROM payments WHERE party_id = p.id) as last_payment
+        FROM parties p
+        WHERE p.type != 'supplier'
+      )
+      SELECT * FROM calc
+      WHERE outstanding > 0
       ORDER BY outstanding DESC
     `);
     res.json(parties);
