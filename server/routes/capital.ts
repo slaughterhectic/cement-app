@@ -22,17 +22,23 @@ router.get('/summary', async (_req, res) => {
     }));
     const imprestCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
 
-    // Cash received from customers (direction='receive') minus cash paid to suppliers (direction='pay') minus expenses
-    const cashReceivedTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='receive'`))?.t ?? 0);
-    const cashPaidOutTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='pay'`))?.t ?? 0);
-    const cashExpensesTotal = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash'`))?.t ?? 0);
+    // Cash is ALWAYS attributed to a handler now — so imprestCash is the single source of truth.
+    // We still count orphan cash flows that have mode='cash' but no cash_handler (legacy rows or
+    // entries where the user didn't pick a handler) so nothing silently disappears.
+    const orphanCashReceived = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='receive' AND cash_handler IS NULL`))?.t ?? 0);
+    const orphanCashPaidOut = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='pay' AND cash_handler IS NULL`))?.t ?? 0);
+    const orphanCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const cashLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='disbursement'`))?.t ?? 0);
     const cashLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='repayment'`))?.t ?? 0);
-    const truckCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='cash'`))?.t ?? 0);
-    const driverCashPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='cash'`))?.t ?? 0);
-    const transporterCashPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);
-    const transporterCashReceived = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND payment_type='received'`))?.t ?? 0);
-    const totalCash = imprestCash + cashReceivedTotal - cashPaidOutTotal - cashExpensesTotal - cashLoanDisbursed + cashLoanRepaid - truckCashExpenses - driverCashPayments - transporterCashPaid + transporterCashReceived;
+    const orphanTruckCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
+    const orphanDriverCashPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
+    const orphanTransporterCashPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND cash_handler IS NULL AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);
+    const orphanTransporterCashReceived = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND cash_handler IS NULL AND payment_type='received'`))?.t ?? 0);
+    const totalCash = imprestCash
+      + orphanCashReceived - orphanCashPaidOut - orphanCashExpenses
+      - cashLoanDisbursed + cashLoanRepaid
+      - orphanTruckCashExpenses - orphanDriverCashPayments
+      - orphanTransporterCashPaid + orphanTransporterCashReceived;
 
     // Banks: received = payments with direction='receive'; paid = payments with direction='pay' + expenses
     // Also include opening balances from bank_balances table for configured banks

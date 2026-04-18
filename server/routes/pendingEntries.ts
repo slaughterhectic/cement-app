@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { syncImprestForCashTxn } from '../lib/imprestSync';
 
 const router = Router();
 
@@ -177,17 +178,45 @@ router.post('/:id/approve', async (req, res) => {
       );
     } else if (pending.entry_type === 'payment') {
       const dir = data.direction === 'pay' ? 'pay' : 'receive';
+      const mode = data.mode || 'cash';
+      const handler = mode === 'cash' ? (data.cash_handler || null) : null;
+      const bank    = mode === 'bank' ? (data.bank_name    || null) : null;
       result = await getOne(
-        `INSERT INTO payments (date, party_id, amount, mode, bank_name, remarks, direction)
-         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-        [data.date, data.party_id, data.amount, data.mode, data.bank_name, data.remarks, dir]
+        `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, remarks, direction)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [data.date, data.party_id, data.amount, mode, bank, handler, data.remarks, dir]
       );
+      const party = await getOne(`SELECT name FROM parties WHERE id=$1`, [data.party_id]);
+      await syncImprestForCashTxn({
+        sourceTable: 'payments',
+        sourceId: result.id,
+        mode,
+        cashHandler: handler,
+        amount: Number(data.amount),
+        date: data.date,
+        direction: dir === 'pay' ? 'debit' : 'credit',
+        particulars: `${dir === 'pay' ? 'Payment to' : 'Receipt from'} ${party?.name ?? 'Party #' + data.party_id}`,
+        narration: data.remarks || null,
+      });
     } else if (pending.entry_type === 'expense') {
+      const mode = data.mode || 'cash';
+      const handler = mode === 'cash' ? (data.cash_handler || null) : null;
+      const bank    = mode === 'bank' ? (data.bank_name    || null) : null;
       result = await getOne(
-        `INSERT INTO expenses (date, amount, category, description, bank_name, mode)
-         VALUES ($1,$2,$3,$4,$5,$6) RETURNING *`,
-        [data.date, data.amount, data.category, data.description, data.bank_name, data.mode]
+        `INSERT INTO expenses (date, amount, category, description, bank_name, cash_handler, mode)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+        [data.date, data.amount, data.category, data.description, bank, handler, mode]
       );
+      await syncImprestForCashTxn({
+        sourceTable: 'expenses',
+        sourceId: result.id,
+        mode,
+        cashHandler: handler,
+        amount: Number(data.amount),
+        date: data.date,
+        particulars: `Expense — ${data.category || 'General'}`,
+        narration: data.description || null,
+      });
     } else {
       return res.status(400).json({ error: 'Unknown entry type' });
     }

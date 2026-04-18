@@ -23,10 +23,14 @@ const schema = z
     category: z.string().min(1, 'Category is required'),
     mode: z.enum(['bank', 'cash']),
     bank_name: z.string().optional(),
+    cash_handler: z.string().optional(),
   })
   .superRefine((data, ctx) => {
     if (data.mode === 'bank' && !data.bank_name) {
       ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a bank', path: ['bank_name'] });
+    }
+    if (data.mode === 'cash' && !data.cash_handler?.trim()) {
+      ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a cash handler', path: ['cash_handler'] });
     }
   });
 
@@ -53,6 +57,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
       category: '',
       mode: 'bank' as const,
       bank_name: '' as string,
+      cash_handler: '' as string,
     }),
     []
   );
@@ -93,7 +98,9 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
 
   useEffect(() => {
     setValue('bank_name', '');
+    setValue('cash_handler', '');
     clearErrors('bank_name');
+    clearErrors('cash_handler');
   }, [mode, setValue, clearErrors]);
 
   const onSubmit = async (values: ExpenseFormValues) => {
@@ -105,7 +112,8 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
         amount: values.amount,
         category: values.category,
         mode: values.mode,
-        bank_name: values.bank_name || null,
+        bank_name: values.mode === 'bank' ? (values.bank_name || null) : null,
+        cash_handler: values.mode === 'cash' ? (values.cash_handler || null) : null,
       });
       if ((result as any).pending) {
         addToast('Entry sent for admin approval', 'info');
@@ -202,18 +210,22 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
           </div>
         )}
 
-        {mode === 'cash' && cashHandlers.length > 0 && (
+        {mode === 'cash' && (
           <div>
-            <label className="mb-1 block text-sm font-medium text-heading">Cash Handler</label>
-            <select className="input-field w-full" {...register('bank_name')}>
-              <option value="">Select handler (optional)</option>
+            <label className="mb-1 block text-sm font-medium text-heading">Cash Handler *</label>
+            <select className="input-field w-full" {...register('cash_handler')}>
+              <option value="">Select handler</option>
               {cashHandlers.map((h) => (
                 <option key={h} value={h}>
                   {h}
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-xs text-gray-500">Who paid this expense from their cash?</p>
+            {errors.cash_handler && <p className="mt-1 text-xs text-red-600">{errors.cash_handler.message}</p>}
+            {cashHandlers.length === 0 && (
+              <p className="mt-1 text-xs text-amber-600">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">This cash expense will be deducted from the handler's cash book automatically.</p>
           </div>
         )}
 

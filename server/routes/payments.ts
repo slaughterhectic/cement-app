@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
 import { requirePermission } from '../middleware/auth';
+import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
 
@@ -80,7 +81,7 @@ router.get('/parties-with-dues', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, party_id, amount, mode, bank_name, remarks, direction } = req.body;
+  const { date, party_id, amount, mode, bank_name, cash_handler, remarks, direction } = req.body;
   const dir = direction === 'pay' ? 'pay' : 'receive';
   try {
     // Non-admin users entering a past/future date need admin approval
@@ -95,10 +96,31 @@ router.post('/', async (req, res) => {
       return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
     }
 
+    const normalizedMode = mode || 'cash';
+    const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
+    const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+
     const result = await getOne(
-      `INSERT INTO payments (date, party_id, amount, mode, bank_name, remarks, direction) VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [date, party_id, amount, mode, bank_name, remarks, dir]
+      `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, remarks, direction)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [date, party_id, amount, normalizedMode, bank, handler, remarks, dir]
     );
+
+    const party = await getOne(`SELECT name FROM parties WHERE id=$1`, [party_id]);
+    await syncImprestForCashTxn({
+      sourceTable: 'payments',
+      sourceId: result.id,
+      mode: normalizedMode,
+      cashHandler: handler,
+      amount: Number(amount),
+      date,
+      // direction 'pay' = we paid them (cash leaves handler → debit)
+      // direction 'receive' = they paid us (cash enters handler → credit)
+      direction: dir === 'pay' ? 'debit' : 'credit',
+      particulars: `${dir === 'pay' ? 'Payment to' : 'Receipt from'} ${party?.name ?? 'Party #' + party_id}`,
+      narration: remarks || null,
+    });
+
     const full = await getOne(
       'SELECT pm.*, p.name as party_name FROM payments pm JOIN parties p ON pm.party_id=p.id WHERE pm.id=$1',
       [result.id]
@@ -109,6 +131,7 @@ router.post('/', async (req, res) => {
 
 router.delete('/:id', requirePermission('delete_payments'), async (req, res) => {
   try {
+    await deleteImprestForSource('payments', Number(req.params.id));
     await query('DELETE FROM payments WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }

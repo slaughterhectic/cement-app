@@ -27,6 +27,7 @@ interface LedgerEntry {
   material_name: string | null;
   mode: string | null;
   bank_name: string | null;
+  cash_handler: string | null;
   remarks: string | null;
   balance: number;
 }
@@ -44,6 +45,7 @@ const emptyPayForm = {
   amount: '',
   mode: 'cash' as 'cash' | 'bank',
   bank_name: '',
+  cash_handler: '',
   remarks: '',
 };
 
@@ -59,6 +61,7 @@ export default function DriverLedger() {
   const [saving, setSaving] = useState(false);
   const [addPayOpen, setAddPayOpen] = useState(false);
   const [banks, setBanks] = useState<{ id: number; bank_name: string }[]>([]);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
   // Driver management modal
   const [driverModalOpen, setDriverModalOpen] = useState(false);
   const [driverForm, setDriverForm] = useState({ name: '', phone: '', license_number: '' });
@@ -91,6 +94,9 @@ export default function DriverLedger() {
   useEffect(() => {
     loadDrivers();
     api.capital.banks().then(setBanks).catch(() => {});
+    api.imprest.handlers().then((rows: any[]) => {
+      setCashHandlers(rows.map((r) => r.handler_name));
+    }).catch(() => {});
   }, [loadDrivers]);
 
   useEffect(() => {
@@ -101,6 +107,12 @@ export default function DriverLedger() {
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedId || !payForm.amount) { addToast('Amount is required', 'error'); return; }
+    if (payForm.mode === 'cash' && !payForm.cash_handler) {
+      addToast('Select a cash handler', 'error'); return;
+    }
+    if (payForm.mode === 'bank' && !payForm.bank_name) {
+      addToast('Select a bank', 'error'); return;
+    }
     setSaving(true);
     try {
       await api.driverPayments.create({
@@ -108,7 +120,8 @@ export default function DriverLedger() {
         driver_id: selectedId,
         amount: Number(payForm.amount),
         mode: payForm.mode,
-        bank_name: payForm.bank_name || null,
+        bank_name: payForm.mode === 'bank' ? (payForm.bank_name || null) : null,
+        cash_handler: payForm.mode === 'cash' ? (payForm.cash_handler || null) : null,
         remarks: payForm.remarks || null,
       });
       addToast('Payment recorded', 'success');
@@ -292,19 +305,32 @@ export default function DriverLedger() {
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Mode</label>
                         <select className="input-field" value={payForm.mode}
-                          onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank' }))}>
+                          onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '', cash_handler: '' }))}>
                           <option value="cash">Cash</option>
                           <option value="bank">Bank</option>
                         </select>
                       </div>
                       {payForm.mode === 'bank' && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Bank Name</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Bank Name *</label>
                           <select className="input-field" value={payForm.bank_name}
                             onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
                             <option value="">Select bank</option>
                             {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
                           </select>
+                        </div>
+                      )}
+                      {payForm.mode === 'cash' && (
+                        <div>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Cash Handler *</label>
+                          <select className="input-field" value={payForm.cash_handler}
+                            onChange={(e) => setPayForm((p) => ({ ...p, cash_handler: e.target.value }))}>
+                            <option value="">Select handler</option>
+                            {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
+                          </select>
+                          {cashHandlers.length === 0 && (
+                            <p className="mt-1 text-xs text-amber-600">Add one in Capital → Add Cash Handler.</p>
+                          )}
                         </div>
                       )}
                       <div className="col-span-2">
@@ -371,7 +397,8 @@ export default function DriverLedger() {
                               ) : (
                                 <span>
                                   {entry.mode && <span className="capitalize">{entry.mode}</span>}
-                                  {entry.bank_name && ` · ${entry.bank_name}`}
+                                  {entry.mode === 'cash' && entry.cash_handler && ` · ${entry.cash_handler}`}
+                                  {entry.mode === 'bank' && entry.bank_name && ` · ${entry.bank_name}`}
                                   {entry.remarks && ` · ${entry.remarks}`}
                                 </span>
                               )}

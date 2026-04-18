@@ -41,6 +41,7 @@ router.get('/:id/ledger', async (req, res) => {
         tt.material_name,
         NULL as mode,
         NULL as bank_name,
+        NULL as cash_handler,
         tt.remarks
       FROM truck_trips tt
       JOIN trucks t ON tt.truck_id = t.id
@@ -60,6 +61,7 @@ router.get('/:id/ledger', async (req, res) => {
         NULL as material_name,
         dp.mode,
         dp.bank_name,
+        dp.cash_handler,
         dp.remarks
       FROM driver_payments dp
       WHERE dp.driver_id = $1

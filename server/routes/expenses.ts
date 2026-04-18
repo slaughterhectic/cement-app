@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
 import { requirePermission } from '../middleware/auth';
+import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get('/', async (req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, amount, category, description, bank_name, mode } = req.body;
+  const { date, amount, category, description, bank_name, cash_handler, mode } = req.body;
   try {
     // Non-admin users entering a past/future date need admin approval
     const today = new Date().toISOString().split('T')[0];
@@ -42,16 +43,34 @@ router.post('/', async (req, res) => {
       return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
     }
 
+    const normalizedMode = mode || 'cash';
+    const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
+    const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+
     const result = await getOne(
-      'INSERT INTO expenses (date, amount, category, description, bank_name, mode) VALUES ($1,$2,$3,$4,$5,$6) RETURNING *',
-      [date, amount, category, description, bank_name, mode]
+      `INSERT INTO expenses (date, amount, category, description, bank_name, cash_handler, mode)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [date, amount, category, description, bank, handler, normalizedMode]
     );
+
+    await syncImprestForCashTxn({
+      sourceTable: 'expenses',
+      sourceId: result.id,
+      mode: normalizedMode,
+      cashHandler: handler,
+      amount: Number(amount),
+      date,
+      particulars: `Expense — ${category || 'General'}`,
+      narration: description || null,
+    });
+
     res.json(result);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
 router.delete('/:id', requirePermission('delete_expenses'), async (req, res) => {
   try {
+    await deleteImprestForSource('expenses', Number(req.params.id));
     await query('DELETE FROM expenses WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }

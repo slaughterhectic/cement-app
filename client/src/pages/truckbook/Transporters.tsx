@@ -28,6 +28,7 @@ interface LedgerEntry {
   material_name: string | null;
   mode: string | null;
   bank_name: string | null;
+  cash_handler: string | null;
   remarks: string | null;
   balance: number;
 }
@@ -47,6 +48,7 @@ const emptyPayForm = {
   payment_type: 'paid' as 'paid' | 'received',
   mode: 'cash' as 'cash' | 'bank',
   bank_name: '',
+  cash_handler: '',
   remarks: '',
 };
 
@@ -101,6 +103,12 @@ export default function Transporters() {
   const handleAddPayment = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!selectedId || !payForm.amount) { addToast('Amount required', 'error'); return; }
+    if (payForm.mode === 'cash' && !payForm.cash_handler) {
+      addToast('Select a cash handler', 'error'); return;
+    }
+    if (payForm.mode === 'bank' && !payForm.bank_name) {
+      addToast('Select a bank', 'error'); return;
+    }
     setSaving(true);
     try {
       await api.transporters.addPayment(selectedId, {
@@ -108,7 +116,8 @@ export default function Transporters() {
         amount: Number(payForm.amount),
         payment_type: payForm.payment_type,
         mode: payForm.mode,
-        bank_name: payForm.bank_name || null,
+        bank_name: payForm.mode === 'bank' ? (payForm.bank_name || null) : null,
+        cash_handler: payForm.mode === 'cash' ? (payForm.cash_handler || null) : null,
         remarks: payForm.remarks || null,
       });
       addToast('Payment recorded', 'success');
@@ -322,30 +331,33 @@ export default function Transporters() {
                       <div>
                         <label className="block text-xs font-medium text-gray-600 mb-1">Mode</label>
                         <select className="input-field" value={payForm.mode}
-                          onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '' }))}>
+                          onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '', cash_handler: '' }))}>
                           <option value="cash">Cash</option>
                           <option value="bank">Bank</option>
                         </select>
                       </div>
                       {payForm.mode === 'bank' ? (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Bank</label>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Bank *</label>
                           <select className="input-field" value={payForm.bank_name}
                             onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
                             <option value="">Select bank</option>
                             {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
                           </select>
                         </div>
-                      ) : cashHandlers.length > 0 ? (
+                      ) : (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Cash Handler</label>
-                          <select className="input-field" value={payForm.bank_name}
-                            onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
+                          <label className="block text-xs font-medium text-gray-600 mb-1">Cash Handler *</label>
+                          <select className="input-field" value={payForm.cash_handler}
+                            onChange={(e) => setPayForm((p) => ({ ...p, cash_handler: e.target.value }))}>
                             <option value="">Select handler</option>
                             {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
                           </select>
+                          {cashHandlers.length === 0 && (
+                            <p className="mt-1 text-xs text-amber-600">Add one in Capital → Add Cash Handler.</p>
+                          )}
                         </div>
-                      ) : null}
+                      )}
                       <div className="col-span-2">
                         <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
                         <input className="input-field" value={payForm.remarks}
@@ -411,7 +423,12 @@ export default function Transporters() {
                               </td>
                               <td className="px-4 py-3 text-xs text-gray-500 max-w-[180px]">
                                 {isPayment
-                                  ? <span>{row.mode && <span className="capitalize">{row.mode}</span>}{row.bank_name && ` · ${row.bank_name}`}{row.remarks && ` · ${row.remarks}`}</span>
+                                  ? <span>
+                                      {row.mode && <span className="capitalize">{row.mode}</span>}
+                                      {row.mode === 'cash' && row.cash_handler && ` · ${row.cash_handler}`}
+                                      {row.mode === 'bank' && row.bank_name && ` · ${row.bank_name}`}
+                                      {row.remarks && ` · ${row.remarks}`}
+                                    </span>
                                   : <span>{[row.truck_number, row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination, row.material_name].filter(Boolean).join(' · ')}</span>
                                 }
                               </td>

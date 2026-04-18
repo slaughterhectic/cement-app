@@ -14,6 +14,7 @@ interface ExpenseRow {
   amount: number;
   mode: 'cash' | 'bank';
   bank_name: string | null;
+  cash_handler: string | null;
 }
 
 interface Truck { id: number; truck_number: string; }
@@ -29,6 +30,7 @@ const emptyForm = {
   amount: '',
   mode: 'cash' as 'cash' | 'bank',
   bank_name: '',
+  cash_handler: '',
 };
 
 export default function TruckExpenses() {
@@ -37,6 +39,7 @@ export default function TruckExpenses() {
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [banks, setBanks] = useState<Bank[]>([]);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(emptyForm);
@@ -60,9 +63,14 @@ export default function TruckExpenses() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, b] = await Promise.all([api.trucks.list(), api.capital.banks()]);
+      const [t, b, h] = await Promise.all([
+        api.trucks.list(),
+        api.capital.banks(),
+        api.imprest.handlers(),
+      ]);
       setTrucks(t);
       setBanks(b);
+      setCashHandlers((h || []).map((row: any) => row.handler_name));
     } catch (_) {}
   }, []);
 
@@ -86,6 +94,12 @@ export default function TruckExpenses() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.amount) { addToast('Date and Amount are required', 'error'); return; }
+    if (form.mode === 'cash' && !form.cash_handler) {
+      addToast('Select a cash handler', 'error'); return;
+    }
+    if (form.mode === 'bank' && !form.bank_name) {
+      addToast('Select a bank', 'error'); return;
+    }
     setSaving(true);
     try {
       await api.truckExpenses.create({
@@ -95,7 +109,8 @@ export default function TruckExpenses() {
         description: form.description || null,
         amount: Number(form.amount),
         mode: form.mode,
-        bank_name: form.bank_name || null,
+        bank_name: form.mode === 'bank' ? (form.bank_name || null) : null,
+        cash_handler: form.mode === 'cash' ? (form.cash_handler || null) : null,
       });
       addToast('Expense added', 'success');
       setForm(emptyForm);
@@ -196,7 +211,7 @@ export default function TruckExpenses() {
                 <th className="px-4 py-3 font-medium text-orange-700">Description</th>
                 <th className="px-4 py-3 font-medium text-orange-700 text-right">Amount</th>
                 <th className="px-4 py-3 font-medium text-orange-700">Mode</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Bank</th>
+                <th className="px-4 py-3 font-medium text-orange-700">Bank / Handler</th>
                 {isAdmin() && <th className="px-4 py-3 font-medium text-orange-700">Actions</th>}
               </tr>
             </thead>
@@ -232,7 +247,9 @@ export default function TruckExpenses() {
                         {row.mode}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">{row.bank_name || '—'}</td>
+                    <td className="px-4 py-3 text-gray-500">
+                      {row.mode === 'cash' ? (row.cash_handler || '—') : (row.bank_name || '—')}
+                    </td>
                     {isAdmin() && (
                       <td className="px-4 py-3">
                         <button type="button" onClick={() => handleDelete(row.id)}
@@ -299,20 +316,36 @@ export default function TruckExpenses() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-gray-700 mb-1">Mode</label>
-                  <select className="input-field" value={form.mode} onChange={f('mode')}>
+                  <select
+                    className="input-field"
+                    value={form.mode}
+                    onChange={(e) => setForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '', cash_handler: '' }))}
+                  >
                     <option value="cash">Cash</option>
                     <option value="bank">Bank</option>
                   </select>
                 </div>
                 {form.mode === 'bank' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name</label>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name *</label>
                     <select className="input-field" value={form.bank_name} onChange={f('bank_name')}>
                       <option value="">Select bank</option>
                       {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
                     </select>
                     {banks.length === 0 && (
                       <p className="text-xs text-amber-600 mt-1">No banks configured — add them in Settings</p>
+                    )}
+                  </div>
+                )}
+                {form.mode === 'cash' && (
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">Cash Handler *</label>
+                    <select className="input-field" value={form.cash_handler} onChange={f('cash_handler')}>
+                      <option value="">Select handler</option>
+                      {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
+                    </select>
+                    {cashHandlers.length === 0 && (
+                      <p className="text-xs text-amber-600 mt-1">Add one in Capital → Add Cash Handler.</p>
                     )}
                   </div>
                 )}

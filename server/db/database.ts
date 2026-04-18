@@ -431,6 +431,32 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check`);
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','supplier','other'))`);
 
+    // --- Unified cash_handler column for every cash-capable table ---
+    // Pre-existing rows stored the handler name in `bank_name`; this migrates them.
+    await client.query(`ALTER TABLE payments             ADD COLUMN IF NOT EXISTS cash_handler TEXT`);
+    await client.query(`ALTER TABLE expenses             ADD COLUMN IF NOT EXISTS cash_handler TEXT`);
+    await client.query(`ALTER TABLE driver_payments      ADD COLUMN IF NOT EXISTS cash_handler TEXT`);
+    await client.query(`ALTER TABLE truck_expenses       ADD COLUMN IF NOT EXISTS cash_handler TEXT`);
+    await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS cash_handler TEXT`);
+    for (const tbl of ['payments', 'expenses', 'driver_payments', 'truck_expenses', 'transporter_payments']) {
+      await client.query(
+        `UPDATE ${tbl} SET cash_handler = bank_name, bank_name = NULL
+           WHERE mode = 'cash'
+             AND cash_handler IS NULL
+             AND bank_name IS NOT NULL
+             AND bank_name IN (SELECT handler_name FROM imprest_handlers)`
+      );
+    }
+
+    // Link imprest_transactions back to their originating row so edits/deletes cascade cleanly.
+    await client.query(`ALTER TABLE imprest_transactions ADD COLUMN IF NOT EXISTS source_table TEXT`);
+    await client.query(`ALTER TABLE imprest_transactions ADD COLUMN IF NOT EXISTS source_id INTEGER`);
+    await client.query(
+      `CREATE UNIQUE INDEX IF NOT EXISTS idx_imprest_txn_source
+         ON imprest_transactions (source_table, source_id)
+         WHERE source_table IS NOT NULL AND source_id IS NOT NULL`
+    );
+
     console.log('Database schema initialized');
   } finally {
     client.release();

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
 
@@ -27,13 +28,70 @@ router.get('/', async (req, res) => {
 // POST /driver-payments
 router.post('/', async (req, res) => {
   try {
-    const { date, driver_id, amount, mode, bank_name, trip_id, remarks } = req.body;
+    const { date, driver_id, amount, mode, bank_name, cash_handler, trip_id, remarks } = req.body;
     if (!date || !driver_id || !amount) return res.status(400).json({ error: 'date, driver_id and amount are required' });
+
+    const normalizedMode = mode || 'cash';
+    const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
+    const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+
     const row = await getOne(
-      `INSERT INTO driver_payments (date, driver_id, amount, mode, bank_name, trip_id, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [date, driver_id, amount, mode || 'cash', bank_name || null, trip_id || null, remarks || null]
+      `INSERT INTO driver_payments (date, driver_id, amount, mode, bank_name, cash_handler, trip_id, remarks)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [date, driver_id, amount, normalizedMode, bank, handler, trip_id || null, remarks || null]
     );
+
+    const driver = await getOne(`SELECT name FROM drivers WHERE id=$1`, [driver_id]);
+    await syncImprestForCashTxn({
+      sourceTable: 'driver_payments',
+      sourceId: row.id,
+      mode: normalizedMode,
+      cashHandler: handler,
+      amount: Number(amount),
+      date,
+      particulars: `Driver payment — ${driver?.name ?? 'Driver #' + driver_id}`,
+      narration: remarks || null,
+    });
+
+    const full = await getOne(
+      `SELECT dp.*, d.name as driver_name FROM driver_payments dp JOIN drivers d ON dp.driver_id=d.id WHERE dp.id=$1`,
+      [row.id]
+    );
+    res.json(full);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+// PUT /driver-payments/:id
+router.put('/:id', async (req, res) => {
+  try {
+    const { date, driver_id, amount, mode, bank_name, cash_handler, trip_id, remarks } = req.body;
+    if (!date || !driver_id || !amount) return res.status(400).json({ error: 'date, driver_id and amount are required' });
+
+    const normalizedMode = mode || 'cash';
+    const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
+    const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+
+    const row = await getOne(
+      `UPDATE driver_payments
+          SET date=$1, driver_id=$2, amount=$3, mode=$4, bank_name=$5,
+              cash_handler=$6, trip_id=$7, remarks=$8
+        WHERE id=$9 RETURNING *`,
+      [date, driver_id, amount, normalizedMode, bank, handler, trip_id || null, remarks || null, req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Driver payment not found' });
+
+    const driver = await getOne(`SELECT name FROM drivers WHERE id=$1`, [driver_id]);
+    await syncImprestForCashTxn({
+      sourceTable: 'driver_payments',
+      sourceId: row.id,
+      mode: normalizedMode,
+      cashHandler: handler,
+      amount: Number(amount),
+      date,
+      particulars: `Driver payment — ${driver?.name ?? 'Driver #' + driver_id}`,
+      narration: remarks || null,
+    });
+
     const full = await getOne(
       `SELECT dp.*, d.name as driver_name FROM driver_payments dp JOIN drivers d ON dp.driver_id=d.id WHERE dp.id=$1`,
       [row.id]
@@ -46,6 +104,7 @@ router.post('/', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    await deleteImprestForSource('driver_payments', Number(req.params.id));
     await query('DELETE FROM driver_payments WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }

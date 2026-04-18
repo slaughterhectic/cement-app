@@ -241,6 +241,7 @@ export const api = {
       return request<any[]>(`/driver-payments${q}`);
     },
     create: (data: any) => request<any>('/driver-payments', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/driver-payments/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/driver-payments/${id}`, { method: 'DELETE' }),
   },
   truckExpenses: {
@@ -249,6 +250,7 @@ export const api = {
       return request<any[]>(`/truck-expenses${q}`);
     },
     create: (data: any) => request<any>('/truck-expenses', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/truck-expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-expenses/${id}`, { method: 'DELETE' }),
   },
   requests: {

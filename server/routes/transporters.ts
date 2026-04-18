@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.get('/:id/ledger', async (req, res) => {
     const paymentEntries = await getAll(`
       SELECT id, date, 'payment' as entry_type, amount,
         NULL as truck_number, NULL as load_from, NULL as billed_destination,
-        NULL as material_name, NULL as trip_id, mode, bank_name, remarks,
+        NULL as material_name, NULL as trip_id, mode, bank_name, cash_handler, remarks,
         COALESCE(payment_type, 'paid') as payment_type
       FROM transporter_payments WHERE transporter_id=$1
     `, [req.params.id]);
@@ -132,13 +133,34 @@ router.delete('/:id', async (req, res) => {
 // POST /transporters/:id/payments
 router.post('/:id/payments', async (req, res) => {
   try {
-    const { date, amount, mode, bank_name, remarks, payment_type } = req.body;
+    const { date, amount, mode, bank_name, cash_handler, remarks, payment_type } = req.body;
     if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
+
+    const normalizedMode = mode || 'cash';
+    const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
+    const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+    const pType   = payment_type || 'paid';
+
     const row = await getOne(
-      `INSERT INTO transporter_payments (date, transporter_id, amount, mode, bank_name, remarks, payment_type)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
-      [date, req.params.id, Number(amount), mode || 'cash', bank_name || null, remarks || null, payment_type || 'paid']
+      `INSERT INTO transporter_payments (date, transporter_id, amount, mode, bank_name, cash_handler, remarks, payment_type)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+      [date, req.params.id, Number(amount), normalizedMode, bank, handler, remarks || null, pType]
     );
+
+    const transporter = await getOne(`SELECT name FROM transporters WHERE id=$1`, [req.params.id]);
+    await syncImprestForCashTxn({
+      sourceTable: 'transporter_payments',
+      sourceId: row.id,
+      mode: normalizedMode,
+      cashHandler: handler,
+      amount: Number(amount),
+      date,
+      // 'paid' = cash goes OUT of handler; 'received' = cash comes IN.
+      direction: pType === 'received' ? 'credit' : 'debit',
+      particulars: `Transporter ${pType === 'received' ? 'receipt' : 'payment'} — ${transporter?.name ?? 'Transporter #' + req.params.id}`,
+      narration: remarks || null,
+    });
+
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
@@ -147,6 +169,7 @@ router.post('/:id/payments', async (req, res) => {
 router.delete('/:id/payments/:pid', async (req, res) => {
   try {
     if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    await deleteImprestForSource('transporter_payments', Number(req.params.pid));
     await query('DELETE FROM transporter_payments WHERE id=$1 AND transporter_id=$2', [req.params.pid, req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: e.message }); }
