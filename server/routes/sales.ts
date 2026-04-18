@@ -7,14 +7,16 @@ const router = Router();
 async function getStock(brandId: number, godownId?: number): Promise<number> {
   if (godownId) {
     const r = await getOne(`
-      SELECT COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id=$1 AND godown_id=$2),0)
-           - COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id=$1 AND godown_id=$2),0) as stock
+      SELECT COALESCE((SELECT bags FROM godown_opening_stock WHERE brand_id=$1 AND godown_id=$2),0)
+           + COALESCE((SELECT SUM(bags) FROM purchases       WHERE brand_id=$1 AND godown_id=$2),0)
+           - COALESCE((SELECT SUM(bags) FROM sales           WHERE brand_id=$1 AND godown_id=$2),0) as stock
     `, [brandId, godownId]);
     return Number(r.stock);
   }
   const r = await getOne(`
-    SELECT COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id=$1),0)
-         - COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id=$1),0) as stock
+    SELECT COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=$1),0)
+         + COALESCE((SELECT SUM(bags) FROM purchases            WHERE brand_id=$1),0)
+         - COALESCE((SELECT SUM(bags) FROM sales                WHERE brand_id=$1),0) as stock
   `, [brandId]);
   return Number(r.stock);
 }

@@ -106,13 +106,21 @@ router.get('/summary', async (_req, res) => {
       transporterBankPaid + transporterBankReceived -
       bankLoanDisbursed + bankLoanRepaid;
 
-    // Stock value
+    // Stock value — includes opening stock (bags + cost) from godown_opening_stock.
+    // Average rate is weighted across opening-stock rates and purchase rates.
     const stockCalc = await getOne(`
       SELECT COALESCE(SUM(sub.stock * sub.avg_rate),0) as value, COALESCE(SUM(sub.stock),0) as bags FROM (
         SELECT cb.id,
-          (COALESCE((SELECT SUM(bags) FROM purchases WHERE brand_id=cb.id),0)
-           - COALESCE((SELECT SUM(bags) FROM sales WHERE brand_id=cb.id),0)) as stock,
-          COALESCE((SELECT AVG(purchase_rate) FROM purchases WHERE brand_id=cb.id),0) as avg_rate
+          (COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=cb.id),0)
+           + COALESCE((SELECT SUM(bags) FROM purchases          WHERE brand_id=cb.id),0)
+           - COALESCE((SELECT SUM(bags) FROM sales              WHERE brand_id=cb.id),0)) as stock,
+          COALESCE(
+            (COALESCE((SELECT SUM(bags * rate)          FROM godown_opening_stock WHERE brand_id=cb.id),0)
+           + COALESCE((SELECT SUM(bags * purchase_rate) FROM purchases            WHERE brand_id=cb.id),0))
+            / NULLIF(
+                COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=cb.id),0)
+              + COALESCE((SELECT SUM(bags) FROM purchases            WHERE brand_id=cb.id),0), 0),
+          0) as avg_rate
         FROM cement_brands cb
       ) sub WHERE sub.stock > 0
     `);

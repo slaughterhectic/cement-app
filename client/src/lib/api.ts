@@ -99,6 +99,10 @@ export const api = {
     },
     godown: () => request<any[]>('/stock/godown'),
     godownProfit: () => request<any[]>('/stock/godown-profit'),
+    openingList: () => request<any[]>('/stock/opening'),
+    openingUpsert: (data: { godown_id: number; brand_id: number; bags: number; rate: number; as_of_date?: string | null; remarks?: string | null }) =>
+      request<any>('/stock/opening', { method: 'POST', body: JSON.stringify(data) }),
+    openingDelete: (id: number) => request<any>(`/stock/opening/${id}`, { method: 'DELETE' }),
   },
   parties: {
     list: () => request<any[]>('/parties'),

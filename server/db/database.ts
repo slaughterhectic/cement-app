@@ -457,6 +457,22 @@ export async function initializeDatabase() {
          WHERE source_table IS NOT NULL AND source_id IS NOT NULL`
     );
 
+    // Opening stock per godown+brand (for bags already on hand before the app was used).
+    // Stock value is computed as bags * rate.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS godown_opening_stock (
+        id SERIAL PRIMARY KEY,
+        godown_id INTEGER NOT NULL REFERENCES godowns(id) ON DELETE CASCADE,
+        brand_id  INTEGER NOT NULL REFERENCES cement_brands(id) ON DELETE CASCADE,
+        bags INTEGER NOT NULL DEFAULT 0,
+        rate REAL NOT NULL DEFAULT 0,
+        as_of_date TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (godown_id, brand_id)
+      )
+    `);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

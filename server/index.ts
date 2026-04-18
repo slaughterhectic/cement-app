@@ -101,10 +101,13 @@ app.put('/api/godowns/:id', async (req, res) => {
 app.delete('/api/godowns/:id', async (req, res) => {
   try {
     const used = await getOne(
-      'SELECT 1 FROM purchases WHERE godown_id=$1 UNION SELECT 1 FROM sales WHERE godown_id=$1 LIMIT 1',
+      `SELECT 1 FROM purchases WHERE godown_id=$1
+       UNION SELECT 1 FROM sales WHERE godown_id=$1
+       UNION SELECT 1 FROM godown_opening_stock WHERE godown_id=$1
+       LIMIT 1`,
       [req.params.id]
     );
-    if (used) return res.status(400).json({ error: 'Godown is used in purchases/sales and cannot be deleted' });
+    if (used) return res.status(400).json({ error: 'Godown is used in purchases/sales/opening stock and cannot be deleted' });
     await query('DELETE FROM godowns WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(500).json({ error: e.message }); }

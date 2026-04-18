@@ -4,8 +4,9 @@ import { formatDate, formatINR } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import StockCard from '../components/ui/StockCard';
 import type { StockType, RateBreakdown } from '../components/ui/StockCard';
-import { Package } from 'lucide-react';
+import { Package, Plus, Trash2, Pencil } from 'lucide-react';
 import { useToastStore } from '../lib/store';
+import { Modal } from '../components/ui/Modal';
 
 type StockSummaryRow = {
   id: number;
@@ -45,9 +46,41 @@ type GodownStockRow = {
 type GodownProfitRow = {
   id: number;
   name: string;
+  opening_value?: number;
   total_purchase: number;
   total_sale: number;
   profit: number;
+};
+
+type OpeningStockRow = {
+  id: number;
+  godown_id: number;
+  brand_id: number;
+  bags: number;
+  rate: number;
+  as_of_date: string | null;
+  remarks: string | null;
+  godown_name: string;
+  brand_name: string;
+  brand_type: string | null;
+};
+
+type OpeningForm = {
+  godown_id: string;
+  brand_id: string;
+  bags: string;
+  rate: string;
+  as_of_date: string;
+  remarks: string;
+};
+
+const emptyOpeningForm: OpeningForm = {
+  godown_id: '',
+  brand_id: '',
+  bags: '',
+  rate: '',
+  as_of_date: '',
+  remarks: '',
 };
 
 function toStockType(t: string): StockType {
@@ -128,6 +161,82 @@ export default function Stock() {
 
   const [brands, setBrands] = useState<{ id: number; name: string }[]>([]);
   const [godowns, setGodowns] = useState<{ id: number; name: string; location?: string | null }[]>([]);
+
+  // Opening stock management
+  const [openingOpen, setOpeningOpen] = useState(false);
+  const [openingRows, setOpeningRows] = useState<OpeningStockRow[]>([]);
+  const [openingLoading, setOpeningLoading] = useState(false);
+  const [openingForm, setOpeningForm] = useState<OpeningForm>(emptyOpeningForm);
+  const [openingSaving, setOpeningSaving] = useState(false);
+
+  const loadOpening = useCallback(async () => {
+    setOpeningLoading(true);
+    try {
+      const rows = (await api.stock.openingList()) as OpeningStockRow[];
+      setOpeningRows(Array.isArray(rows) ? rows : []);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Failed to load opening stock', 'error');
+      setOpeningRows([]);
+    } finally {
+      setOpeningLoading(false);
+    }
+  }, [addToast]);
+
+  const handleOpenOpeningModal = async () => {
+    setOpeningForm(emptyOpeningForm);
+    setOpeningOpen(true);
+    await loadOpening();
+  };
+
+  const handleSaveOpening = async () => {
+    const godown_id = Number(openingForm.godown_id);
+    const brand_id = Number(openingForm.brand_id);
+    const bags = Number(openingForm.bags);
+    const rate = Number(openingForm.rate);
+    if (!godown_id || !brand_id) { addToast('Pick a godown and a brand', 'error'); return; }
+    if (!Number.isFinite(bags) || bags < 0) { addToast('Bags must be a non-negative number', 'error'); return; }
+    if (!Number.isFinite(rate) || rate <= 0) { addToast('Rate per bag is required', 'error'); return; }
+    setOpeningSaving(true);
+    try {
+      await api.stock.openingUpsert({
+        godown_id,
+        brand_id,
+        bags,
+        rate,
+        as_of_date: openingForm.as_of_date || null,
+        remarks: openingForm.remarks || null,
+      });
+      addToast('Opening stock saved');
+      setOpeningForm(emptyOpeningForm);
+      await Promise.all([loadOpening(), loadStockList(), loadGodownStock(), loadMovement()]);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Failed to save opening stock', 'error');
+    } finally {
+      setOpeningSaving(false);
+    }
+  };
+
+  const handleEditOpening = (row: OpeningStockRow) => {
+    setOpeningForm({
+      godown_id: String(row.godown_id),
+      brand_id: String(row.brand_id),
+      bags: String(row.bags ?? 0),
+      rate: String(row.rate ?? 0),
+      as_of_date: row.as_of_date ?? '',
+      remarks: row.remarks ?? '',
+    });
+  };
+
+  const handleDeleteOpening = async (row: OpeningStockRow) => {
+    if (!window.confirm(`Delete opening stock of ${row.bags} bags (${row.brand_name}) in ${row.godown_name}?`)) return;
+    try {
+      await api.stock.openingDelete(row.id);
+      addToast('Opening stock removed');
+      await Promise.all([loadOpening(), loadStockList(), loadGodownStock(), loadMovement()]);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Failed to delete', 'error');
+    }
+  };
 
   const loadStockList = useCallback(async () => {
     setStockListLoading(true);
@@ -315,6 +424,14 @@ export default function Stock() {
           </h1>
           <p className="mt-1 text-sm text-gray-600">Brand summary, movement log, and godown-wise quantities.</p>
         </div>
+        <button
+          type="button"
+          onClick={handleOpenOpeningModal}
+          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
+        >
+          <Plus className="h-4 w-4" aria-hidden />
+          Opening Stock
+        </button>
       </div>
 
       <section aria-labelledby="stock-summary-heading">
@@ -428,6 +545,12 @@ export default function Stock() {
                     const p = godownProfit.get(g.id)!;
                     return (
                       <>
+                        {p.opening_value ? (
+                          <div className="flex justify-between">
+                            <span>Opening stock value</span>
+                            <span className="font-medium text-gray-700">{formatINR(p.opening_value)}</span>
+                          </div>
+                        ) : null}
                         <div className="flex justify-between">
                           <span>Total purchases</span>
                           <span className="font-medium text-gray-700">{formatINR(p.total_purchase)}</span>
@@ -451,6 +574,167 @@ export default function Stock() {
           </div>
         )}
       </section>
+
+      <Modal
+        isOpen={openingOpen}
+        onClose={() => setOpeningOpen(false)}
+        title="Opening Stock (Godown-wise)"
+        size="xl"
+      >
+        <div className="flex flex-col gap-5">
+          <p className="text-sm text-gray-600">
+            Record bags already on hand per godown per brand, before any purchase entries. One row per
+            godown + brand; saving again overwrites the existing entry. Rate per bag is used to value the stock.
+          </p>
+
+          <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Godown *</label>
+              <select
+                className="input-field"
+                value={openingForm.godown_id}
+                onChange={(e) => setOpeningForm({ ...openingForm, godown_id: e.target.value })}
+              >
+                <option value="">Select godown</option>
+                {godowns.map((g) => (
+                  <option key={g.id} value={String(g.id)}>{g.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Brand *</label>
+              <select
+                className="input-field"
+                value={openingForm.brand_id}
+                onChange={(e) => setOpeningForm({ ...openingForm, brand_id: e.target.value })}
+              >
+                <option value="">Select brand</option>
+                {brands.map((b) => (
+                  <option key={b.id} value={String(b.id)}>{b.name}</option>
+                ))}
+              </select>
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Bags *</label>
+              <input
+                type="number"
+                min={0}
+                className="input-field"
+                value={openingForm.bags}
+                onChange={(e) => setOpeningForm({ ...openingForm, bags: e.target.value })}
+                placeholder="e.g. 1600"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">Rate per bag *</label>
+              <input
+                type="number"
+                min={0}
+                step="0.01"
+                className="input-field"
+                value={openingForm.rate}
+                onChange={(e) => setOpeningForm({ ...openingForm, rate: e.target.value })}
+                placeholder="e.g. 340"
+              />
+            </div>
+            <div>
+              <label className="mb-1 block text-xs font-medium text-gray-600">As of date</label>
+              <input
+                type="date"
+                className="input-field"
+                value={openingForm.as_of_date}
+                onChange={(e) => setOpeningForm({ ...openingForm, as_of_date: e.target.value })}
+              />
+            </div>
+            <div className="sm:col-span-2 lg:col-span-1">
+              <label className="mb-1 block text-xs font-medium text-gray-600">Remarks</label>
+              <input
+                type="text"
+                className="input-field"
+                value={openingForm.remarks}
+                onChange={(e) => setOpeningForm({ ...openingForm, remarks: e.target.value })}
+                placeholder="Optional"
+              />
+            </div>
+          </div>
+          <div className="flex items-center justify-end gap-2">
+            <button
+              type="button"
+              className="rounded-lg border border-card-border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              onClick={() => setOpeningForm(emptyOpeningForm)}
+            >
+              Clear
+            </button>
+            <button
+              type="button"
+              className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-60"
+              onClick={handleSaveOpening}
+              disabled={openingSaving}
+            >
+              {openingSaving ? 'Saving…' : 'Save Opening'}
+            </button>
+          </div>
+
+          <div className="border-t border-card-border pt-4">
+            <h3 className="mb-2 text-sm font-semibold text-heading">Existing opening stock</h3>
+            {openingLoading ? (
+              <p className="text-sm text-gray-500">Loading…</p>
+            ) : openingRows.length === 0 ? (
+              <p className="text-sm text-gray-500">No opening stock recorded yet.</p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="min-w-full divide-y divide-gray-200 text-sm">
+                  <thead className="bg-gray-50 text-xs font-medium uppercase text-gray-500">
+                    <tr>
+                      <th className="px-3 py-2 text-left">Godown</th>
+                      <th className="px-3 py-2 text-left">Brand</th>
+                      <th className="px-3 py-2 text-right">Bags</th>
+                      <th className="px-3 py-2 text-right">Rate</th>
+                      <th className="px-3 py-2 text-right">Value</th>
+                      <th className="px-3 py-2 text-left">As of</th>
+                      <th className="px-3 py-2"></th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-gray-100">
+                    {openingRows.map((r) => (
+                      <tr key={r.id}>
+                        <td className="px-3 py-2">{r.godown_name}</td>
+                        <td className="px-3 py-2">{r.brand_name}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{r.bags}</td>
+                        <td className="px-3 py-2 text-right tabular-nums">{formatINR(Number(r.rate))}</td>
+                        <td className="px-3 py-2 text-right tabular-nums font-medium">
+                          {formatINR(Math.round(Number(r.bags) * Number(r.rate)))}
+                        </td>
+                        <td className="px-3 py-2">{r.as_of_date ? formatDate(r.as_of_date) : '—'}</td>
+                        <td className="px-3 py-2">
+                          <div className="flex items-center justify-end gap-2">
+                            <button
+                              type="button"
+                              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                              title="Edit"
+                              onClick={() => handleEditOpening(r)}
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              className="rounded p-1 text-red-500 hover:bg-red-50"
+                              title="Delete"
+                              onClick={() => handleDeleteOpening(r)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }
