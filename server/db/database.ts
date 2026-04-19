@@ -425,8 +425,6 @@ export async function initializeDatabase() {
 
     // opening_balance_type: 'dr' = they owe us (debit), 'cr' = we owe them (credit)
     await client.query(`ALTER TABLE parties ADD COLUMN IF NOT EXISTS opening_balance_type TEXT NOT NULL DEFAULT 'dr'`);
-    // Existing suppliers' opening balances represent what we owe them → credit
-    await client.query(`UPDATE parties SET opening_balance_type = 'cr' WHERE type = 'supplier' AND opening_balance_type = 'dr'`);
     // Existing parties also need supplier type allowed in the check constraint
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check`);
     await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','supplier','other'))`);
