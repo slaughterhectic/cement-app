@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
-import { AlertCircle, Building2, IndianRupee, Package, TrendingUp, Wallet } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { AlertCircle, Building2, IndianRupee, Package, TrendingUp, Wallet, X } from 'lucide-react';
 import { OutstandingBarChart } from '../components/charts/OutstandingBarChart';
 import { SalesBarChart } from '../components/charts/SalesBarChart';
 import { KPICard } from '../components/ui/KPICard';
@@ -120,8 +121,199 @@ function BrandDonutChart({ data, title }: { data: { name: string; bags: number }
   );
 }
 
+interface BreakdownRow {
+  id: number;
+  name: string;
+  type: string;
+  phone: string | null;
+  location: string | null;
+  outstanding: number;
+  last_transaction: string | null;
+}
+
+function OutstandingBreakdownModal({
+  isOpen,
+  onClose,
+  type,
+  rows,
+  total,
+  loading,
+  onPartyClick,
+}: {
+  isOpen: boolean;
+  onClose: () => void;
+  type: 'receivable' | 'payable';
+  rows: BreakdownRow[];
+  total: number;
+  loading: boolean;
+  onPartyClick: (id: number) => void;
+}) {
+  const [search, setSearch] = useState('');
+  const [sortBy, setSortBy] = useState<'outstanding' | 'name'>('outstanding');
+  const [sortDir, setSortDir] = useState<'asc' | 'desc'>('desc');
+
+  if (!isOpen) return null;
+
+  const filtered = rows.filter((r) =>
+    r.name.toLowerCase().includes(search.toLowerCase()) ||
+    (r.location || '').toLowerCase().includes(search.toLowerCase()) ||
+    (r.type || '').toLowerCase().includes(search.toLowerCase())
+  );
+
+  const sorted = [...filtered].sort((a, b) => {
+    if (sortBy === 'outstanding') {
+      return sortDir === 'desc' ? b.outstanding - a.outstanding : a.outstanding - b.outstanding;
+    }
+    return sortDir === 'asc'
+      ? a.name.localeCompare(b.name)
+      : b.name.localeCompare(a.name);
+  });
+
+  const positive = sorted.filter(r => r.outstanding > 0);
+  const negative = sorted.filter(r => r.outstanding < 0);
+  const zero = sorted.filter(r => r.outstanding === 0);
+
+  const toggleSort = (col: 'outstanding' | 'name') => {
+    if (sortBy === col) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
+    else { setSortBy(col); setSortDir(col === 'outstanding' ? 'desc' : 'asc'); }
+  };
+
+  const isPayable = type === 'payable';
+  const title = isPayable ? 'Outstanding Payables Breakdown' : 'Outstanding Receivables Breakdown';
+  const accentColor = isPayable ? 'orange' : 'blue';
+
+  const TypeBadge = ({ t }: { t: string }) => {
+    const colors: Record<string, string> = {
+      dealer: 'bg-blue-100 text-blue-700',
+      contractor: 'bg-purple-100 text-purple-700',
+      supplier: 'bg-amber-100 text-amber-700',
+      other: 'bg-gray-100 text-gray-600',
+    };
+    return (
+      <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${colors[t] || colors.other}`}>
+        {t}
+      </span>
+    );
+  };
+
+  const renderRow = (r: BreakdownRow) => (
+    <tr
+      key={r.id}
+      className="hover:bg-gray-50 cursor-pointer transition-colors"
+      onClick={() => onPartyClick(r.id)}
+    >
+      <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px] truncate">{r.name}</td>
+      <td className="px-3 py-2.5"><TypeBadge t={r.type} /></td>
+      <td className="px-3 py-2.5 text-gray-500 max-w-[120px] truncate">{r.location || '—'}</td>
+      <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${
+        r.outstanding > 0 ? (isPayable ? 'text-orange-700' : 'text-green-700') :
+        r.outstanding < 0 ? 'text-red-600' : 'text-gray-400'
+      }`}>
+        {r.outstanding < 0 && '−'}{formatINR(Math.abs(r.outstanding))}
+      </td>
+      <td className="px-3 py-2.5 text-gray-400 text-xs tabular-nums">{r.last_transaction ? formatDate(r.last_transaction) : '—'}</td>
+    </tr>
+  );
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-8 pb-8 overflow-y-auto" onClick={onClose}>
+      <div
+        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 animate-in fade-in-0 slide-in-from-bottom-4"
+        onClick={(e) => e.stopPropagation()}
+        style={{ animation: 'fadeSlideUp 0.25s ease-out' }}
+      >
+        {/* Header */}
+        <div className={`flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-${accentColor}-50/50 rounded-t-2xl`}>
+          <div>
+            <h2 className="text-lg font-bold text-gray-800">{title}</h2>
+            <p className="text-sm text-gray-500 mt-0.5">
+              {filtered.length} {filtered.length === 1 ? 'party' : 'parties'} · Net total: <span className={`font-semibold ${total >= 0 ? `text-${accentColor}-700` : 'text-red-600'}`}>{formatINR(total)}</span>
+            </p>
+          </div>
+          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors" aria-label="Close">
+            <X className="h-5 w-5 text-gray-500" />
+          </button>
+        </div>
+
+        {/* Search */}
+        <div className="px-6 py-3 border-b border-gray-100">
+          <input
+            type="text"
+            placeholder="Search by name, location, or type..."
+            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            autoFocus
+          />
+        </div>
+
+        {/* Table */}
+        <div className="overflow-x-auto max-h-[60vh] overflow-y-auto">
+          {loading ? (
+            <div className="p-8 space-y-3">
+              {Array.from({ length: 8 }).map((_, i) => (
+                <div key={i} className="flex animate-pulse gap-4">
+                  <div className="h-4 flex-1 rounded bg-gray-200" />
+                  <div className="h-4 w-20 rounded bg-gray-200" />
+                  <div className="h-4 w-24 rounded bg-gray-200" />
+                </div>
+              ))}
+            </div>
+          ) : sorted.length === 0 ? (
+            <p className="px-6 py-12 text-center text-sm text-gray-400">No parties match your search.</p>
+          ) : (
+            <table className="w-full text-sm">
+              <thead className="sticky top-0 bg-white border-b border-gray-200 z-10">
+                <tr className="text-left text-xs font-medium uppercase tracking-wider text-gray-500">
+                  <th className="px-4 py-2.5 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('name')}>
+                    Party {sortBy === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-3 py-2.5">Type</th>
+                  <th className="px-3 py-2.5">Location</th>
+                  <th className="px-4 py-2.5 text-right cursor-pointer hover:text-gray-700" onClick={() => toggleSort('outstanding')}>
+                    Outstanding {sortBy === 'outstanding' && (sortDir === 'asc' ? '↑' : '↓')}
+                  </th>
+                  <th className="px-3 py-2.5">Last Txn</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-gray-100">
+                {/* Positive balances first */}
+                {positive.length > 0 && positive.map(renderRow)}
+                {/* Zero balances */}
+                {zero.length > 0 && zero.map(renderRow)}
+                {/* Negative balances (overpaid) with separator */}
+                {negative.length > 0 && (
+                  <>
+                    <tr>
+                      <td colSpan={5} className="px-4 py-2 bg-red-50/70 text-xs font-semibold text-red-600 uppercase tracking-wider">
+                        ⚠ Overpaid / Advance ({negative.length} {negative.length === 1 ? 'party' : 'parties'})
+                      </td>
+                    </tr>
+                    {negative.map(renderRow)}
+                  </>
+                )}
+              </tbody>
+            </table>
+          )}
+        </div>
+
+        {/* Footer summary */}
+        {!loading && sorted.length > 0 && (
+          <div className="px-6 py-3 border-t border-gray-200 bg-gray-50/50 rounded-b-2xl flex items-center justify-between text-sm">
+            <span className="text-gray-500">
+              {positive.length} owe{isPayable ? 'd' : ''} · {negative.length} overpaid · {zero.length} settled
+            </span>
+            <span className="text-xs text-gray-400">Click a row to view ledger</span>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 export default function Dashboard() {
   const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [charts, setCharts] = useState<DashboardCharts | null>(null);
   const [collection, setCollection] = useState<{ rows: any[]; daily: any[] } | null>(null);
@@ -129,6 +321,25 @@ export default function Dashboard() {
   const [collectionLoading, setCollectionLoading] = useState(false);
   const [collectionDate, setCollectionDate] = useState<string>(new Date().toISOString().slice(0, 10));
   const [collectionMonth, setCollectionMonth] = useState<string>(new Date().toISOString().slice(0, 7));
+
+  // Breakdown modal state
+  const [breakdownModal, setBreakdownModal] = useState<{
+    open: boolean;
+    type: 'receivable' | 'payable';
+    rows: BreakdownRow[];
+    total: number;
+    loading: boolean;
+  }>({ open: false, type: 'receivable', rows: [], total: 0, loading: false });
+
+  const openBreakdown = async (type: 'receivable' | 'payable') => {
+    setBreakdownModal({ open: true, type, rows: [], total: 0, loading: true });
+    try {
+      const data = await api.dashboard.outstandingBreakdown(type);
+      setBreakdownModal({ open: true, type, rows: data.rows, total: data.total, loading: false });
+    } catch {
+      setBreakdownModal(prev => ({ ...prev, loading: false }));
+    }
+  };
 
   useEffect(() => {
     let cancelled = false;
@@ -201,8 +412,8 @@ export default function Dashboard() {
           <>{Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}</>
         ) : (
           <>
-            <KPICard title="Outstanding Receivables" value={formatINR(stats.outstandingReceivable ?? stats.outstanding)} subtitle="Customers owe us" icon={AlertCircle} color="outstanding" />
-            <KPICard title="Outstanding Payables" value={formatINR(stats.outstandingPayable ?? 0)} subtitle="We owe suppliers" icon={AlertCircle} color="purchase" />
+            <KPICard title="Outstanding Receivables" value={formatINR(stats.outstandingReceivable ?? stats.outstanding)} subtitle="Customers owe us" icon={AlertCircle} color="outstanding" onClick={() => openBreakdown('receivable')} />
+            <KPICard title="Outstanding Payables" value={formatINR(stats.outstandingPayable ?? 0)} subtitle="We owe suppliers" icon={AlertCircle} color="purchase" onClick={() => openBreakdown('payable')} />
             <KPICard title="Total Capital" value={formatINR(stats.totalCapital)} subtitle="Cash + bank" icon={Wallet} color="profit" />
           </>
         )}
@@ -439,6 +650,28 @@ export default function Dashboard() {
           )}
         </div>
       </section>
+
+      {/* Outstanding Breakdown Modal */}
+      <OutstandingBreakdownModal
+        isOpen={breakdownModal.open}
+        onClose={() => setBreakdownModal(prev => ({ ...prev, open: false }))}
+        type={breakdownModal.type}
+        rows={breakdownModal.rows}
+        total={breakdownModal.total}
+        loading={breakdownModal.loading}
+        onPartyClick={(id) => {
+          setBreakdownModal(prev => ({ ...prev, open: false }));
+          navigate(`/parties/${id}`);
+        }}
+      />
+
+      {/* Animation keyframes */}
+      <style>{`
+        @keyframes fadeSlideUp {
+          from { opacity: 0; transform: translateY(16px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </div>
   );
 }

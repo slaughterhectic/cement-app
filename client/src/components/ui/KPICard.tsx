@@ -15,12 +15,22 @@ export interface KPICardProps {
   subtitle: string;
   icon: LucideIcon;
   color: KPIColor;
+  onClick?: () => void;
 }
 
-export function KPICard({ title, value, subtitle, icon: Icon, color }: KPICardProps) {
+export function KPICard({ title, value, subtitle, icon: Icon, color, onClick }: KPICardProps) {
   return (
-    <div className="card flex flex-col gap-4">
-      <p className="text-sm font-medium text-heading/60">{title}</p>
+    <div
+      className={`card flex flex-col gap-4 ${onClick ? 'cursor-pointer transition-shadow hover:shadow-lg hover:ring-1 hover:ring-brand-200' : ''}`}
+      onClick={onClick}
+      role={onClick ? 'button' : undefined}
+      tabIndex={onClick ? 0 : undefined}
+      onKeyDown={onClick ? (e) => { if (e.key === 'Enter' || e.key === ' ') onClick(); } : undefined}
+    >
+      <div className="flex items-center gap-2">
+        <p className="text-sm font-medium text-heading/60">{title}</p>
+        {onClick && <span className="ml-auto text-xs text-heading/40">Click for details →</span>}
+      </div>
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0 flex-1">
           <p className="text-2xl font-bold tracking-tight text-heading sm:text-3xl">{value}</p>

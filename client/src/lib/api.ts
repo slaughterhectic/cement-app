@@ -65,6 +65,7 @@ export const api = {
   dashboard: {
     stats: () => request<any>('/dashboard/stats'),
     charts: () => request<any>('/dashboard/charts'),
+    outstandingBreakdown: (type: 'receivable' | 'payable') => request<any>(`/dashboard/outstanding-breakdown?type=${type}`),
   },
   purchases: {
     list: (params?: Record<string, string>) => {

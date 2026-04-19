@@ -295,6 +295,63 @@ app.get('/api/dashboard/charts', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// Outstanding breakdown — party-wise list for the clickable KPI cards
+app.get('/api/dashboard/outstanding-breakdown', async (req, res) => {
+  try {
+    const type = req.query.type as string; // 'receivable' or 'payable'
+
+    if (type === 'payable') {
+      // Suppliers — outstanding = how much we owe them
+      const rows = await getAll(`
+        SELECT p.id, p.name, p.type, p.phone, p.location,
+          ROUND(CAST(
+            CASE WHEN COALESCE(p.opening_balance_type,'cr') = 'cr' THEN COALESCE(p.opening_balance,0)
+                 ELSE -COALESCE(p.opening_balance,0) END
+            + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            + COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id AND pm.direction = 'receive'), 0)
+            - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id = p.id AND (pm.direction = 'pay' OR pm.direction IS NULL)), 0)
+            - COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id = p.id), 0)
+          AS numeric), 0) as outstanding,
+          (SELECT MAX(d) FROM (
+            SELECT date as d FROM purchases WHERE supplier_id = p.id
+            UNION ALL SELECT date FROM payments WHERE party_id = p.id
+          ) sub) as last_transaction
+        FROM parties p
+        WHERE p.type = 'supplier'
+        ORDER BY outstanding DESC
+      `);
+      const total = rows.reduce((s: number, r: any) => s + Number(r.outstanding), 0);
+      res.json({ type: 'payable', rows, total });
+    } else {
+      // Non-suppliers — outstanding = how much they owe us
+      const rows = await getAll(`
+        SELECT p.id, p.name, p.type, p.phone, p.location,
+          ROUND(CAST(
+            CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
+                 ELSE -COALESCE(p.opening_balance,0) END
+            + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id = p.id), 0)
+            + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
+          AS numeric), 0) as outstanding,
+          (SELECT MAX(d) FROM (
+            SELECT date as d FROM sales WHERE party_id = p.id
+            UNION ALL SELECT date FROM payments WHERE party_id = p.id
+          ) sub) as last_transaction
+        FROM parties p
+        WHERE p.type != 'supplier'
+          AND (
+            COALESCE(p.opening_balance,0) > 0
+            OR (SELECT COUNT(*) FROM sales WHERE party_id = p.id) > 0
+            OR (SELECT COUNT(*) FROM payments WHERE party_id = p.id) > 0
+          )
+        ORDER BY outstanding DESC
+      `);
+      const total = rows.reduce((s: number, r: any) => s + Number(r.outstanding), 0);
+      res.json({ type: 'receivable', rows, total });
+    }
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // Database backup endpoint — returns Excel workbook (admin only)
 app.get('/api/backup', async (req, res) => {
   try {
