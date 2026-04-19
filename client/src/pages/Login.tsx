@@ -32,6 +32,8 @@ export default function Login() {
       } else if (permissions.includes('access_truckbook')) {
         // Go to trucks list — dashboard requires view_truckbook_dashboard separately
         navigate(permissions.includes('view_truckbook_dashboard') ? '/truckbook' : '/truckbook/trucks');
+      } else if (permissions.includes('access_transportbook')) {
+        navigate('/transportbook');
       } else {
         navigate('/no-access');
       }
