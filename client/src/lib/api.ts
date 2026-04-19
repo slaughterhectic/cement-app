@@ -276,6 +276,37 @@ export const api = {
       request<any>(`/pending-entries/${id}/reject`, { method: 'POST', body: JSON.stringify({ admin_note }) }),
     delete: (id: number) => request<any>(`/pending-entries/${id}`, { method: 'DELETE' }),
   },
+  rlTruckOwners: {
+    list: () => request<any[]>('/rl/truck-owners'),
+    create: (data: any) => request<any>('/rl/truck-owners', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/truck-owners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/truck-owners/${id}`, { method: 'DELETE' }),
+    ledger: (id: number) => request<any>(`/rl/truck-owners/${id}/ledger`),
+  },
+  rlTrips: {
+    list: (params?: Record<string, string>) => {
+      const q = params ? '?' + new URLSearchParams(params).toString() : '';
+      return request<any[]>(`/rl/trips${q}`);
+    },
+    create: (data: any) => request<any>('/rl/trips', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/trips/${id}`, { method: 'DELETE' }),
+  },
+  rlInvoices: {
+    list: () => request<any[]>('/rl/invoices'),
+    create: (data: any) => request<any>('/rl/invoices', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/invoices/${id}`, { method: 'DELETE' }),
+  },
+  rlPartners: {
+    list: () => request<any[]>('/rl/partners'),
+    create: (data: any) => request<any>('/rl/partners', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/partners/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/partners/${id}`, { method: 'DELETE' }),
+    transactions: (id: number) => request<any[]>(`/rl/partners/${id}/transactions`),
+    addTransaction: (id: number, data: any) => request<any>(`/rl/partners/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteTransaction: (id: number, txId: number) => request<any>(`/rl/partners/${id}/transactions/${txId}`, { method: 'DELETE' }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();

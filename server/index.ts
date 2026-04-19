@@ -27,6 +27,10 @@ import truckExpensesRouter from './routes/truckExpenses';
 import requestsRouter from './routes/requests';
 import transportersRouter from './routes/transporters';
 import pendingEntriesRouter from './routes/pendingEntries';
+import rlTruckOwnersRouter from './routes/rlTruckOwners';
+import rlTripsRouter from './routes/rlTrips';
+import rlInvoicesRouter from './routes/rlInvoices';
+import rlPartnersRouter from './routes/rlPartners';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -70,6 +74,10 @@ app.use('/api/truck-expenses', truckExpensesRouter);
 app.use('/api/requests', requestsRouter);
 app.use('/api/transporters', transportersRouter);
 app.use('/api/pending-entries', pendingEntriesRouter);
+app.use('/api/rl/truck-owners', rlTruckOwnersRouter);
+app.use('/api/rl/trips', rlTripsRouter);
+app.use('/api/rl/invoices', rlInvoicesRouter);
+app.use('/api/rl/partners', rlPartnersRouter);
 
 // Godown CRUD
 app.get('/api/godowns', async (_req, res) => {

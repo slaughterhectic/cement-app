@@ -29,6 +29,12 @@ import TruckExpenses from './pages/truckbook/TruckExpenses';
 import Requests from './pages/Requests';
 import Transporters from './pages/truckbook/Transporters';
 import PendingApprovals from './pages/PendingApprovals';
+import TransportDashboard from './pages/transportbook/TransportDashboard';
+import TruckOwners from './pages/transportbook/TruckOwners';
+import TruckOwnerLedger from './pages/transportbook/TruckOwnerLedger';
+import TransportTrips from './pages/transportbook/TransportTrips';
+import TransportInvoices from './pages/transportbook/TransportInvoices';
+import TransportPartners from './pages/transportbook/TransportPartners';
 import { Building2, Truck, LogOut } from 'lucide-react';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -126,6 +132,13 @@ export default function App() {
           <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />
           <Route path="/truckbook/expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckExpenses /></BookGuard>} />
           <Route path="/truckbook/transporters" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Transporters /></BookGuard>} />
+          {/* TransportBook routes — require access_transportbook */}
+          <Route path="/transportbook" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportDashboard /></BookGuard>} />
+          <Route path="/transportbook/trucks" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TruckOwners /></BookGuard>} />
+          <Route path="/transportbook/trucks/:id" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TruckOwnerLedger /></BookGuard>} />
+          <Route path="/transportbook/trips" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportTrips /></BookGuard>} />
+          <Route path="/transportbook/invoices" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportInvoices /></BookGuard>} />
+          <Route path="/transportbook/partners" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportPartners /></BookGuard>} />
           {/* CementBook requests/approvals */}
           <Route path="/requests" element={<Requests source="cementbook" />} />
           <Route path="/pending-approvals" element={<PendingApprovals source="cementbook" />} />

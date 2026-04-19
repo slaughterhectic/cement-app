@@ -473,6 +473,85 @@ export async function initializeDatabase() {
       )
     `);
 
+    // Transport Book (Rudra Logistics) tables
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_truck_owners (
+        id SERIAL PRIMARY KEY,
+        truck_number TEXT NOT NULL UNIQUE,
+        owner_name TEXT NOT NULL,
+        owner_phone TEXT,
+        driver_name TEXT,
+        driver_phone TEXT,
+        bank_account TEXT,
+        ifsc_code TEXT,
+        beneficiary_name TEXT,
+        pan_number TEXT,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_trips (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        builty_number TEXT,
+        do_number TEXT,
+        truck_owner_id INTEGER NOT NULL REFERENCES rl_truck_owners(id),
+        party_name TEXT NOT NULL,
+        location TEXT,
+        dch_type TEXT,
+        qty REAL NOT NULL DEFAULT 0,
+        acc_freight_rate REAL NOT NULL DEFAULT 0,
+        commission_pct REAL DEFAULT 6.29,
+        diesel_advance REAL DEFAULT 0,
+        cash_advance REAL DEFAULT 0,
+        petrol_slip_number TEXT,
+        epod_bill_number TEXT,
+        difference_rate REAL DEFAULT 0,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_invoices (
+        id SERIAL PRIMARY KEY,
+        invoice_number TEXT NOT NULL UNIQUE,
+        invoice_date TEXT,
+        invoice_amount REAL,
+        payment_receive_date TEXT,
+        received_amount REAL,
+        tds_amount REAL,
+        status TEXT CHECK(status IN ('pending','done','partial')) DEFAULT 'pending',
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_partners (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        opening_capital REAL DEFAULT 0,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_partner_transactions (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        partner_id INTEGER NOT NULL REFERENCES rl_partners(id),
+        type TEXT CHECK(type IN ('withdrawal','profit','capital')) NOT NULL,
+        amount REAL NOT NULL,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    // Seed default partners
+    await client.query(`
+      INSERT INTO rl_partners (name, opening_capital) VALUES
+        ('Shubham', 0), ('Rahul', 0), ('Rahul Ashish Singh', 0), ('Partner 4', 0)
+      ON CONFLICT (name) DO NOTHING;
+    `);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

@@ -1,0 +1,314 @@
+import { useCallback, useEffect, useState } from 'react';
+import { Plus, Pencil, Trash2, X, Eye } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { api } from '../../lib/api';
+import { useToastStore, useAuthStore } from '../../lib/store';
+
+interface OwnerRow {
+  id: number;
+  truck_number: string;
+  owner_name: string;
+  owner_phone: string | null;
+  driver_name: string | null;
+  driver_phone: string | null;
+  bank_account: string | null;
+  ifsc_code: string | null;
+  beneficiary_name: string | null;
+  pan_number: string | null;
+  is_active: number;
+  trip_count: number;
+}
+
+const emptyForm = {
+  truck_number: '',
+  owner_name: '',
+  owner_phone: '',
+  driver_name: '',
+  driver_phone: '',
+  bank_account: '',
+  ifsc_code: '',
+  beneficiary_name: '',
+  pan_number: '',
+};
+
+function maskAccount(account: string | null): string {
+  if (!account) return '—';
+  if (account.length <= 4) return account;
+  return '*'.repeat(account.length - 4) + account.slice(-4);
+}
+
+export default function TruckOwners() {
+  const navigate = useNavigate();
+  const addToast = useToastStore((s) => s.addToast);
+  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const [rows, setRows] = useState<OwnerRow[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [modalOpen, setModalOpen] = useState(false);
+  const [editing, setEditing] = useState<OwnerRow | null>(null);
+  const [form, setForm] = useState(emptyForm);
+  const [saving, setSaving] = useState(false);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const data = await api.rlTruckOwners.list();
+      setRows(data);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Failed to load truck owners', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const openAdd = () => {
+    setEditing(null);
+    setForm(emptyForm);
+    setModalOpen(true);
+  };
+
+  const openEdit = (row: OwnerRow) => {
+    setEditing(row);
+    setForm({
+      truck_number: row.truck_number,
+      owner_name: row.owner_name,
+      owner_phone: row.owner_phone || '',
+      driver_name: row.driver_name || '',
+      driver_phone: row.driver_phone || '',
+      bank_account: row.bank_account || '',
+      ifsc_code: row.ifsc_code || '',
+      beneficiary_name: row.beneficiary_name || '',
+      pan_number: row.pan_number || '',
+    });
+    setModalOpen(true);
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!form.truck_number.trim()) { addToast('Truck number is required', 'error'); return; }
+    if (!form.owner_name.trim()) { addToast('Owner name is required', 'error'); return; }
+    setSaving(true);
+    try {
+      const payload = {
+        truck_number: form.truck_number.trim(),
+        owner_name: form.owner_name.trim(),
+        owner_phone: form.owner_phone || null,
+        driver_name: form.driver_name || null,
+        driver_phone: form.driver_phone || null,
+        bank_account: form.bank_account || null,
+        ifsc_code: form.ifsc_code || null,
+        beneficiary_name: form.beneficiary_name || null,
+        pan_number: form.pan_number || null,
+      };
+      if (editing) {
+        await api.rlTruckOwners.update(editing.id, payload);
+        addToast('Truck owner updated', 'success');
+      } else {
+        await api.rlTruckOwners.create(payload);
+        addToast('Truck owner added', 'success');
+      }
+      setModalOpen(false);
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (row: OwnerRow) => {
+    if (!window.confirm(`Delete truck owner "${row.owner_name} (${row.truck_number})"?`)) return;
+    try {
+      await api.rlTruckOwners.delete(row.id);
+      addToast('Truck owner deleted', 'success');
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+  };
+
+  const f = (field: keyof typeof emptyForm) =>
+    (e: React.ChangeEvent<HTMLInputElement>) =>
+      setForm((prev) => ({ ...prev, [field]: e.target.value }));
+
+  return (
+    <div className="flex flex-col gap-6">
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-heading">Truck Owners</h1>
+          <p className="text-sm text-gray-500 mt-1">{rows.length} truck owner{rows.length !== 1 ? 's' : ''} registered</p>
+        </div>
+        <button
+          type="button"
+          onClick={openAdd}
+          className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
+        >
+          <Plus className="h-4 w-4" />
+          Add Truck Owner
+        </button>
+      </div>
+
+      <div className="card overflow-hidden p-0">
+        <div className="overflow-x-auto">
+          <table className="w-full text-sm">
+            <thead>
+              <tr className="border-b border-card-border bg-indigo-50 text-left">
+                <th className="px-4 py-3 font-medium text-indigo-700">Truck No.</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">Owner Name</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">Owner Phone</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">Driver</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">Bank Account</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">PAN</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Trips</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {loading ? (
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+              ) : rows.length === 0 ? (
+                <tr>
+                  <td colSpan={8} className="px-4 py-12 text-center">
+                    <p className="text-gray-400 mb-3">No truck owners added yet</p>
+                    <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Add your first truck owner</button>
+                  </td>
+                </tr>
+              ) : (
+                rows.map((row) => (
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/40 transition-colors">
+                    <td className="px-4 py-3">
+                      <button
+                        type="button"
+                        onClick={() => navigate(`/transportbook/trucks/${row.id}`)}
+                        className="font-semibold text-indigo-600 hover:underline"
+                      >
+                        {row.truck_number}
+                      </button>
+                    </td>
+                    <td className="px-4 py-3 font-medium text-gray-800">{row.owner_name}</td>
+                    <td className="px-4 py-3 text-gray-600">{row.owner_phone || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600">{row.driver_name || '—'}</td>
+                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{maskAccount(row.bank_account)}</td>
+                    <td className="px-4 py-3 text-gray-600">{row.pan_number || '—'}</td>
+                    <td className="px-4 py-3 text-right">
+                      <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                        {row.trip_count}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => navigate(`/transportbook/trucks/${row.id}`)}
+                          className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          title="View Ledger"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => openEdit(row)}
+                          className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          title="Edit"
+                        >
+                          <Pencil className="h-4 w-4" />
+                        </button>
+                        {isAdmin() && (
+                          <button
+                            type="button"
+                            onClick={() => handleDelete(row)}
+                            className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                            title="Delete"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </button>
+                        )}
+                      </div>
+                    </td>
+                  </tr>
+                ))
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* Modal */}
+      {modalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sticky top-0 bg-white z-10">
+              <h2 className="font-semibold text-heading">{editing ? 'Edit Truck Owner' : 'Add Truck Owner'}</h2>
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Truck & Owner Details</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck Number *</label>
+                  <input className="input-field" value={form.truck_number} onChange={f('truck_number')} placeholder="e.g. HR55AB1234" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name *</label>
+                  <input className="input-field" value={form.owner_name} onChange={f('owner_name')} placeholder="Owner's full name" required />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner Phone</label>
+                  <input className="input-field" value={form.owner_phone} onChange={f('owner_phone')} placeholder="Mobile number" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Driver Name</label>
+                  <input className="input-field" value={form.driver_name} onChange={f('driver_name')} placeholder="Driver's name" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Driver Phone</label>
+                  <input className="input-field" value={form.driver_phone} onChange={f('driver_phone')} placeholder="Driver's mobile" />
+                </div>
+              </div>
+
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mt-2">Bank & Payment Details</p>
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Account Number</label>
+                  <input className="input-field" value={form.bank_account} onChange={f('bank_account')} placeholder="Account number" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                  <input className="input-field" value={form.ifsc_code} onChange={f('ifsc_code')} placeholder="e.g. SBIN0001234" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Beneficiary Name</label>
+                  <input className="input-field" value={form.beneficiary_name} onChange={f('beneficiary_name')} placeholder="Name as per bank" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
+                  <input className="input-field" value={form.pan_number} onChange={f('pan_number')} placeholder="ABCDE1234F" />
+                </div>
+              </div>
+
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setModalOpen(false)}
+                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={saving}
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-60 transition-colors"
+                >
+                  {saving ? 'Saving…' : editing ? 'Update' : 'Add Truck Owner'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

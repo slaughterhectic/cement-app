@@ -29,10 +29,11 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { useAuthStore, useSidebarStore } from '../../lib/store';
 import { api } from '../../lib/api';
 
-type Book = 'cement' | 'truck' | 'finance' | 'settings';
+type Book = 'cement' | 'truck' | 'transport' | 'finance' | 'settings';
 
 function detectBook(pathname: string): Book {
   if (pathname.startsWith('/truckbook')) return 'truck';
+  if (pathname.startsWith('/transportbook')) return 'transport';
   if (pathname === '/capital' || pathname === '/finance') return 'finance';
   if (pathname === '/settings' || pathname === '/users') return 'settings';
   return 'cement';
@@ -74,6 +75,14 @@ const truckNavItems = [
   { to: '/truckbook/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];
 
+const transportNavItems = [
+  { to: '/transportbook', label: 'Dashboard', icon: LayoutDashboard },
+  { to: '/transportbook/trucks', label: 'Truck Owners', icon: Truck },
+  { to: '/transportbook/trips', label: 'Trip Log', icon: FileText },
+  { to: '/transportbook/invoices', label: 'ACC Billing', icon: Receipt },
+  { to: '/transportbook/partners', label: 'Partners', icon: Users },
+];
+
 const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string; hoverClass: string; defaultRoute: string }> = {
   cement: {
     label: 'CementBook',
@@ -95,6 +104,13 @@ const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string;
     activeClass: 'bg-emerald-600 text-white shadow-sm',
     hoverClass: 'hover:bg-emerald-50 hover:text-emerald-700',
     defaultRoute: '/capital',
+  },
+  transport: {
+    label: 'TransportBook',
+    dot: 'bg-indigo-500',
+    activeClass: 'bg-indigo-500 text-white shadow-sm',
+    hoverClass: 'hover:bg-indigo-50 hover:text-indigo-700',
+    defaultRoute: '/transportbook',
   },
   settings: {
     label: 'User & Settings',
@@ -183,6 +199,7 @@ export function Sidebar() {
   const availableBooks: Book[] = [
     ...(isAdmin() || hasPermission('access_cementbook') ? (['cement'] as Book[]) : []),
     ...(isAdmin() || hasPermission('access_truckbook') ? (['truck'] as Book[]) : []),
+    ...(isAdmin() || hasPermission('access_transportbook') ? (['transport'] as Book[]) : []),
     ...(canSeeFinance ? (['finance'] as Book[]) : []),
     ...(isAdmin() ? (['settings'] as Book[]) : []),
   ];
@@ -199,6 +216,8 @@ export function Sidebar() {
       })
     : book === 'settings'
     ? settingsNavItems
+    : book === 'transport'
+    ? transportNavItems
     : truckNavItems.filter((item) => {
         if ((item as any).permission) return isAdmin() || hasPermission((item as any).permission);
         return true;
@@ -281,7 +300,7 @@ export function Sidebar() {
           <NavLink
             key={to}
             to={to}
-            end={to === '/truckbook' || to === '/dashboard'}
+            end={to === '/truckbook' || to === '/dashboard' || to === '/transportbook'}
             title={collapsed ? label : undefined}
             className={({ isActive }) =>
               [
