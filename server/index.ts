@@ -183,15 +183,18 @@ app.get('/api/dashboard/stats', async (_req, res) => {
         - (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='bank' AND direction='pay')
         - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='bank') as total
     `);
-    // Cash = opening + received (direction=receive) - paid_out (direction=pay) - expenses + imprest
+    // Cash = imprest handler accounts + orphan cash (no handler) — mirrors capital.ts approach.
+    // Cash payments with a cash_handler flow through imprest_transactions; counting them
+    // again from the payments table would double-count. Only add payments/expenses where
+    // cash_handler IS NULL (orphan entries not tracked in any handler account).
     const cashCalc = await getOne(`
       SELECT
         (SELECT COALESCE(SUM(opening_balance),0) FROM imprest_handlers)
-        + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash' AND (direction='receive' OR direction IS NULL))
-        - (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash' AND direction='pay')
-        - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='cash')
         + (SELECT COALESCE(SUM(credit),0) FROM imprest_transactions)
-        - (SELECT COALESCE(SUM(debit),0) FROM imprest_transactions) as total
+        - (SELECT COALESCE(SUM(debit),0) FROM imprest_transactions)
+        + (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash' AND (direction='receive' OR direction IS NULL) AND cash_handler IS NULL)
+        - (SELECT COALESCE(SUM(amount),0) FROM payments WHERE mode='cash' AND direction='pay' AND cash_handler IS NULL)
+        - (SELECT COALESCE(SUM(amount),0) FROM expenses WHERE mode='cash' AND cash_handler IS NULL) as total
     `);
     // Bank/cash breakdown for dashboard — received = direction=receive, paid = direction=pay + expenses
     const bankReceived = await getOne(`SELECT COALESCE(SUM(amount),0) as total FROM payments WHERE mode='bank' AND (direction='receive' OR direction IS NULL)`);

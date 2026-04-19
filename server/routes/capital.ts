@@ -125,20 +125,25 @@ router.get('/summary', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
-    // Outstanding receivable = customers owe us (exclude suppliers)
+    // Outstanding receivable = customers owe us (exclude suppliers), opening_balance_type aware
     const outstandingCalc = await getOne(`
       SELECT COALESCE(SUM(GREATEST(0,
-        COALESCE(p.opening_balance,0)
+        CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
+             ELSE -COALESCE(p.opening_balance,0) END
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-        - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id),0)
+        + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
+        - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)
       )),0) as total FROM parties p WHERE p.type != 'supplier'
     `);
-    // Outstanding payable = we owe suppliers
+    // Outstanding payable = we owe suppliers, opening_balance_type + direction aware
     const payableCalc = await getOne(`
       SELECT COALESCE(SUM(GREATEST(0,
-        COALESCE(p.opening_balance,0)
+        CASE WHEN COALESCE(p.opening_balance_type,'cr') = 'cr' THEN COALESCE(p.opening_balance,0)
+             ELSE -COALESCE(p.opening_balance,0) END
         + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
-        - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id),0)
+        + COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id AND pm.direction='receive'),0)
+        - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id AND (pm.direction='pay' OR pm.direction IS NULL)),0)
+        - COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id=p.id),0)
       )),0) as total FROM parties p WHERE p.type = 'supplier'
     `);
 
