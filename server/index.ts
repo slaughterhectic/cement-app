@@ -142,27 +142,27 @@ app.get('/api/dashboard/stats', async (_req, res) => {
     const totalPurchases = await getOne(`SELECT COALESCE(SUM(purchase_amount), 0) as amount FROM purchases`);
     const totalExpenses = await getOne(`SELECT COALESCE(SUM(amount), 0) as amount FROM expenses`);
 
-    // Outstanding receivable = sum of POSITIVE customer balances (they owe us)
+    // Outstanding receivable = NET sum of all non-supplier balances (includes overpayments)
     const outstandingCalc = await getOne(`
-      SELECT COALESCE(SUM(GREATEST(0,
+      SELECT COALESCE(SUM(
         CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
              ELSE -COALESCE(p.opening_balance,0) END
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)
-      )),0) as total FROM parties p WHERE p.type != 'supplier'
+      ),0) as total FROM parties p WHERE p.type != 'supplier'
     `);
-    // Outstanding payable = sum of POSITIVE supplier balances (we owe them)
+    // Outstanding payable = NET sum of all supplier balances (includes overpayments)
     // Mirrors the formula in parties.ts summary/ledger endpoints
     const payableCalc = await getOne(`
-      SELECT COALESCE(SUM(GREATEST(0,
+      SELECT COALESCE(SUM(
         CASE WHEN COALESCE(p.opening_balance_type,'cr') = 'cr' THEN COALESCE(p.opening_balance,0)
              ELSE -COALESCE(p.opening_balance,0) END
         + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
         + COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id AND pm.direction='receive'),0)
         - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id AND (pm.direction='pay' OR pm.direction IS NULL)),0)
         - COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id=p.id),0)
-      )),0) as total FROM parties p WHERE p.type = 'supplier'
+      ),0) as total FROM parties p WHERE p.type = 'supplier'
     `);
 
     const stockCalc = await getOne(`
