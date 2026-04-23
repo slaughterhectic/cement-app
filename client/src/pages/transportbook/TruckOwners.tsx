@@ -180,16 +180,16 @@ export default function TruckOwners() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-indigo-50 text-left">
-                <th className="px-4 py-3 font-medium text-indigo-700">Truck No.</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Owner Name</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Owner Phone</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Driver</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Bank Account</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">PAN</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Trips</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Status</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Actions</th>
+              <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Truck No.</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Owner Name</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Owner Phone</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Driver</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Bank Account</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">PAN</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Trips</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Status</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -199,17 +199,17 @@ export default function TruckOwners() {
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No truck owners added yet</p>
-                    <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Add your first truck owner</button>
+                    <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Add your first truck owner</button>
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/40 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/40 transition-colors">
                     <td className="px-4 py-3">
                       <button
                         type="button"
                         onClick={() => navigate(`/transportbook/trucks/${row.id}`)}
-                        className="font-semibold text-indigo-600 hover:underline"
+                        className="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline"
                       >
                         {row.truck_number}
                       </button>
@@ -220,12 +220,12 @@ export default function TruckOwners() {
                     <td className="px-4 py-3 text-heading/70 font-mono text-xs">{maskAccount(row.bank_account)}</td>
                     <td className="px-4 py-3 text-heading/70">{row.pan_number || '—'}</td>
                     <td className="px-4 py-3 text-right">
-                      <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
+                      <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                         {row.trip_count}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${row.is_active ? 'bg-green-100 text-green-700' : 'bg-surface text-heading/60'}`}>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${row.is_active ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-surface text-heading/60'}`}>
                         {row.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -234,7 +234,7 @@ export default function TruckOwners() {
                         <button
                           type="button"
                           onClick={() => navigate(`/transportbook/trucks/${row.id}`)}
-                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
                           title="View Ledger"
                         >
                           <Eye className="h-4 w-4" />
@@ -242,7 +242,7 @@ export default function TruckOwners() {
                         <button
                           type="button"
                           onClick={() => handleToggleActive(row)}
-                          className={`rounded p-1.5 hover:bg-card-border/50 transition-colors ${row.is_active ? 'text-green-600' : 'text-heading/50'}`}
+                          className={`rounded p-1.5 hover:bg-card-border/50 transition-colors ${row.is_active ? 'text-green-600 dark:text-green-400' : 'text-heading/50'}`}
                           title={row.is_active ? 'Deactivate (stop GPS rent)' : 'Activate (start GPS rent)'}
                         >
                           {row.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
@@ -250,7 +250,7 @@ export default function TruckOwners() {
                         <button
                           type="button"
                           onClick={() => openEdit(row)}
-                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
@@ -259,7 +259,7 @@ export default function TruckOwners() {
                           <button
                             type="button"
                             onClick={() => handleDelete(row)}
-                            className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                            className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="h-4 w-4" />

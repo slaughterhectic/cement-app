@@ -30,9 +30,9 @@ const TXN_TYPE_LABELS: Record<string, string> = {
 };
 
 const TXN_TYPE_COLORS: Record<string, string> = {
-  capital: 'text-blue-600',
-  profit: 'text-green-600',
-  withdrawal: 'text-red-600',
+  capital: 'text-blue-600 dark:text-blue-400',
+  profit: 'text-green-600 dark:text-green-400',
+  withdrawal: 'text-red-600 dark:text-red-400',
 };
 
 const emptyTxnForm = {
@@ -219,7 +219,7 @@ export default function TransportPartners() {
           <button
             type="button"
             onClick={openAddPartner}
-            className="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-card px-4 py-2.5 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 transition-colors"
+            className="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-card px-4 py-2.5 text-sm font-medium text-indigo-700 dark:text-indigo-300 shadow-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
           >
             <UserPlus className="h-4 w-4" />
             Add Partner
@@ -238,20 +238,20 @@ export default function TransportPartners() {
       {/* Summary Cards */}
       {partners.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="card p-4 bg-indigo-50 border-indigo-200 text-center">
-            <p className="text-xs text-indigo-600 font-medium uppercase tracking-wider">Partners</p>
+          <div className="card p-4 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-center">
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wider">Partners</p>
             <p className="text-2xl font-bold text-heading">{partners.length}</p>
           </div>
-          <div className="card p-4 bg-blue-50 border-blue-200 text-center">
-            <p className="text-xs text-blue-600 font-medium uppercase tracking-wider">Total Capital</p>
+          <div className="card p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-center">
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider">Total Capital</p>
             <p className="text-xl font-bold text-heading">{formatINR(partners.reduce((s, p) => s + p.opening_capital + p.total_capital, 0))}</p>
           </div>
-          <div className="card p-4 bg-green-50 border-green-200 text-center">
-            <p className="text-xs text-green-600 font-medium uppercase tracking-wider">Total Profit</p>
+          <div className="card p-4 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-center">
+            <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Total Profit</p>
             <p className="text-xl font-bold text-heading">{formatINR(partners.reduce((s, p) => s + p.total_profit, 0))}</p>
           </div>
-          <div className={`card p-4 border text-center ${totalBalance >= 0 ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}`}>
-            <p className={`text-xs font-medium uppercase tracking-wider ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>Total Balance</p>
+          <div className={`card p-4 border text-center ${totalBalance >= 0 ? 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800' : 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800'}`}>
+            <p className={`text-xs font-medium uppercase tracking-wider ${totalBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>Total Balance</p>
             <p className="text-xl font-bold text-heading">{formatINR(totalBalance)}</p>
           </div>
         </div>
@@ -262,15 +262,15 @@ export default function TransportPartners() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-indigo-50 text-left">
-                <th className="px-4 py-3 font-medium text-indigo-700 w-8"></th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Partner</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Opening Capital</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Deposits</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Profit</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Withdrawals</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Balance</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Actions</th>
+              <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 w-8"></th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Partner</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Opening Capital</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Deposits</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Profit</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Withdrawals</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Balance</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -282,7 +282,7 @@ export default function TransportPartners() {
                 partners.map((partner) => (
                   <Fragment key={partner.id}>
                     <tr
-                      className="border-b border-card-border hover:bg-indigo-50/30 transition-colors cursor-pointer"
+                      className="border-b border-card-border hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors cursor-pointer"
                       onClick={() => toggleExpand(partner.id)}
                     >
                       <td className="px-4 py-3">
@@ -291,12 +291,12 @@ export default function TransportPartners() {
                           : <ChevronRight className="h-4 w-4 text-heading/50" />
                         }
                       </td>
-                      <td className="px-4 py-3 font-medium text-indigo-600">{partner.name}</td>
+                      <td className="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400">{partner.name}</td>
                       <td className="px-4 py-3 text-right text-heading/70">{formatINR(partner.opening_capital)}</td>
-                      <td className="px-4 py-3 text-right text-blue-600">{formatINR(partner.total_capital)}</td>
-                      <td className="px-4 py-3 text-right text-green-600">{formatINR(partner.total_profit)}</td>
-                      <td className="px-4 py-3 text-right text-red-600">{formatINR(partner.total_withdrawals)}</td>
-                      <td className={`px-4 py-3 text-right font-bold ${partner.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                      <td className="px-4 py-3 text-right text-blue-600 dark:text-blue-400">{formatINR(partner.total_capital)}</td>
+                      <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">{formatINR(partner.total_profit)}</td>
+                      <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(partner.total_withdrawals)}</td>
+                      <td className={`px-4 py-3 text-right font-bold ${partner.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {formatINR(partner.balance)}
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
@@ -304,7 +304,7 @@ export default function TransportPartners() {
                           <button
                             type="button"
                             onClick={() => openAddTxn(partner.id)}
-                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-200 transition-colors"
+                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-1 text-xs font-medium text-indigo-700 dark:text-indigo-300 hover:bg-indigo-200 transition-colors"
                             title="Add transaction"
                           >
                             <Plus className="h-3 w-3" />
@@ -313,7 +313,7 @@ export default function TransportPartners() {
                           <button
                             type="button"
                             onClick={() => openEditPartner(partner)}
-                            className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                            className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
                             title="Edit partner"
                           >
                             <Pencil className="h-4 w-4" />
@@ -322,7 +322,7 @@ export default function TransportPartners() {
                             <button
                               type="button"
                               onClick={() => handleDeletePartner(partner)}
-                              className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                              className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                               title="Delete partner"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -365,7 +365,7 @@ export default function TransportPartners() {
                                         <button
                                           type="button"
                                           onClick={() => handleDeleteTxn(partner.id, txn.id)}
-                                          className="rounded p-1 text-red-400 hover:bg-red-50 hover:text-red-600 transition-colors"
+                                          className="rounded p-1 text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30 hover:text-red-600 dark:text-red-400 transition-colors"
                                           title="Delete"
                                         >
                                           <Trash2 className="h-3.5 w-3.5" />
@@ -386,13 +386,13 @@ export default function TransportPartners() {
             </tbody>
             {partners.length > 0 && (
               <tfoot>
-                <tr className="bg-indigo-50 font-semibold border-t-2 border-indigo-200">
-                  <td colSpan={2} className="px-4 py-3 text-indigo-700">Total</td>
+                <tr className="bg-indigo-50 dark:bg-indigo-900/30 font-semibold border-t-2 border-indigo-200 dark:border-indigo-800">
+                  <td colSpan={2} className="px-4 py-3 text-indigo-700 dark:text-indigo-300">Total</td>
                   <td className="px-4 py-3 text-right">{formatINR(partners.reduce((s, p) => s + p.opening_capital, 0))}</td>
-                  <td className="px-4 py-3 text-right text-blue-600">{formatINR(partners.reduce((s, p) => s + p.total_capital, 0))}</td>
-                  <td className="px-4 py-3 text-right text-green-600">{formatINR(partners.reduce((s, p) => s + p.total_profit, 0))}</td>
-                  <td className="px-4 py-3 text-right text-red-600">{formatINR(partners.reduce((s, p) => s + p.total_withdrawals, 0))}</td>
-                  <td className={`px-4 py-3 text-right ${totalBalance >= 0 ? 'text-green-600' : 'text-red-600'}`}>{formatINR(totalBalance)}</td>
+                  <td className="px-4 py-3 text-right text-blue-600 dark:text-blue-400">{formatINR(partners.reduce((s, p) => s + p.total_capital, 0))}</td>
+                  <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">{formatINR(partners.reduce((s, p) => s + p.total_profit, 0))}</td>
+                  <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(partners.reduce((s, p) => s + p.total_withdrawals, 0))}</td>
+                  <td className={`px-4 py-3 text-right ${totalBalance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(totalBalance)}</td>
                   <td className="px-4 py-3">—</td>
                 </tr>
               </tfoot>

@@ -200,8 +200,8 @@ export default function DriverLedger() {
       <div className="grid gap-6 lg:grid-cols-[300px_1fr]">
         {/* Left panel: drivers list */}
         <div className="card overflow-hidden p-0">
-          <div className="border-b border-card-border px-4 py-3 bg-orange-50">
-            <p className="font-medium text-orange-700 text-sm flex items-center gap-2">
+          <div className="border-b border-card-border px-4 py-3 bg-orange-50 dark:bg-orange-900/30">
+            <p className="font-medium text-orange-700 dark:text-orange-300 text-sm flex items-center gap-2">
               <Users className="h-4 w-4" />
               Drivers ({drivers.length})
             </p>
@@ -217,7 +217,7 @@ export default function DriverLedger() {
                   key={d.id}
                   onClick={() => setSelectedId(d.id === selectedId ? null : d.id)}
                   className={`cursor-pointer px-4 py-3 transition-colors ${
-                    selectedId === d.id ? 'bg-orange-50 border-l-4 border-l-orange-500' : 'hover:bg-surface border-l-4 border-l-transparent'
+                    selectedId === d.id ? 'bg-orange-50 dark:bg-orange-900/30 border-l-4 border-l-orange-500' : 'hover:bg-surface border-l-4 border-l-transparent'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
@@ -226,7 +226,7 @@ export default function DriverLedger() {
                       {d.phone && <p className="text-xs text-heading/50">{d.phone}</p>}
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-xs font-semibold ${Number(d.outstanding) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <p className={`text-xs font-semibold ${Number(d.outstanding) > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                         {formatINR(Number(d.outstanding))}
                       </p>
                       <p className="text-xs text-heading/50">{d.trip_count} trips</p>
@@ -262,17 +262,17 @@ export default function DriverLedger() {
             <>
               {/* Summary */}
               <div className="grid grid-cols-3 gap-4">
-                <div className="card p-4 text-center bg-blue-50 border-blue-200">
-                  <p className="text-xs text-blue-600 font-medium">Total Earned</p>
+                <div className="card p-4 text-center bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium">Total Earned</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalEarned)}</p>
                 </div>
-                <div className="card p-4 text-center bg-green-50 border-green-200">
-                  <p className="text-xs text-green-600 font-medium">Total Paid</p>
+                <div className="card p-4 text-center bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium">Total Paid</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalPaid)}</p>
                 </div>
-                <div className={`card p-4 text-center ${ledger.outstanding > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                  <p className={`text-xs font-medium ${ledger.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>Outstanding</p>
-                  <p className={`text-lg font-bold ${ledger.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatINR(ledger.outstanding)}</p>
+                <div className={`card p-4 text-center ${ledger.outstanding > 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800'}`}>
+                  <p className={`text-xs font-medium ${ledger.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>Outstanding</p>
+                  <p className={`text-lg font-bold ${ledger.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{formatINR(ledger.outstanding)}</p>
                 </div>
               </div>
 
@@ -329,7 +329,7 @@ export default function DriverLedger() {
                             {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
                           </select>
                           {cashHandlers.length === 0 && (
-                            <p className="mt-1 text-xs text-amber-600">Add one in Capital → Add Cash Handler.</p>
+                            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Add one in Capital → Add Cash Handler.</p>
                           )}
                         </div>
                       )}
@@ -351,8 +351,8 @@ export default function DriverLedger() {
 
               {/* Ledger Table */}
               <div className="card overflow-hidden p-0">
-                <div className="border-b border-card-border px-4 py-3 bg-orange-50">
-                  <p className="font-medium text-orange-700 text-sm">Ledger — {ledger.driver.name}</p>
+                <div className="border-b border-card-border px-4 py-3 bg-orange-50 dark:bg-orange-900/30">
+                  <p className="font-medium text-orange-700 dark:text-orange-300 text-sm">Ledger — {ledger.driver.name}</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -373,16 +373,16 @@ export default function DriverLedger() {
                       ) : (
                         ledger.ledger.map((entry, idx) => (
                           <tr key={`${entry.entry_type}-${entry.id}-${idx}`}
-                            className={`border-b border-card-border last:border-0 ${entry.entry_type === 'trip' ? 'hover:bg-blue-50/40' : 'hover:bg-green-50/40'} transition-colors`}
+                            className={`border-b border-card-border last:border-0 ${entry.entry_type === 'trip' ? 'hover:bg-blue-50 dark:hover:bg-blue-900/30/40' : 'hover:bg-green-50 dark:hover:bg-green-900/30/40'} transition-colors`}
                           >
                             <td className="px-4 py-2.5 whitespace-nowrap">{formatDate(entry.date)}</td>
                             <td className="px-4 py-2.5">
                               {entry.entry_type === 'trip' ? (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 px-2 py-0.5 text-xs font-medium text-blue-700">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-blue-100 dark:bg-blue-900/40 px-2 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">
                                   <TrendingUp className="h-3 w-3" /> Trip
                                 </span>
                               ) : (
-                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                                   <TrendingDown className="h-3 w-3" /> Payment
                                 </span>
                               )}
@@ -403,13 +403,13 @@ export default function DriverLedger() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 text-right font-medium text-blue-700">
+                            <td className="px-4 py-2.5 text-right font-medium text-blue-700 dark:text-blue-300">
                               {entry.entry_type === 'trip' ? formatINR(Number(entry.amount)) : '—'}
                             </td>
-                            <td className="px-4 py-2.5 text-right font-medium text-green-700">
+                            <td className="px-4 py-2.5 text-right font-medium text-green-700 dark:text-green-300">
                               {entry.entry_type === 'payment' ? formatINR(Number(entry.amount)) : '—'}
                             </td>
-                            <td className={`px-4 py-2.5 text-right font-semibold ${Number(entry.balance) > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                            <td className={`px-4 py-2.5 text-right font-semibold ${Number(entry.balance) > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                               {formatINR(Number(entry.balance))}
                             </td>
                             <td className="px-4 py-2.5">
@@ -417,7 +417,7 @@ export default function DriverLedger() {
                                 <button
                                   type="button"
                                   onClick={() => handleDeletePayment(entry.id)}
-                                  className="rounded p-1 text-red-500 hover:bg-red-50 transition-colors"
+                                  className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                                   title="Delete payment"
                                 >
                                   <Trash2 className="h-3.5 w-3.5" />

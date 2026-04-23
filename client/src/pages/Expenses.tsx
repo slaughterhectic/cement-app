@@ -21,13 +21,13 @@ function modeBadge(mode: string) {
   const m = String(mode).toLowerCase();
   if (m === 'cash') {
     return (
-      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+      <span className="inline-flex rounded-full bg-slate-100 dark:bg-slate-900/40 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
         cash
       </span>
     );
   }
   return (
-    <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+    <span className="inline-flex rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
       bank
     </span>
   );
@@ -37,7 +37,7 @@ function categoryBadge(category: string | null) {
   const c = category?.trim() || '—';
   if (c === '—') return c;
   return (
-    <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-900">
+    <span className="inline-flex rounded-full bg-amber-50 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-100">
       {c}
     </span>
   );
@@ -121,7 +121,7 @@ export default function Expenses() {
           hasPermission('delete_expenses') ? (
             <button
               type="button"
-              className="rounded p-1.5 text-red-600 hover:bg-red-50"
+              className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               aria-label="Delete"
               onClick={() => handleDelete(row.original)}
             >

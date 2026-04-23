@@ -83,26 +83,26 @@ export default function TruckDashboard() {
           label="Active Trucks"
           value={String(data.totalTrucks)}
           icon={Truck}
-          color="bg-orange-50 text-orange-600"
+          color="bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
         />
         <StatCard
           label="Total Trips"
           value={String(data.totalTrips)}
           sub="all time"
           icon={Route}
-          color="bg-orange-50 text-orange-600"
+          color="bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
         />
         <StatCard
           label="This Month Freight"
           value={formatINR(data.monthFreight)}
           icon={IndianRupee}
-          color="bg-orange-50 text-orange-600"
+          color="bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
         />
         <StatCard
           label="This Month Profit"
           value={formatINR(data.monthProfit)}
           icon={TrendingUp}
-          color={data.monthProfit >= 0 ? 'bg-green-50 text-green-600' : 'bg-red-50 text-red-600'}
+          color={data.monthProfit >= 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'}
         />
       </div>
 
@@ -113,13 +113,13 @@ export default function TruckDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-orange-50 text-left">
-                <th className="px-4 py-3 font-medium text-orange-700">Truck</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Trips</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Total Freight</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Variable Cost</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Fixed Expense</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Net Profit</th>
+              <tr className="border-b border-card-border bg-orange-50 dark:bg-orange-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Truck</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Trips</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Total Freight</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Variable Cost</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Fixed Expense</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Profit</th>
               </tr>
             </thead>
             <tbody>
@@ -129,13 +129,13 @@ export default function TruckDashboard() {
                 </tr>
               ) : (
                 data.perTruck.map((t) => (
-                  <tr key={t.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 transition-colors">
-                    <td className="px-4 py-3 font-medium text-orange-600">{t.truck_number}</td>
+                  <tr key={t.id} className="border-b border-card-border last:border-0 hover:bg-orange-50 dark:hover:bg-orange-900/30/40 transition-colors">
+                    <td className="px-4 py-3 font-medium text-orange-600 dark:text-orange-400">{t.truck_number}</td>
                     <td className="px-4 py-3 text-right">{t.trip_count}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(t.total_freight))}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(t.total_variable_cost))}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(t.total_fixed_expense))}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${Number(t.net_profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 py-3 text-right font-semibold ${Number(t.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(Number(t.net_profit))}
                     </td>
                   </tr>
@@ -144,13 +144,13 @@ export default function TruckDashboard() {
             </tbody>
             {data.perTruck.length > 0 && (
               <tfoot>
-                <tr className="bg-orange-50 font-semibold border-t-2 border-orange-200">
-                  <td className="px-4 py-3 text-orange-700">Total</td>
+                <tr className="bg-orange-50 dark:bg-orange-900/30 font-semibold border-t-2 border-orange-200 dark:border-orange-800">
+                  <td className="px-4 py-3 text-orange-700 dark:text-orange-300">Total</td>
                   <td className="px-4 py-3 text-right">{data.perTruck.reduce((s, t) => s + Number(t.trip_count), 0)}</td>
                   <td className="px-4 py-3 text-right">{formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_freight), 0))}</td>
                   <td className="px-4 py-3 text-right">{formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_variable_cost), 0))}</td>
                   <td className="px-4 py-3 text-right">{formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_fixed_expense), 0))}</td>
-                  <td className={`px-4 py-3 text-right ${data.perTruck.reduce((s, t) => s + Number(t.net_profit), 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <td className={`px-4 py-3 text-right ${data.perTruck.reduce((s, t) => s + Number(t.net_profit), 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatINR(data.perTruck.reduce((s, t) => s + Number(t.net_profit), 0))}
                   </td>
                 </tr>

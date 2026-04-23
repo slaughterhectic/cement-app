@@ -206,7 +206,7 @@ export default function UserManagement() {
                       <button
                         type="button"
                         onClick={() => { setResetUserId(u.id); setResetPw(''); }}
-                        className="rounded p-1.5 text-heading/70 hover:bg-amber-50 hover:text-amber-700"
+                        className="rounded p-1.5 text-heading/70 hover:bg-amber-50 dark:hover:bg-amber-900/30 hover:text-amber-700 dark:text-amber-300"
                         title="Reset password"
                       >
                         <KeyRound className="h-4 w-4" />
@@ -225,7 +225,7 @@ export default function UserManagement() {
                         <button
                           type="button"
                           onClick={() => handleDeleteUser(u.id, u.display_name)}
-                          className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                          className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
                           title="Delete user"
                         >
                           <Trash2 className="h-4 w-4" />
@@ -327,7 +327,7 @@ export default function UserManagement() {
                 </p>
               )}
               {!resetUser.email && (
-                <p className="text-xs text-amber-600">
+                <p className="text-xs text-amber-600 dark:text-amber-400">
                   No email set for this user — no notification will be sent.
                 </p>
               )}
@@ -363,7 +363,7 @@ export default function UserManagement() {
                           type="checkbox"
                           checked={checked}
                           onChange={() => handleTogglePermission(permUser.id, perm.key)}
-                          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+                          className="h-4 w-4 rounded border-card-border text-brand-600 focus:ring-brand-500"
                         />
                       </label>
                     );

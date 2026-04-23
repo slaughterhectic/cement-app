@@ -282,7 +282,7 @@ export default function TransportTrips() {
           <button
             type="button"
             onClick={() => { setFilterOwner(''); setFilterMonth(''); }}
-            className="text-sm text-indigo-600 hover:underline font-medium"
+            className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
           >
             Clear filters
           </button>
@@ -292,28 +292,28 @@ export default function TransportTrips() {
       {/* Summary Strip */}
       {rows.length > 0 && (
         <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">
-          <div className="card p-3 text-center border-indigo-200 bg-indigo-50">
-            <p className="text-xs text-indigo-600 font-medium">Total Qty</p>
+          <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Total Qty</p>
             <p className="text-lg font-bold text-heading">{totals.qty.toFixed(2)} T</p>
           </div>
-          <div className="card p-3 text-center border-indigo-200 bg-indigo-50">
-            <p className="text-xs text-indigo-600 font-medium">ACC Amount</p>
+          <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">ACC Amount</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.acc_amount)}</p>
           </div>
-          <div className="card p-3 text-center border-amber-200 bg-amber-50">
-            <p className="text-xs text-amber-600 font-medium">Commission</p>
+          <div className="card p-3 text-center border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30">
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Commission</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.commission_amount)}</p>
           </div>
-          <div className="card p-3 text-center border-red-200 bg-red-50">
-            <p className="text-xs text-red-600 font-medium">Diesel Adv</p>
+          <div className="card p-3 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium">Diesel Adv</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.diesel_advance)}</p>
           </div>
-          <div className="card p-3 text-center border-red-200 bg-red-50">
-            <p className="text-xs text-red-600 font-medium">Cash Adv</p>
+          <div className="card p-3 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium">Cash Adv</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.cash_advance)}</p>
           </div>
-          <div className="card p-3 text-center border-green-200 bg-green-50">
-            <p className="text-xs text-green-600 font-medium">Final Pay</p>
+          <div className="card p-3 text-center border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30">
+            <p className="text-xs text-green-600 dark:text-green-400 font-medium">Final Pay</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.final_payment)}</p>
           </div>
         </div>
@@ -324,21 +324,21 @@ export default function TransportTrips() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-indigo-50 text-left">
-                <th className="px-3 py-3 font-medium text-indigo-700">Date</th>
-                <th className="px-3 py-3 font-medium text-indigo-700">Builty#</th>
-                <th className="px-3 py-3 font-medium text-indigo-700">Truck</th>
-                <th className="px-3 py-3 font-medium text-indigo-700">Party</th>
-                <th className="px-3 py-3 font-medium text-indigo-700">DCH</th>
-                <th className="px-3 py-3 font-medium text-indigo-700">Material</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Qty (T)</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">ACC Amt</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Handling</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Commission</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Bilty</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Advances</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Final Pay</th>
-                <th className="px-3 py-3 font-medium text-indigo-700">Actions</th>
+              <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Date</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Builty#</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Truck</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Party</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">DCH</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Material</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Qty (T)</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">ACC Amt</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Handling</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Commission</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Bilty</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Advances</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final Pay</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -348,41 +348,41 @@ export default function TransportTrips() {
                 <tr>
                   <td colSpan={14} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No trips found</p>
-                    <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Log first trip</button>
+                    <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Log first trip</button>
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors">
                     <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-3 py-2.5 text-heading/70 text-xs">{row.builty_number || '—'}</td>
-                    <td className="px-3 py-2.5 font-medium text-indigo-600">{row.truck_number}</td>
+                    <td className="px-3 py-2.5 font-medium text-indigo-600 dark:text-indigo-400">{row.truck_number}</td>
                     <td className="px-3 py-2.5 text-heading/80">{row.party_name}</td>
                     <td className="px-3 py-2.5">
                       {row.dch_type ? (
-                        <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{row.dch_type}</span>
+                        <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{row.dch_type}</span>
                       ) : '—'}
                     </td>
                     <td className="px-3 py-2.5">
                       {row.material_type ? (
-                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">{row.material_type}</span>
+                        <span className="rounded-full bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">{row.material_type}</span>
                       ) : '—'}
                     </td>
                     <td className="px-3 py-2.5 text-right">{Number(row.qty).toFixed(2)}</td>
                     <td className="px-3 py-2.5 text-right font-medium">{formatINR(Number(row.acc_amount))}</td>
-                    <td className="px-3 py-2.5 text-right text-green-600">{formatINR(Number(row.handling_charge || 0))}</td>
-                    <td className="px-3 py-2.5 text-right text-amber-600">{formatINR(Number(row.commission_amount))}</td>
-                    <td className="px-3 py-2.5 text-right text-amber-600">{formatINR(Number(row.builty_charge))}</td>
-                    <td className="px-3 py-2.5 text-right text-red-600 text-xs">
+                    <td className="px-3 py-2.5 text-right text-green-600 dark:text-green-400">{formatINR(Number(row.handling_charge || 0))}</td>
+                    <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.commission_amount))}</td>
+                    <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.builty_charge))}</td>
+                    <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400 text-xs">
                       D: {formatINR(Number(row.diesel_advance))} / C: {formatINR(Number(row.cash_advance))}
                     </td>
-                    <td className="px-3 py-2.5 text-right font-semibold text-green-600">{formatINR(Number(row.final_payment))}</td>
+                    <td className="px-3 py-2.5 text-right font-semibold text-green-600 dark:text-green-400">{formatINR(Number(row.final_payment))}</td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
                           onClick={() => openEdit(row)}
-                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
@@ -391,7 +391,7 @@ export default function TransportTrips() {
                           <button
                             type="button"
                             onClick={() => handleDelete(row)}
-                            className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                            className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                             title="Delete"
                           >
                             <Trash2 className="h-4 w-4" />
@@ -489,9 +489,9 @@ export default function TransportTrips() {
                         <input type="number" min="0" max="100" step="0.01" className="input-field" value={form.commission_pct} onChange={f('commission_pct')} placeholder="6.29" required />
                       </div>
                       <div className="flex items-end">
-                        <div className="rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-2 text-xs w-full">
+                        <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs w-full">
                           <p className="text-heading/60">ACC Amount</p>
-                          <p className="font-bold text-indigo-700 text-sm">{formatINR(live.acc_amount)}</p>
+                          <p className="font-bold text-indigo-700 dark:text-indigo-300 text-sm">{formatINR(live.acc_amount)}</p>
                         </div>
                       </div>
                     </div>

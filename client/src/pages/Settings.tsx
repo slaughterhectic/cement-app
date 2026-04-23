@@ -105,9 +105,9 @@ function BrandsPanel() {
   };
 
   const typeBadge: Record<Brand['type'], string> = {
-    OPC: 'bg-blue-100 text-blue-700',
-    PPC: 'bg-green-100 text-green-700',
-    DAMAGE: 'bg-red-100 text-red-700',
+    OPC: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+    PPC: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300',
+    DAMAGE: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300',
     OTHER: 'bg-surface text-heading/80',
   };
 
@@ -149,7 +149,7 @@ function BrandsPanel() {
                   <td className="px-4 py-3 text-heading/70">{b.manufacturer || '—'}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-heading/80">{b.stock ?? 0}</td>
                   <td className="px-4 py-3">
-                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${b.is_active ? 'bg-green-100 text-green-700' : 'bg-surface text-heading/60'}`}>
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${b.is_active ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' : 'bg-surface text-heading/60'}`}>
                       {b.is_active ? 'Active' : 'Inactive'}
                     </span>
                   </td>
@@ -158,10 +158,10 @@ function BrandsPanel() {
                       <button type="button" onClick={() => openEdit(b)} className="rounded p-1.5 text-heading/60 hover:bg-card-border/50" title="Edit">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button type="button" onClick={() => handleToggle(b)} className={`rounded p-1.5 hover:bg-card-border/50 ${b.is_active ? 'text-green-600' : 'text-heading/50'}`} title={b.is_active ? 'Deactivate' : 'Activate'}>
+                      <button type="button" onClick={() => handleToggle(b)} className={`rounded p-1.5 hover:bg-card-border/50 ${b.is_active ? 'text-green-600 dark:text-green-400' : 'text-heading/50'}`} title={b.is_active ? 'Deactivate' : 'Activate'}>
                         {b.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                       </button>
-                      <button type="button" onClick={() => handleDelete(b)} className="rounded p-1.5 text-red-500 hover:bg-red-50" title="Delete">
+                      <button type="button" onClick={() => handleDelete(b)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -302,7 +302,7 @@ function GodownsPanel() {
                       <button type="button" onClick={() => openEdit(g)} className="rounded p-1.5 text-heading/60 hover:bg-card-border/50" title="Edit">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button type="button" onClick={() => handleDelete(g)} className="rounded p-1.5 text-red-500 hover:bg-red-50" title="Delete">
+                      <button type="button" onClick={() => handleDelete(g)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -445,7 +445,7 @@ function BanksPanel() {
                       <button type="button" onClick={() => openEdit(b)} className="rounded p-1.5 text-heading/60 hover:bg-card-border/50" title="Edit">
                         <Pencil className="h-4 w-4" />
                       </button>
-                      <button type="button" onClick={() => handleDelete(b)} className="rounded p-1.5 text-red-500 hover:bg-red-50" title="Remove">
+                      <button type="button" onClick={() => handleDelete(b)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" title="Remove">
                         <Trash2 className="h-4 w-4" />
                       </button>
                     </div>
@@ -576,7 +576,7 @@ function ExpenseCategoriesPanel() {
               {categories.map((c) => (
                 <tr key={c.id} className="hover:bg-surface/50">
                   <td className="px-4 py-3 font-medium text-heading">
-                    <span className="inline-flex rounded-full bg-amber-50 px-2.5 py-0.5 text-xs font-medium text-amber-900">
+                    <span className="inline-flex rounded-full bg-amber-50 dark:bg-amber-900/30 px-2.5 py-0.5 text-xs font-medium text-amber-900 dark:text-amber-100">
                       {c.name}
                     </span>
                   </td>
@@ -584,7 +584,7 @@ function ExpenseCategoriesPanel() {
                     <button
                       type="button"
                       onClick={() => handleDelete(c.id, c.name)}
-                      className="rounded p-1.5 text-red-500 hover:bg-red-50"
+                      className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
                       title="Remove"
                     >
                       <Trash2 className="h-4 w-4" />
@@ -688,7 +688,7 @@ function TransportRatesPanel() {
     <div className="space-y-4">
       <div className="card">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
             <Truck className="h-5 w-5" />
           </div>
           <div className="flex-1">
@@ -784,7 +784,7 @@ function BackupPanel() {
 
       <div className="card">
         <div className="flex items-start gap-4">
-          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-600">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
             <HardDrive className="h-5 w-5" />
           </div>
           <div className="flex-1">

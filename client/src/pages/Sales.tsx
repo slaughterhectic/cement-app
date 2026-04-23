@@ -34,9 +34,9 @@ export type SaleRow = {
 };
 
 function marginClass(marginPerBag: number) {
-  if (marginPerBag > 20) return 'font-medium text-green-600';
-  if (marginPerBag >= 10) return 'font-medium text-amber-600';
-  return 'font-medium text-red-600';
+  if (marginPerBag > 20) return 'font-medium text-green-600 dark:text-green-400';
+  if (marginPerBag >= 10) return 'font-medium text-amber-600 dark:text-amber-400';
+  return 'font-medium text-red-600 dark:text-red-400';
 }
 
 export default function Sales() {
@@ -282,7 +282,7 @@ export default function Sales() {
         cell: ({ getValue }) => {
           const v = getValue() as string | null;
           return v ? (
-            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-semibold text-emerald-800">
+            <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2 py-0.5 text-xs font-semibold text-emerald-800 dark:text-emerald-200">
               ✓ {v}
             </span>
           ) : <span className="text-heading/50 text-xs">Not billed</span>;
@@ -301,7 +301,7 @@ export default function Sales() {
               onClick={() => handleToggleReceived(row.original)}
               aria-label={isReceived ? 'Mark as not received' : 'Mark as received'}
               className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full border-2 border-transparent transition-colors duration-200 focus:outline-none ${
-                isReceived ? 'bg-emerald-500' : 'bg-gray-200'
+                isReceived ? 'bg-emerald-500' : 'bg-card-border/60'
               }`}
             >
               <span
@@ -331,7 +331,7 @@ export default function Sales() {
             {hasPermission('delete_sales') && (
               <button
                 type="button"
-                className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
                 aria-label="Delete"
                 onClick={() => handleDelete(row.original)}
               >
@@ -449,7 +449,7 @@ export default function Sales() {
           <button
             type="button"
             onClick={clearFilters}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
           >
             Clear
           </button>
@@ -473,7 +473,7 @@ export default function Sales() {
         }}
         exportFileName="sales"
         getRowClassName={(row) =>
-          row.invoice_number ? 'bg-emerald-50' : undefined
+          row.invoice_number ? 'bg-emerald-50 dark:bg-emerald-900/30' : undefined
         }
         canDelete={hasPermission('delete_sales')}
         canDownload={hasPermission('download')}

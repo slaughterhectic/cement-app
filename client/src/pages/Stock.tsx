@@ -99,19 +99,19 @@ function StockSummarySkeleton() {
           aria-label="Loading"
         >
           <div className="flex justify-between gap-2">
-            <div className="h-6 w-32 animate-pulse rounded-md bg-gray-200" />
-            <div className="h-5 w-12 animate-pulse rounded-md bg-gray-200" />
+            <div className="h-6 w-32 animate-pulse rounded-md bg-card-border/60" />
+            <div className="h-5 w-12 animate-pulse rounded-md bg-card-border/60" />
           </div>
-          <div className="mt-4 h-9 w-20 animate-pulse rounded-md bg-gray-200" />
-          <div className="mt-1 h-4 w-28 animate-pulse rounded bg-gray-200" />
+          <div className="mt-4 h-9 w-20 animate-pulse rounded-md bg-card-border/60" />
+          <div className="mt-1 h-4 w-28 animate-pulse rounded bg-card-border/60" />
           <div className="mt-4 space-y-2 border-t border-card-border pt-4">
             <div className="flex justify-between gap-2">
-              <div className="h-4 w-12 animate-pulse rounded bg-gray-200" />
-              <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-12 animate-pulse rounded bg-card-border/60" />
+              <div className="h-4 w-24 animate-pulse rounded bg-card-border/60" />
             </div>
             <div className="flex justify-between gap-2">
-              <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-              <div className="h-4 w-20 animate-pulse rounded bg-gray-200" />
+              <div className="h-4 w-24 animate-pulse rounded bg-card-border/60" />
+              <div className="h-4 w-20 animate-pulse rounded bg-card-border/60" />
             </div>
           </div>
         </div>
@@ -130,12 +130,12 @@ function GodownSectionSkeleton() {
           role="status"
           aria-label="Loading"
         >
-          <div className="h-5 w-40 animate-pulse rounded-md bg-gray-200" />
-          <div className="mt-2 h-4 w-56 animate-pulse rounded bg-gray-200" />
+          <div className="h-5 w-40 animate-pulse rounded-md bg-card-border/60" />
+          <div className="mt-2 h-4 w-56 animate-pulse rounded bg-card-border/60" />
           <div className="mt-4 space-y-2">
-            <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
-            <div className="h-4 w-full animate-pulse rounded bg-gray-200" />
-            <div className="h-4 w-3/4 animate-pulse rounded bg-gray-200" />
+            <div className="h-4 w-full animate-pulse rounded bg-card-border/60" />
+            <div className="h-4 w-full animate-pulse rounded bg-card-border/60" />
+            <div className="h-4 w-3/4 animate-pulse rounded bg-card-border/60" />
           </div>
         </div>
       ))}
@@ -342,7 +342,7 @@ export default function Stock() {
           return (
             <span
               className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${
-                isPurchase ? 'bg-blue-100 text-blue-800' : 'bg-emerald-100 text-emerald-800'
+                isPurchase ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200' : 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200'
               }`}
             >
               {t}
@@ -356,7 +356,7 @@ export default function Stock() {
         header: 'Bags In',
         cell: ({ getValue }) => {
           const n = Number(getValue() ?? 0);
-          return <span className="font-medium text-emerald-600 tabular-nums">{n || '—'}</span>;
+          return <span className="font-medium text-emerald-600 dark:text-emerald-400 tabular-nums">{n || '—'}</span>;
         },
       },
       {
@@ -364,7 +364,7 @@ export default function Stock() {
         header: 'Bags Out',
         cell: ({ getValue }) => {
           const n = Number(getValue() ?? 0);
-          return <span className="font-medium text-red-600 tabular-nums">{n || '—'}</span>;
+          return <span className="font-medium text-red-600 dark:text-red-400 tabular-nums">{n || '—'}</span>;
         },
       },
       {
@@ -561,7 +561,7 @@ export default function Stock() {
                         </div>
                         <div className="flex justify-between border-t border-card-border pt-1.5">
                           <span className="font-semibold">Profit</span>
-                          <span className={`font-bold ${p.profit >= 0 ? 'text-emerald-600' : 'text-red-600'}`}>
+                          <span className={`font-bold ${p.profit >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
                             {p.profit >= 0 ? '' : '-'}{formatINR(Math.abs(p.profit))}
                           </span>
                         </div>
@@ -718,7 +718,7 @@ export default function Stock() {
                             </button>
                             <button
                               type="button"
-                              className="rounded p-1 text-red-500 hover:bg-red-50"
+                              className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
                               title="Delete"
                               onClick={() => handleDeleteOpening(r)}
                             >

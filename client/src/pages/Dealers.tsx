@@ -155,7 +155,7 @@ export default function Dealers() {
           <button
             type="button"
             onClick={() => navigate(`/dealers/${row.original.id}`)}
-            className="font-medium text-blue-600 hover:underline text-left"
+            className="font-medium text-blue-600 dark:text-blue-400 hover:underline text-left"
           >
             {row.original.name}
           </button>
@@ -169,7 +169,7 @@ export default function Dealers() {
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
           return (
-            <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-800">
+            <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-2.5 py-0.5 text-xs font-medium text-blue-800 dark:text-blue-200">
               {n}
             </span>
           );
@@ -181,7 +181,7 @@ export default function Dealers() {
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
           if (n === 0) return <span className="text-heading/50">—</span>;
-          return <span className="text-emerald-700 font-medium">{formatINR(n)}</span>;
+          return <span className="text-emerald-700 dark:text-emerald-300 font-medium">{formatINR(n)}</span>;
         },
       },
       {
@@ -198,8 +198,8 @@ export default function Dealers() {
         header: 'Outstanding',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
-          if (n === 0) return <span className="font-medium text-emerald-600">Settled</span>;
-          return <span className="font-semibold text-red-600">{formatINR(n)}</span>;
+          if (n === 0) return <span className="font-medium text-emerald-600 dark:text-emerald-400">Settled</span>;
+          return <span className="font-semibold text-red-600 dark:text-red-400">{formatINR(n)}</span>;
         },
       },
       {
@@ -220,7 +220,7 @@ export default function Dealers() {
             <button
               type="button"
               onClick={() => handleDelete(row.original)}
-              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+              className="inline-flex items-center gap-1 rounded-md border border-red-200 dark:border-red-800 bg-card px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               aria-label={`Delete ${row.original.name}`}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -237,12 +237,12 @@ export default function Dealers() {
       <div>
         <label className="mb-1 block text-sm font-medium text-heading">Name *</label>
         <input className="input-field" {...register('name')} />
-        {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
+        {errors.name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name.message}</p>}
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-heading">Phone</label>
         <input className="input-field" maxLength={10} placeholder="10 digits" {...register('phone')} />
-        {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
+        {errors.phone && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.phone.message}</p>}
       </div>
       <div>
         <label className="mb-1 block text-sm font-medium text-heading">Location</label>
@@ -273,7 +273,7 @@ export default function Dealers() {
           {obType === 'dr' ? 'Dr — They owe us (debit)' : 'Cr — We owe them (credit)'}
         </p>
         {errors.opening_balance && (
-          <p className="mt-1 text-xs text-red-600">{errors.opening_balance.message}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.opening_balance.message}</p>
         )}
       </div>
     </div>
@@ -283,7 +283,7 @@ export default function Dealers() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 text-blue-600">
+          <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-blue-100 dark:bg-blue-900/40 text-blue-600 dark:text-blue-400">
             <Store className="h-5 w-5" />
           </div>
           <h1 className="text-2xl font-bold text-heading">Dealers</h1>

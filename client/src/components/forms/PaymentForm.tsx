@@ -238,7 +238,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               onClick={() => setDirection('receive')}
               className={`rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-colors text-left ${
                 !isPay
-                  ? 'border-outstanding bg-red-50 text-outstanding'
+                  ? 'border-outstanding bg-red-50 dark:bg-red-900/30 text-outstanding'
                   : 'border-card-border bg-card text-heading/60 hover:bg-surface'
               }`}
             >
@@ -252,7 +252,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               onClick={() => setDirection('pay')}
               className={`rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-colors text-left ${
                 isPay
-                  ? 'border-orange-500 bg-orange-50 text-orange-700'
+                  ? 'border-orange-500 bg-orange-50 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300'
                   : 'border-card-border bg-card text-heading/60 hover:bg-surface'
               }`}
             >
@@ -267,7 +267,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Date *</label>
           <input type="date" className="input-field w-full" {...register('date')} />
-          {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
+          {errors.date && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.date.message}</p>}
         </div>
 
         <div className="relative" ref={partyWrapRef}>
@@ -285,7 +285,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             placeholder={loadingParties ? 'Loading…' : 'Search party…'}
             autoComplete="off"
           />
-          {errors.party_id && <p className="mt-1 text-xs text-red-600">{errors.party_id.message}</p>}
+          {errors.party_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.party_id.message}</p>}
           {partyMenuOpen && filteredParties.length > 0 && (
             <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-md border border-card-border bg-card py-1 shadow-lg">
               {filteredParties.map((p) => (
@@ -308,11 +308,11 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-medium truncate">{p.name}</span>
                       <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize ${
-                        p.type === 'supplier' ? 'bg-indigo-100 text-indigo-700' : 'bg-surface text-heading/70'
+                        p.type === 'supplier' ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' : 'bg-surface text-heading/70'
                       }`}>{p.type ?? 'other'}</span>
                     </div>
                     {p.outstanding > 0 && (
-                      <span className={`shrink-0 text-xs font-semibold ${p.type === 'supplier' ? 'text-orange-600' : 'text-outstanding'}`}>
+                      <span className={`shrink-0 text-xs font-semibold ${p.type === 'supplier' ? 'text-orange-600 dark:text-orange-400' : 'text-outstanding'}`}>
                         {p.type === 'supplier' ? 'We owe: ' : 'Due: '}{formatINR(p.outstanding)}
                       </span>
                     )}
@@ -332,7 +332,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Amount *</label>
           {selectedParty != null && outstanding > 0 && (
-            <p className={`mb-1 text-sm font-medium ${selectedParty.type === 'supplier' ? 'text-orange-600' : 'text-outstanding'}`}>
+            <p className={`mb-1 text-sm font-medium ${selectedParty.type === 'supplier' ? 'text-orange-600 dark:text-orange-400' : 'text-outstanding'}`}>
               {selectedParty.type === 'supplier' ? 'We owe them' : 'They owe us'}: {formatINR(outstanding)}
             </p>
           )}
@@ -343,7 +343,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             className="input-field w-full"
             {...register('amount')}
           />
-          {amountErrorMsg && <p className="mt-1 text-xs text-red-600">{amountErrorMsg}</p>}
+          {amountErrorMsg && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{amountErrorMsg}</p>}
         </div>
 
         <div>
@@ -385,7 +385,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
                 : <option disabled value="">No banks configured — add in Settings → Banks</option>
               }
             </select>
-            {errors.bank_name && <p className="mt-1 text-xs text-red-600">{errors.bank_name.message}</p>}
+            {errors.bank_name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.bank_name.message}</p>}
           </div>
         )}
 
@@ -398,9 +398,9 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
                 <option key={h} value={h}>{h}</option>
               ))}
             </select>
-            {errors.cash_handler && <p className="mt-1 text-xs text-red-600">{errors.cash_handler.message}</p>}
+            {errors.cash_handler && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.cash_handler.message}</p>}
             {cashHandlers.length === 0 && (
-              <p className="mt-1 text-xs text-amber-600">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
             )}
             <p className="mt-1 text-xs text-heading/60">This cash movement will be recorded against the handler's cash book automatically.</p>
           </div>

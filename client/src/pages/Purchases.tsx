@@ -260,7 +260,7 @@ export default function Purchases() {
             {hasPermission('delete_purchases') && (
               <button
                 type="button"
-                className="rounded p-1.5 text-red-600 hover:bg-red-50"
+                className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
                 aria-label="Delete"
                 onClick={() => handleDelete(row.original)}
               >
@@ -355,7 +355,7 @@ export default function Purchases() {
           <button
             type="button"
             onClick={clearFilters}
-            className="rounded-lg px-4 py-2 text-sm font-medium text-red-600 hover:bg-red-50"
+            className="rounded-lg px-4 py-2 text-sm font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
           >
             Clear
           </button>
@@ -379,7 +379,7 @@ export default function Purchases() {
         }}
         exportFileName="purchases"
         getRowClassName={(row) =>
-          row.invoice_number ? 'bg-emerald-50' : undefined
+          row.invoice_number ? 'bg-emerald-50 dark:bg-emerald-900/30' : undefined
         }
         canDelete={hasPermission('delete_purchases')}
         canDownload={hasPermission('download')}

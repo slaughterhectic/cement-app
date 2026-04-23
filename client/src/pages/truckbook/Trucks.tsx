@@ -144,16 +144,16 @@ export default function Trucks() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-orange-50 text-left">
-                <th className="px-4 py-3 font-medium text-orange-700">Truck No.</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Purchase Date</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Total Value</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Down Payment</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Financed</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">EMI</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Trips</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Lender</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Actions</th>
+              <tr className="border-b border-card-border bg-orange-50 dark:bg-orange-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Truck No.</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Purchase Date</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Total Value</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Down Payment</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Financed</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">EMI</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Trips</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Lender</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -163,13 +163,13 @@ export default function Trucks() {
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No trucks added yet</p>
-                    <button type="button" onClick={openAdd} className="text-orange-600 hover:underline text-sm font-medium">Add your first truck</button>
+                    <button type="button" onClick={openAdd} className="text-orange-600 dark:text-orange-400 hover:underline text-sm font-medium">Add your first truck</button>
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 transition-colors">
-                    <td className="px-4 py-3 font-semibold text-orange-600">{row.truck_number}</td>
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50 dark:hover:bg-orange-900/30/40 transition-colors">
+                    <td className="px-4 py-3 font-semibold text-orange-600 dark:text-orange-400">{row.truck_number}</td>
                     <td className="px-4 py-3 text-heading/70">{row.purchase_date ? formatDate(row.purchase_date) : '—'}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(row.total_value))}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(row.down_payment))}</td>
@@ -178,18 +178,18 @@ export default function Trucks() {
                       {row.emi_amount ? `${formatINR(Number(row.emi_amount))} × ${row.emi_tenure || '?'} mo` : '—'}
                     </td>
                     <td className="px-4 py-3 text-right">
-                      <span className="inline-flex items-center justify-center rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+                      <span className="inline-flex items-center justify-center rounded-full bg-orange-100 dark:bg-orange-900/40 px-2.5 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-300">
                         {row.trip_count}
                       </span>
                     </td>
                     <td className="px-4 py-3 text-heading/70">{row.lender_name || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 hover:text-orange-600 transition-colors" title="Edit">
+                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-600 dark:text-orange-400 transition-colors" title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
                         {isAdmin() && (
-                          <button type="button" onClick={() => handleDelete(row)} className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+                          <button type="button" onClick={() => handleDelete(row)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}

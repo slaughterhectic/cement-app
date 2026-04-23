@@ -172,7 +172,7 @@ export default function TruckExpenses() {
         </div>
         {(filterTruck || filterMonth) && (
           <button type="button" onClick={() => { setFilterTruck(''); setFilterMonth(''); }}
-            className="text-sm text-orange-600 hover:underline font-medium">
+            className="text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium">
             Clear filters
           </button>
         )}
@@ -186,8 +186,8 @@ export default function TruckExpenses() {
             {Object.entries(categoryTotals)
               .sort((a, b) => b[1] - a[1])
               .map(([cat, total]) => (
-                <div key={cat} className="rounded-lg border border-orange-200 bg-orange-50 px-3 py-2 text-center">
-                  <p className="text-xs text-orange-600 font-medium">{cat}</p>
+                <div key={cat} className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30 px-3 py-2 text-center">
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium">{cat}</p>
                   <p className="text-sm font-bold text-heading">{formatINR(total)}</p>
                 </div>
               ))}
@@ -204,15 +204,15 @@ export default function TruckExpenses() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-orange-50 text-left">
-                <th className="px-4 py-3 font-medium text-orange-700">Date</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Truck</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Category</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Description</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Amount</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Mode</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Bank / Handler</th>
-                {isAdmin() && <th className="px-4 py-3 font-medium text-orange-700">Actions</th>}
+              <tr className="border-b border-card-border bg-orange-50 dark:bg-orange-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Date</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Truck</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Category</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Description</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Amount</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Mode</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Bank / Handler</th>
+                {isAdmin() && <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Actions</th>}
               </tr>
             </thead>
             <tbody>
@@ -223,17 +223,17 @@ export default function TruckExpenses() {
                   <td colSpan={8} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No expenses found</p>
                     <button type="button" onClick={() => setModalOpen(true)}
-                      className="text-orange-600 hover:underline text-sm font-medium">Add first expense</button>
+                      className="text-orange-600 dark:text-orange-400 hover:underline text-sm font-medium">Add first expense</button>
                   </td>
                 </tr>
               ) : (
                 filteredRows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50 dark:hover:bg-orange-900/30/40 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.date)}</td>
-                    <td className="px-4 py-3 font-medium text-orange-600">{row.truck_number || '—'}</td>
+                    <td className="px-4 py-3 font-medium text-orange-600 dark:text-orange-400">{row.truck_number || '—'}</td>
                     <td className="px-4 py-3">
                       {row.category ? (
-                        <span className="inline-flex rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-medium text-orange-700">
+                        <span className="inline-flex rounded-full bg-orange-100 dark:bg-orange-900/40 px-2.5 py-0.5 text-xs font-medium text-orange-700 dark:text-orange-300">
                           {row.category}
                         </span>
                       ) : '—'}
@@ -242,7 +242,7 @@ export default function TruckExpenses() {
                     <td className="px-4 py-3 text-right font-semibold">{formatINR(Number(row.amount))}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
-                        row.mode === 'cash' ? 'bg-slate-100 text-slate-700' : 'bg-emerald-50 text-emerald-800'
+                        row.mode === 'cash' ? 'bg-slate-100 dark:bg-slate-900/40 text-slate-700 dark:text-slate-300' : 'bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200'
                       }`}>
                         {row.mode}
                       </span>
@@ -253,7 +253,7 @@ export default function TruckExpenses() {
                     {isAdmin() && (
                       <td className="px-4 py-3">
                         <button type="button" onClick={() => handleDelete(row.id)}
-                          className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+                          className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Delete">
                           <Trash2 className="h-4 w-4" />
                         </button>
                       </td>
@@ -264,9 +264,9 @@ export default function TruckExpenses() {
             </tbody>
             {filteredRows.length > 0 && (
               <tfoot>
-                <tr className="border-t-2 border-orange-200 bg-orange-50 font-semibold">
-                  <td colSpan={4} className="px-4 py-3 text-orange-700">Total</td>
-                  <td className="px-4 py-3 text-right text-orange-700">{formatINR(grandTotal)}</td>
+                <tr className="border-t-2 border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30 font-semibold">
+                  <td colSpan={4} className="px-4 py-3 text-orange-700 dark:text-orange-300">Total</td>
+                  <td className="px-4 py-3 text-right text-orange-700 dark:text-orange-300">{formatINR(grandTotal)}</td>
                   <td colSpan={isAdmin() ? 3 : 2} />
                 </tr>
               </tfoot>
@@ -333,7 +333,7 @@ export default function TruckExpenses() {
                       {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
                     </select>
                     {banks.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1">No banks configured — add them in Settings</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">No banks configured — add them in Settings</p>
                     )}
                   </div>
                 )}
@@ -345,7 +345,7 @@ export default function TruckExpenses() {
                       {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
                     </select>
                     {cashHandlers.length === 0 && (
-                      <p className="text-xs text-amber-600 mt-1">Add one in Capital → Add Cash Handler.</p>
+                      <p className="text-xs text-amber-600 dark:text-amber-400 mt-1">Add one in Capital → Add Cash Handler.</p>
                     )}
                   </div>
                 )}

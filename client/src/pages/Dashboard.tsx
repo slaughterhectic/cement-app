@@ -107,7 +107,7 @@ function BrandDonutChart({ data, title }: { data: { name: string; bags: number }
                 <span className="min-w-0 flex-1 truncate font-medium text-heading/80">{d.name}</span>
                 <span className="tabular-nums text-heading/60">{formatNumber(d.bags)}</span>
                 <div className="w-16 shrink-0">
-                  <div className="h-1.5 rounded-full bg-gray-200">
+                  <div className="h-1.5 rounded-full bg-card-border/60">
                     <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
                   </div>
                 </div>
@@ -184,9 +184,9 @@ function OutstandingBreakdownModal({
 
   const TypeBadge = ({ t }: { t: string }) => {
     const colors: Record<string, string> = {
-      dealer: 'bg-blue-100 text-blue-700',
-      contractor: 'bg-purple-100 text-purple-700',
-      supplier: 'bg-amber-100 text-amber-700',
+      dealer: 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300',
+      contractor: 'bg-purple-100 dark:bg-purple-900/40 text-purple-700 dark:text-purple-300',
+      supplier: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300',
       other: 'bg-surface text-heading/70',
     };
     return (
@@ -206,8 +206,8 @@ function OutstandingBreakdownModal({
       <td className="px-3 py-2.5"><TypeBadge t={r.type} /></td>
       <td className="px-3 py-2.5 text-heading/60 max-w-[120px] truncate">{r.location || '—'}</td>
       <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${
-        r.outstanding > 0 ? (isPayable ? 'text-orange-700' : 'text-green-700') :
-        r.outstanding < 0 ? 'text-red-600' : 'text-heading/50'
+        r.outstanding > 0 ? (isPayable ? 'text-orange-700 dark:text-orange-300' : 'text-green-700 dark:text-green-300') :
+        r.outstanding < 0 ? 'text-red-600 dark:text-red-400' : 'text-heading/50'
       }`}>
         {r.outstanding < 0 && '−'}{formatINR(Math.abs(r.outstanding))}
       </td>
@@ -227,10 +227,10 @@ function OutstandingBreakdownModal({
           <div>
             <h2 className="text-lg font-bold text-gray-800">{title}</h2>
             <p className="text-sm text-heading/60 mt-0.5">
-              {filtered.length} {filtered.length === 1 ? 'party' : 'parties'} · Net total: <span className={`font-semibold ${total >= 0 ? `text-${accentColor}-700` : 'text-red-600'}`}>{formatINR(total)}</span>
+              {filtered.length} {filtered.length === 1 ? 'party' : 'parties'} · Net total: <span className={`font-semibold ${total >= 0 ? `text-${accentColor}-700` : 'text-red-600 dark:text-red-400'}`}>{formatINR(total)}</span>
             </p>
           </div>
-          <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors" aria-label="Close">
+          <button onClick={onClose} className="p-2 hover:bg-card-border/60 rounded-full transition-colors" aria-label="Close">
             <X className="h-5 w-5 text-heading/60" />
           </button>
         </div>
@@ -253,9 +253,9 @@ function OutstandingBreakdownModal({
             <div className="p-8 space-y-3">
               {Array.from({ length: 8 }).map((_, i) => (
                 <div key={i} className="flex animate-pulse gap-4">
-                  <div className="h-4 flex-1 rounded bg-gray-200" />
-                  <div className="h-4 w-20 rounded bg-gray-200" />
-                  <div className="h-4 w-24 rounded bg-gray-200" />
+                  <div className="h-4 flex-1 rounded bg-card-border/60" />
+                  <div className="h-4 w-20 rounded bg-card-border/60" />
+                  <div className="h-4 w-24 rounded bg-card-border/60" />
                 </div>
               ))}
             </div>
@@ -285,7 +285,7 @@ function OutstandingBreakdownModal({
                 {negative.length > 0 && (
                   <>
                     <tr>
-                      <td colSpan={5} className="px-4 py-2 bg-red-50/70 text-xs font-semibold text-red-600 uppercase tracking-wider">
+                      <td colSpan={5} className="px-4 py-2 bg-red-50 dark:bg-red-900/30/70 text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">
                         ⚠ Overpaid / Advance ({negative.length} {negative.length === 1 ? 'party' : 'parties'})
                       </td>
                     </tr>
@@ -425,44 +425,44 @@ export default function Dashboard() {
           {/* Bank summary */}
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Building2 className="h-5 w-5 text-blue-600" />
+              <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
               <h3 className="text-sm font-semibold text-heading">Bank Balance</h3>
-              <span className="ml-auto text-xl font-bold tabular-nums text-blue-700">{formatINR(stats.bankBalance)}</span>
+              <span className="ml-auto text-xl font-bold tabular-nums text-blue-700 dark:text-blue-300">{formatINR(stats.bankBalance)}</span>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-heading/70">
                 <span>Total received (bank)</span>
-                <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.bankReceived)}</span>
+                <span className="tabular-nums font-medium text-green-700 dark:text-green-300">+{formatINR(stats.bankReceived)}</span>
               </div>
               <div className="flex justify-between text-heading/70">
                 <span>Total paid out (bank)</span>
-                <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.bankPaid)}</span>
+                <span className="tabular-nums font-medium text-red-700 dark:text-red-300">−{formatINR(stats.bankPaid)}</span>
               </div>
               <div className="border-t border-card-border pt-2 flex justify-between font-semibold">
                 <span className="text-heading/80">Net bank</span>
-                <span className={`tabular-nums ${stats.bankBalance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{formatINR(stats.bankBalance)}</span>
+                <span className={`tabular-nums ${stats.bankBalance >= 0 ? 'text-blue-700 dark:text-blue-300' : 'text-red-700 dark:text-red-300'}`}>{formatINR(stats.bankBalance)}</span>
               </div>
             </div>
           </div>
           {/* Cash summary */}
           <div className="card p-5">
             <div className="flex items-center gap-2 mb-4">
-              <Wallet className="h-5 w-5 text-amber-600" />
+              <Wallet className="h-5 w-5 text-amber-600 dark:text-amber-400" />
               <h3 className="text-sm font-semibold text-heading">Cash in Hand</h3>
-              <span className="ml-auto text-xl font-bold tabular-nums text-amber-700">{formatINR(stats.cashBalance)}</span>
+              <span className="ml-auto text-xl font-bold tabular-nums text-amber-700 dark:text-amber-300">{formatINR(stats.cashBalance)}</span>
             </div>
             <div className="space-y-2 text-sm">
               <div className="flex justify-between text-heading/70">
                 <span>Total received (cash)</span>
-                <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.cashReceived)}</span>
+                <span className="tabular-nums font-medium text-green-700 dark:text-green-300">+{formatINR(stats.cashReceived)}</span>
               </div>
               <div className="flex justify-between text-heading/70">
                 <span>Total paid out (cash)</span>
-                <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.cashPaid)}</span>
+                <span className="tabular-nums font-medium text-red-700 dark:text-red-300">−{formatINR(stats.cashPaid)}</span>
               </div>
               <div className="border-t border-card-border pt-2 flex justify-between font-semibold">
                 <span className="text-heading/80">Net cash</span>
-                <span className={`tabular-nums ${stats.cashBalance >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{formatINR(stats.cashBalance)}</span>
+                <span className={`tabular-nums ${stats.cashBalance >= 0 ? 'text-amber-700 dark:text-amber-300' : 'text-red-700 dark:text-red-300'}`}>{formatINR(stats.cashBalance)}</span>
               </div>
             </div>
           </div>
@@ -510,7 +510,7 @@ export default function Dashboard() {
                 </div>
               </div>
               {collection && (
-                <span className="text-sm font-semibold tabular-nums text-green-700">
+                <span className="text-sm font-semibold tabular-nums text-green-700 dark:text-green-300">
                   {formatINR(
                     collectionView === 'daily' && collectionDate
                       ? (collection.daily.find((d: any) => d.date === collectionDate) ? Number(collection.daily.find((d: any) => d.date === collectionDate).total) : 0)
@@ -544,9 +544,9 @@ export default function Dashboard() {
             <div className="p-4 space-y-2">
               {Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="flex animate-pulse gap-3">
-                  <div className="h-4 w-24 rounded bg-gray-200" />
-                  <div className="h-4 flex-1 rounded bg-gray-200" />
-                  <div className="h-4 w-20 rounded bg-gray-200" />
+                  <div className="h-4 w-24 rounded bg-card-border/60" />
+                  <div className="h-4 flex-1 rounded bg-card-border/60" />
+                  <div className="h-4 w-20 rounded bg-card-border/60" />
                 </div>
               ))}
             </div>
@@ -572,7 +572,7 @@ export default function Dashboard() {
                     <th className="px-4 py-2 text-right">Txns</th>
                     <th className="px-4 py-2 text-right">Bank</th>
                     <th className="px-4 py-2 text-right">Cash</th>
-                    <th className="px-4 py-2 text-right font-semibold text-green-700">Total</th>
+                    <th className="px-4 py-2 text-right font-semibold text-green-700 dark:text-green-300">Total</th>
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-card-border">
@@ -582,9 +582,9 @@ export default function Dashboard() {
                         {collectionView === 'monthly' ? d.month : formatDate(d.date)}
                       </td>
                       <td className="px-4 py-2 text-right tabular-nums text-heading/60">{d.count}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-blue-700">{formatINR(Number(d.bank))}</td>
-                      <td className="px-4 py-2 text-right tabular-nums text-amber-700">{formatINR(Number(d.cash))}</td>
-                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(d.total))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-blue-700 dark:text-blue-300">{formatINR(Number(d.bank))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-amber-700 dark:text-amber-300">{formatINR(Number(d.cash))}</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-green-700 dark:text-green-300">{formatINR(Number(d.total))}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -611,9 +611,9 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {Array.from({ length: 6 }).map((_, i) => (
                   <div key={i} className="flex animate-pulse gap-4">
-                    <div className="h-4 flex-1 rounded bg-gray-200" />
-                    <div className="h-4 w-24 rounded bg-gray-200" />
-                    <div className="h-4 w-32 rounded bg-gray-200" />
+                    <div className="h-4 flex-1 rounded bg-card-border/60" />
+                    <div className="h-4 w-24 rounded bg-card-border/60" />
+                    <div className="h-4 w-32 rounded bg-card-border/60" />
                   </div>
                 ))}
               </div>

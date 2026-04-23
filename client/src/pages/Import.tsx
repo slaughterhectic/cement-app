@@ -245,14 +245,14 @@ export default function Import() {
                   className={[
                     'flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium',
                     done
-                      ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
+                      ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 text-emerald-800 dark:text-emerald-200'
                       : active
                         ? 'border-brand-400 bg-brand-50 text-brand-800'
                         : 'border-card-border bg-card text-heading/60',
                   ].join(' ')}
                 >
                   {done ? (
-                    <Check className="h-4 w-4 shrink-0 text-emerald-600" />
+                    <Check className="h-4 w-4 shrink-0 text-emerald-600 dark:text-emerald-400" />
                   ) : (
                     <span className="flex h-6 w-6 items-center justify-center rounded-full bg-card text-xs font-bold text-current">
                       {s.n}
@@ -306,7 +306,7 @@ export default function Import() {
             onDragOver={onDragOver}
             onDrop={onDrop}
             onClick={() => fileInputRef.current?.click()}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-surface/80 px-6 py-16 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-card-border bg-surface/80 px-6 py-16 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/30"
           >
             <Upload className="mb-3 h-10 w-10 text-heading/50" />
             <p className="text-sm font-medium text-heading/80">Drop your Excel file here or click to browse</p>
@@ -314,7 +314,7 @@ export default function Import() {
           </div>
 
           {parseError && (
-            <div className="flex items-start gap-2 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-800">
+            <div className="flex items-start gap-2 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30 px-4 py-3 text-sm text-red-800 dark:text-red-200">
               <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
               {parseError}
             </div>
@@ -523,7 +523,7 @@ export default function Import() {
 
             {importing && (
               <div className="mt-4">
-                <div className="h-2 w-full overflow-hidden rounded-full bg-gray-200">
+                <div className="h-2 w-full overflow-hidden rounded-full bg-card-border/60">
                   <div
                     className="h-full bg-brand-500 transition-all duration-200 ease-out"
                     style={{ width: `${importProgress}%` }}
@@ -534,7 +534,7 @@ export default function Import() {
             )}
 
             {importDone && !importing && (
-              <div className="mt-4 rounded-md border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-900">
+              <div className="mt-4 rounded-md border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3 text-sm text-emerald-900 dark:text-emerald-100">
                 <p className="font-medium">Import summary</p>
                 <p className="mt-1">
                   Imported{' '}

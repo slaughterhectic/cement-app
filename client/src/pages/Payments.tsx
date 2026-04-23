@@ -24,13 +24,13 @@ function modeBadge(mode: string) {
   const m = String(mode).toLowerCase();
   if (m === 'cash') {
     return (
-      <span className="inline-flex rounded-full bg-slate-100 px-2.5 py-0.5 text-xs font-medium text-slate-700">
+      <span className="inline-flex rounded-full bg-slate-100 dark:bg-slate-900/40 px-2.5 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">
         cash
       </span>
     );
   }
   return (
-    <span className="inline-flex rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-medium text-emerald-800">
+    <span className="inline-flex rounded-full bg-emerald-50 dark:bg-emerald-900/30 px-2.5 py-0.5 text-xs font-medium text-emerald-800 dark:text-emerald-200">
       bank
     </span>
   );
@@ -96,11 +96,11 @@ export default function Payments() {
           // Always use the actual direction field — applies to both suppliers and non-suppliers
           const isPaidOut = direction === 'pay';
           return isPaidOut ? (
-            <span className="inline-flex rounded-full bg-orange-100 px-2.5 py-0.5 text-xs font-semibold text-orange-700">
+            <span className="inline-flex rounded-full bg-orange-100 dark:bg-orange-900/40 px-2.5 py-0.5 text-xs font-semibold text-orange-700 dark:text-orange-300">
               Paid Out
             </span>
           ) : (
-            <span className="inline-flex rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+            <span className="inline-flex rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 dark:text-emerald-300">
               Received
             </span>
           );
@@ -135,7 +135,7 @@ export default function Payments() {
           hasPermission('delete_payments') ? (
             <button
               type="button"
-              className="rounded p-1.5 text-red-600 hover:bg-red-50"
+              className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               aria-label="Delete"
               onClick={() => handleDelete(row.original)}
             >

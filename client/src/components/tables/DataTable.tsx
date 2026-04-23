@@ -107,7 +107,7 @@ export function DataTable<T>({
         <input
           ref={headerCheckboxRef}
           type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          className="h-4 w-4 rounded border-card-border text-brand-600 focus:ring-brand-500"
           checked={table.getIsAllPageRowsSelected()}
           onChange={table.getToggleAllPageRowsSelectedHandler()}
           aria-label="Select all on page"
@@ -116,7 +116,7 @@ export function DataTable<T>({
       cell: ({ row }) => (
         <input
           type="checkbox"
-          className="h-4 w-4 rounded border-gray-300 text-brand-600 focus:ring-brand-500"
+          className="h-4 w-4 rounded border-card-border text-brand-600 focus:ring-brand-500"
           checked={row.getIsSelected()}
           disabled={!row.getCanSelect()}
           onChange={row.getToggleSelectedHandler()}
@@ -238,7 +238,7 @@ export function DataTable<T>({
                 >
                   <input
                     type="checkbox"
-                    className="h-4 w-4 rounded border-gray-300"
+                    className="h-4 w-4 rounded border-card-border"
                     checked={column.getIsVisible()}
                     onChange={column.getToggleVisibilityHandler()}
                   />
@@ -269,7 +269,7 @@ export function DataTable<T>({
             type="button"
             onClick={handleDeleteSelected}
             disabled={selectedIds.length === 0 || !onDeleteSelected}
-            className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-card px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md border border-red-200 dark:border-red-800 bg-card px-3 py-2 text-sm font-medium text-red-700 dark:text-red-300 shadow-sm hover:bg-red-50 dark:hover:bg-red-900/30 disabled:pointer-events-none disabled:opacity-40"
           >
             <Trash2 className="h-4 w-4" />
             Delete selected
@@ -295,9 +295,9 @@ export function DataTable<T>({
                 className="flex gap-4 py-3"
                 style={{ animationDelay: `${i * 80}ms` }}
               >
-                <div className="h-4 flex-1 animate-pulse rounded bg-gray-200" />
-                <div className="h-4 w-24 animate-pulse rounded bg-gray-200" />
-                <div className="h-4 w-32 animate-pulse rounded bg-gray-200" />
+                <div className="h-4 flex-1 animate-pulse rounded bg-card-border/60" />
+                <div className="h-4 w-24 animate-pulse rounded bg-card-border/60" />
+                <div className="h-4 w-32 animate-pulse rounded bg-card-border/60" />
               </div>
             ))}
           </div>

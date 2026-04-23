@@ -221,7 +221,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
     >
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {lockFields && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
             Only the <strong>invoice number</strong> can be edited. Contact an admin to change other fields.
           </div>
         )}
@@ -229,7 +229,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Date *</label>
             <input type="date" className="input-field w-full" disabled={lockFields} {...register('date')} />
-            {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
+            {errors.date && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.date.message}</p>}
           </div>
           <div className="relative" ref={supplierWrapRef}>
             <label className="mb-1 block text-sm font-medium text-heading">Supplier *</label>
@@ -272,7 +272,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               </ul>
             )}
             {errors.supplier_id && (
-              <p className="mt-1 text-xs text-red-600">{errors.supplier_id.message}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.supplier_id.message}</p>
             )}
           </div>
           <div>
@@ -286,7 +286,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               ))}
             </select>
             {errors.brand_id && (
-              <p className="mt-1 text-xs text-red-600">{errors.brand_id.message}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.brand_id.message}</p>
             )}
           </div>
           <div>
@@ -297,7 +297,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Bags *</label>
             <input type="number" min={1} step={1} className="input-field w-full" disabled={lockFields} {...register('bags')} />
-            {errors.bags && <p className="mt-1 text-xs text-red-600">{errors.bags.message}</p>}
+            {errors.bags && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.bags.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Purchase rate (₹ / bag) *</label>
@@ -310,7 +310,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               {...register('purchase_rate')}
             />
             {errors.purchase_rate && (
-              <p className="mt-1 text-xs text-red-600">{errors.purchase_rate.message}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.purchase_rate.message}</p>
             )}
           </div>
           <div>
@@ -347,7 +347,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               {freightAmount > 0 && (
                 <div>
                   <p className="text-xs text-heading/60">Freight ({formatINR(Number(freightRate) || 0)}/bag × {bagsNum})</p>
-                  <p className="font-semibold text-amber-700">{formatINR(freightAmount)}</p>
+                  <p className="font-semibold text-amber-700 dark:text-amber-300">{formatINR(freightAmount)}</p>
                 </div>
               )}
               <div className={freightAmount > 0 ? 'sm:col-span-2' : 'sm:col-span-3'}>
@@ -377,12 +377,12 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
                 </select>
               )}
             />
-            {errors.godown_id && <p className="mt-1 text-xs text-red-600">{errors.godown_id.message}</p>}
+            {errors.godown_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.godown_id.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Truck number *</label>
             <input type="text" className="input-field w-full" placeholder="e.g. UP14AT7777" disabled={lockFields} {...register('truck_number')} />
-            {errors.truck_number && <p className="mt-1 text-xs text-red-600">{errors.truck_number.message}</p>}
+            {errors.truck_number && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.truck_number.message}</p>}
           </div>
           <div className="sm:col-span-2">
             <label className="mb-1 block text-sm font-medium text-heading">Source location</label>

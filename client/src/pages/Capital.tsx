@@ -181,21 +181,21 @@ function ImprestSection() {
 
           {/* Summary cards */}
           <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-blue-700">Opening</p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-blue-900">{formatINR(handlerData.opening_balance)}</p>
+            <div className="rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-900/30/80 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-blue-700 dark:text-blue-300">Opening</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-blue-900 dark:text-blue-100">{formatINR(handlerData.opening_balance)}</p>
             </div>
-            <div className="rounded-lg border border-green-100 bg-green-50/80 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-green-700">Total Received</p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-green-900">{formatINR(handlerData.transactions.reduce((s: number, t: any) => s + Number(t.credit), 0))}</p>
+            <div className="rounded-lg border border-green-100 bg-green-50 dark:bg-green-900/30/80 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-green-700 dark:text-green-300">Total Received</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-green-900 dark:text-green-100">{formatINR(handlerData.transactions.reduce((s: number, t: any) => s + Number(t.credit), 0))}</p>
             </div>
-            <div className="rounded-lg border border-red-100 bg-red-50/80 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-red-700">Total Spent</p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-red-900">{formatINR(handlerData.transactions.reduce((s: number, t: any) => s + Number(t.debit), 0))}</p>
+            <div className="rounded-lg border border-red-100 bg-red-50 dark:bg-red-900/30/80 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-red-700 dark:text-red-300">Total Spent</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-red-900 dark:text-red-100">{formatINR(handlerData.transactions.reduce((s: number, t: any) => s + Number(t.debit), 0))}</p>
             </div>
-            <div className="rounded-lg border border-emerald-200 bg-emerald-50/90 p-3">
-              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700">Current Balance</p>
-              <p className="mt-1 text-lg font-bold tabular-nums text-emerald-900">{formatINR(handlerData.current_balance)}</p>
+            <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/90 p-3">
+              <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Current Balance</p>
+              <p className="mt-1 text-lg font-bold tabular-nums text-emerald-900 dark:text-emerald-100">{formatINR(handlerData.current_balance)}</p>
             </div>
           </div>
 
@@ -242,25 +242,25 @@ function ImprestSection() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-card-border">
-                    <tr className="bg-blue-50/60">
-                      <td colSpan={5} className="px-4 py-2 text-xs font-medium text-blue-700">Opening Balance</td>
-                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-blue-800">{formatINR(handlerData.opening_balance)}</td>
+                    <tr className="bg-blue-50 dark:bg-blue-900/30/60">
+                      <td colSpan={5} className="px-4 py-2 text-xs font-medium text-blue-700 dark:text-blue-300">Opening Balance</td>
+                      <td className="px-4 py-2 text-right tabular-nums font-semibold text-blue-800 dark:text-blue-200">{formatINR(handlerData.opening_balance)}</td>
                       <td colSpan={2} />
                     </tr>
                     {txPg.pageData.map((t: any) => (
-                      <tr key={t.id} className={t.credit > 0 ? 'bg-green-50/30 hover:bg-green-50' : 'hover:bg-surface'}>
+                      <tr key={t.id} className={t.credit > 0 ? 'bg-green-50 dark:bg-green-900/30/30 hover:bg-green-50 dark:hover:bg-green-900/30' : 'hover:bg-surface'}>
                         <td className="px-4 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
                         <td className="px-4 py-2 max-w-[140px] truncate">{t.particulars || '—'}</td>
                         <td className="px-4 py-2 max-w-[200px] truncate text-heading/70">{t.narration || '—'}</td>
-                        <td className="px-4 py-2 text-right tabular-nums text-red-700">{t.debit > 0 ? formatINR(t.debit) : '—'}</td>
-                        <td className="px-4 py-2 text-right tabular-nums text-green-700">{t.credit > 0 ? formatINR(t.credit) : '—'}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-red-700 dark:text-red-300">{t.debit > 0 ? formatINR(t.debit) : '—'}</td>
+                        <td className="px-4 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{t.credit > 0 ? formatINR(t.credit) : '—'}</td>
                         <td className="px-4 py-2 text-right tabular-nums font-medium">{formatINR(t.running_balance)}</td>
                         <td className="px-4 py-2 text-heading/70">{t.remark || '—'}</td>
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-1">
                             <button type="button" onClick={() => { setEditRow(t); setForm({ date: t.date, particulars: t.particulars || '', narration: t.narration || '', debit: t.debit > 0 ? String(t.debit) : '', credit: t.credit > 0 ? String(t.credit) : '', remark: t.remark || '' }); setShowForm(true); }} className="rounded p-1 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
                             {hasPermission('delete_imprest') && (
-                              <button type="button" onClick={() => handleDelete(t.id)} className="rounded p-1 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                              <button type="button" onClick={() => handleDelete(t.id)} className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="h-3.5 w-3.5" /></button>
                             )}
                           </div>
                         </td>
@@ -384,7 +384,7 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
       </div>
 
       {summary.banks.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-heading/60">
+        <div className="rounded-lg border border-dashed border-card-border p-6 text-center text-sm text-heading/60">
           No banks configured yet. Go to <strong>Settings → Banks</strong> to add your bank accounts.
         </div>
       ) : (
@@ -396,7 +396,7 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                 <th className="px-4 py-3 text-right">Opening (₹)</th>
                 <th className="px-4 py-3 text-right">+ Received (₹)</th>
                 <th className="px-4 py-3 text-right">− Paid Out (₹)</th>
-                <th className="px-4 py-3 text-right font-semibold text-blue-700">Balance (₹)</th>
+                <th className="px-4 py-3 text-right font-semibold text-blue-700 dark:text-blue-300">Balance (₹)</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-card-border">
@@ -404,17 +404,17 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                 <tr key={b.bank_name} className="hover:bg-surface">
                   <td className="px-4 py-3 font-semibold text-heading">{b.bank_name}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.opening)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(b.total_received)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(b.total_paid)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700">{formatINR(b.balance)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(b.total_received)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(b.total_paid)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700 dark:text-blue-300">{formatINR(b.balance)}</td>
                 </tr>
               ))}
-              <tr className="border-t-2 border-gray-300 bg-blue-50/60 font-semibold">
-                <td className="px-4 py-3 text-blue-800">Total</td>
+              <tr className="border-t-2 border-card-border bg-blue-50 dark:bg-blue-900/30/60 font-semibold">
+                <td className="px-4 py-3 text-blue-800 dark:text-blue-200">Total</td>
                 <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(summary.banks.reduce((s, b) => s + b.opening, 0))}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_received, 0))}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_paid, 0))}</td>
-                <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-800">{formatINR(summary.totalBank)}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(summary.banks.reduce((s, b) => s + b.total_received, 0))}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(summary.banks.reduce((s, b) => s + b.total_paid, 0))}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-800 dark:text-blue-200">{formatINR(summary.totalBank)}</td>
               </tr>
             </tbody>
           </table>
@@ -468,64 +468,64 @@ export default function Capital() {
         <>
           {/* Top KPI cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-emerald-200 bg-emerald-50/90 p-5">
-              <div className="flex items-center gap-2 text-emerald-700">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/90 p-5">
+              <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
                 <Wallet className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Total Capital</span>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-800">{formatINR(summary.totalCapital)}</p>
-              <p className="mt-1 text-xs text-emerald-700">Cash + all banks</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-800 dark:text-emerald-200">{formatINR(summary.totalCapital)}</p>
+              <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Cash + all banks</p>
             </div>
-            <div className="rounded-xl border border-amber-200 bg-amber-50/90 p-5">
-              <div className="flex items-center gap-2 text-amber-700">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30/90 p-5">
+              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                 <Wallet className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Cash in Hand</span>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-amber-800">{formatINR(summary.totalCash)}</p>
-              <p className="mt-1 text-xs text-amber-700">{summary.cash.map((c) => c.handler).join(', ')}</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(summary.totalCash)}</p>
+              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{summary.cash.map((c) => c.handler).join(', ')}</p>
             </div>
-            <div className="rounded-xl border border-blue-200 bg-blue-50/90 p-5">
-              <div className="flex items-center gap-2 text-blue-700">
+            <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30/90 p-5">
+              <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                 <Building2 className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Total Bank</span>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800">{formatINR(summary.totalBank)}</p>
-              <p className="mt-1 text-xs text-blue-700">{summary.banks.length} bank account{summary.banks.length !== 1 ? 's' : ''}</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(summary.totalBank)}</p>
+              <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">{summary.banks.length} bank account{summary.banks.length !== 1 ? 's' : ''}</p>
             </div>
-            <div className="rounded-xl border border-purple-200 bg-purple-50/90 p-5">
-              <div className="flex items-center gap-2 text-purple-700">
+            <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30/90 p-5">
+              <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                 <TrendingUp className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Stock Value</span>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-purple-800">{formatINR(summary.stockValue.value)}</p>
-              <p className="mt-1 text-xs text-purple-700">{summary.stockValue.bags.toLocaleString('en-IN')} bags in stock</p>
+              <p className="mt-2 text-2xl font-bold tabular-nums text-purple-800 dark:text-purple-200">{formatINR(summary.stockValue.value)}</p>
+              <p className="mt-1 text-xs text-purple-700 dark:text-purple-300">{summary.stockValue.bags.toLocaleString('en-IN')} bags in stock</p>
             </div>
           </div>
 
           {/* Secondary info */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-red-200 bg-red-50/80 p-4">
-              <div className="flex items-center gap-2 text-red-600">
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/80 p-4">
+              <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Outstanding Receivables</span>
               </div>
-              <p className="mt-2 text-xl font-bold tabular-nums text-red-700">{formatINR(summary.totalOutstanding)}</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-red-700 dark:text-red-300">{formatINR(summary.totalOutstanding)}</p>
               <p className="text-xs text-red-500 mt-1">Customers owe us</p>
             </div>
-            <div className="rounded-lg border border-orange-200 bg-orange-50/80 p-4">
-              <div className="flex items-center gap-2 text-orange-600">
+            <div className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30/80 p-4">
+              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Outstanding Payables</span>
               </div>
-              <p className="mt-2 text-xl font-bold tabular-nums text-orange-700">{formatINR(summary.totalPayable ?? 0)}</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-orange-700 dark:text-orange-300">{formatINR(summary.totalPayable ?? 0)}</p>
               <p className="text-xs text-orange-500 mt-1">We owe suppliers</p>
             </div>
             <div className="rounded-lg border border-card-border bg-card p-4">
-              <div className="flex items-center gap-2 text-orange-600">
+              <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Loan Outstanding</span>
               </div>
-              <p className="mt-2 text-xl font-bold tabular-nums text-orange-700">{formatINR(summary.totalLoans)}</p>
+              <p className="mt-2 text-xl font-bold tabular-nums text-orange-700 dark:text-orange-300">{formatINR(summary.totalLoans)}</p>
               <p className="text-xs text-heading/60 mt-1">Principal debt outstanding</p>
             </div>
           </div>

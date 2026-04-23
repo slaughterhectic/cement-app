@@ -65,9 +65,9 @@ function EMICalculator() {
             <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Monthly EMI</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-brand-800">{formatINR(emi)}</p>
           </div>
-          <div className="rounded-lg border border-amber-100 bg-amber-50/80 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-amber-700">Total Interest</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-amber-800">{formatINR(totalInterest ?? 0)}</p>
+          <div className="rounded-lg border border-amber-100 bg-amber-50 dark:bg-amber-900/30/80 p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">Total Interest</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(totalInterest ?? 0)}</p>
           </div>
           <div className="rounded-lg border border-card-border bg-surface p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-heading/70">Total Payable</p>
@@ -193,21 +193,21 @@ function PartyLoansSection() {
 
       {/* Summary */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-amber-200 bg-amber-50/80 p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30/80 p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
             <ArrowUpRight className="h-4 w-4" /> Total Disbursed
           </div>
-          <p className="mt-1 text-xl font-bold tabular-nums text-amber-800">{formatINR(totalDisbursed)}</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(totalDisbursed)}</p>
         </div>
-        <div className="rounded-xl border border-green-200 bg-green-50/80 p-4">
-          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-green-700">
+        <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30/80 p-4">
+          <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
             <ArrowDownLeft className="h-4 w-4" /> Total Repaid
           </div>
-          <p className="mt-1 text-xl font-bold tabular-nums text-green-800">{formatINR(totalRepaid)}</p>
+          <p className="mt-1 text-xl font-bold tabular-nums text-green-800 dark:text-green-200">{formatINR(totalRepaid)}</p>
         </div>
-        <div className={`rounded-xl border p-4 ${netOutstanding > 0 ? 'border-red-200 bg-red-50/80' : 'border-emerald-200 bg-emerald-50/80'}`}>
-          <p className={`text-xs font-semibold uppercase tracking-wide ${netOutstanding > 0 ? 'text-red-700' : 'text-emerald-700'}`}>Net Outstanding</p>
-          <p className={`mt-1 text-xl font-bold tabular-nums ${netOutstanding > 0 ? 'text-red-800' : 'text-emerald-800'}`}>{formatINR(netOutstanding)}</p>
+        <div className={`rounded-xl border p-4 ${netOutstanding > 0 ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/80' : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/80'}`}>
+          <p className={`text-xs font-semibold uppercase tracking-wide ${netOutstanding > 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>Net Outstanding</p>
+          <p className={`mt-1 text-xl font-bold tabular-nums ${netOutstanding > 0 ? 'text-red-800 dark:text-red-200' : 'text-emerald-800 dark:text-emerald-200'}`}>{formatINR(netOutstanding)}</p>
         </div>
       </div>
 
@@ -239,17 +239,17 @@ function PartyLoansSection() {
                     <td className="px-4 py-3 font-medium text-heading">{l.party_name}</td>
                     <td className="px-4 py-3">
                       {l.type === 'disbursement' ? (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-800 dark:text-amber-200">
                           <ArrowUpRight className="h-3 w-3" /> Disbursed
                         </span>
                       ) : (
-                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-800">
+                        <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-800 dark:text-green-200">
                           <ArrowDownLeft className="h-3 w-3" /> Repaid
                         </span>
                       )}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums font-semibold">
-                      <span className={l.type === 'disbursement' ? 'text-amber-700' : 'text-green-700'}>
+                      <span className={l.type === 'disbursement' ? 'text-amber-700 dark:text-amber-300' : 'text-green-700 dark:text-green-300'}>
                         {formatINR(l.amount)}
                       </span>
                     </td>
@@ -259,7 +259,7 @@ function PartyLoansSection() {
                     <td className="px-4 py-3 text-heading/70 max-w-[150px] truncate">{l.remarks || '—'}</td>
                     {isAdmin && (
                       <td className="px-4 py-3">
-                        <button type="button" onClick={() => handleDelete(l.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
+                        <button type="button" onClick={() => handleDelete(l.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
                           <Trash2 className="h-3.5 w-3.5" />
                         </button>
                       </td>
@@ -479,20 +479,20 @@ export default function Finance() {
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-red-200 bg-red-50/80 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-red-700">Total Loan Principal</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-red-800">{formatINR(totalPrincipal)}</p>
-          <p className="mt-1 text-xs text-red-600">{loans.length} loan{loans.length !== 1 ? 's' : ''}</p>
+        <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/80 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Total Loan Principal</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-red-800 dark:text-red-200">{formatINR(totalPrincipal)}</p>
+          <p className="mt-1 text-xs text-red-600 dark:text-red-400">{loans.length} loan{loans.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="rounded-xl border border-orange-200 bg-orange-50/80 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-orange-700">Outstanding Principal</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-orange-800">{formatINR(totalOutstanding)}</p>
-          <p className="mt-1 text-xs text-orange-600">Remaining to be repaid</p>
+        <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30/80 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Outstanding Principal</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-orange-800 dark:text-orange-200">{formatINR(totalOutstanding)}</p>
+          <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">Remaining to be repaid</p>
         </div>
-        <div className="rounded-xl border border-blue-200 bg-blue-50/80 p-5">
-          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700">Monthly EMI Obligation</p>
-          <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800">{formatINR(totalMonthlyEMI)}</p>
-          <p className="mt-1 text-xs text-blue-600">Sum of all EMIs</p>
+        <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30/80 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Monthly EMI Obligation</p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(totalMonthlyEMI)}</p>
+          <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Sum of all EMIs</p>
         </div>
       </div>
 
@@ -539,15 +539,15 @@ export default function Finance() {
                         <td className="px-4 py-3 font-medium text-heading">{loan.lender_name}</td>
                         <td className="px-4 py-3 text-right tabular-nums">{formatINR(loan.principal)}</td>
                         <td className="px-4 py-3 text-right tabular-nums">
-                          <span className={outstanding > 0 ? 'font-semibold text-red-700' : 'text-green-600'}>
+                          <span className={outstanding > 0 ? 'font-semibold text-red-700 dark:text-red-300' : 'text-green-600 dark:text-green-400'}>
                             {formatINR(outstanding)}
                           </span>
-                          <div className="mt-1 h-1.5 w-full rounded-full bg-gray-200">
+                          <div className="mt-1 h-1.5 w-full rounded-full bg-card-border/60">
                             <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${Math.min(pct, 100)}%` }} />
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">{loan.interest_rate.toFixed(2)}%</td>
-                        <td className="px-4 py-3 text-right tabular-nums font-medium text-blue-700">
+                        <td className="px-4 py-3 text-right tabular-nums font-medium text-blue-700 dark:text-blue-300">
                           {loan.emi_amount != null ? formatINR(loan.emi_amount) : '—'}
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">{formatDate(loan.start_date)}</td>
@@ -557,7 +557,7 @@ export default function Finance() {
                           <div className="flex items-center gap-1">
                             <button type="button" onClick={() => openEdit(loan)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
                             {hasPermission('delete_loans') && (
-                              <button type="button" onClick={() => handleDelete(loan.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50"><Trash2 className="h-3.5 w-3.5" /></button>
+                              <button type="button" onClick={() => handleDelete(loan.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="h-3.5 w-3.5" /></button>
                             )}
                           </div>
                         </td>

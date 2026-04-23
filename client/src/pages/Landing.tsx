@@ -174,11 +174,11 @@ export default function Landing() {
                     {i < howSteps.length - 1 && (
                       <>
                         <div
-                          className="my-4 h-10 w-0 shrink-0 border-l-2 border-dashed border-gray-300 md:hidden"
+                          className="my-4 h-10 w-0 shrink-0 border-l-2 border-dashed border-card-border md:hidden"
                           aria-hidden
                         />
                         <div
-                          className="mx-2 mt-6 hidden h-0 min-w-[2rem] flex-1 border-t-2 border-dashed border-gray-300 md:block"
+                          className="mx-2 mt-6 hidden h-0 min-w-[2rem] flex-1 border-t-2 border-dashed border-card-border md:block"
                           aria-hidden
                         />
                       </>

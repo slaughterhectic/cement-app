@@ -217,11 +217,11 @@ export default function DealerDetail() {
     { accessorKey: 'particulars', header: 'Particulars' },
     { accessorKey: 'qty', header: 'Qty', cell: ({ getValue }) => Number(getValue()) > 0 ? getValue() : '' },
     { accessorKey: 'rate', header: 'Rate', cell: ({ getValue }) => Number(getValue()) > 0 ? formatINR(Number(getValue())) : '' },
-    { accessorKey: 'debit', header: 'Debit (₹)', cell: ({ getValue }) => Number(getValue()) > 0 ? <span className="text-red-600 font-medium">{formatINR(Number(getValue()))}</span> : '' },
-    { accessorKey: 'credit', header: 'Credit (₹)', cell: ({ getValue }) => Number(getValue()) > 0 ? <span className="text-green-600 font-medium">{formatINR(Number(getValue()))}</span> : '' },
+    { accessorKey: 'debit', header: 'Debit (₹)', cell: ({ getValue }) => Number(getValue()) > 0 ? <span className="text-red-600 dark:text-red-400 font-medium">{formatINR(Number(getValue()))}</span> : '' },
+    { accessorKey: 'credit', header: 'Credit (₹)', cell: ({ getValue }) => Number(getValue()) > 0 ? <span className="text-green-600 dark:text-green-400 font-medium">{formatINR(Number(getValue()))}</span> : '' },
     { accessorKey: 'balance', header: 'Balance (₹)', cell: ({ getValue }) => {
       const v = Number(getValue());
-      return <span className={`font-semibold ${v > 0 ? 'text-red-700' : v < 0 ? 'text-green-700' : 'text-heading/60'}`}>{formatINR(v)}</span>;
+      return <span className={`font-semibold ${v > 0 ? 'text-red-700 dark:text-red-300' : v < 0 ? 'text-green-700 dark:text-green-300' : 'text-heading/60'}`}>{formatINR(v)}</span>;
     }},
   ], []);
 
@@ -285,11 +285,11 @@ export default function DealerDetail() {
         </div>
         <div className="card">
           <p className="text-xs font-medium uppercase tracking-wide text-heading/60">Total Received</p>
-          <p className="mt-1 text-2xl font-bold text-green-700">{formatINR(summary.totalReceived)}</p>
+          <p className="mt-1 text-2xl font-bold text-green-700 dark:text-green-300">{formatINR(summary.totalReceived)}</p>
         </div>
         <div className="card">
           <p className="text-xs font-medium uppercase tracking-wide text-heading/60">Outstanding</p>
-          <p className={`mt-1 text-2xl font-bold ${outstanding > 0 ? 'text-red-700' : 'text-green-700'}`}>
+          <p className={`mt-1 text-2xl font-bold ${outstanding > 0 ? 'text-red-700 dark:text-red-300' : 'text-green-700 dark:text-green-300'}`}>
             {formatINR(outstanding)}
           </p>
         </div>
@@ -329,7 +329,7 @@ export default function DealerDetail() {
                     <td className="px-3 py-2 font-medium text-heading">{sp.name}</td>
                     <td className="px-3 py-2">
                       {sp.type && (
-                        <span className="rounded-full bg-blue-50 px-2 py-0.5 text-xs font-medium capitalize text-blue-700">
+                        <span className="rounded-full bg-blue-50 dark:bg-blue-900/30 px-2 py-0.5 text-xs font-medium capitalize text-blue-700 dark:text-blue-300">
                           {sp.type.replace(/_/g, ' ')}
                         </span>
                       )}
@@ -340,7 +340,7 @@ export default function DealerDetail() {
                       <button
                         type="button"
                         onClick={() => handleDeleteSubParty(sp)}
-                        className="rounded p-1 text-red-500 hover:bg-red-50"
+                        className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"
                         title="Delete sub-party"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -365,7 +365,7 @@ export default function DealerDetail() {
           exportFileName={`dealer-${dealer.name.replace(/[^a-zA-Z0-9]/g, '_')}`}
           getRowId={(row) => row.rowKey as any}
           getRowClassName={(row) =>
-            row.particulars === 'Opening Balance' ? 'bg-amber-50 font-medium' : undefined
+            row.particulars === 'Opening Balance' ? 'bg-amber-50 dark:bg-amber-900/30 font-medium' : undefined
           }
         />
       </div>

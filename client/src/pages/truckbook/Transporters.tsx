@@ -171,9 +171,9 @@ export default function Transporters() {
   };
 
   const ENTRY_LABELS: Record<string, { label: string; color: string }> = {
-    commission: { label: 'Commission', color: 'text-blue-600' },
-    advance_diesel: { label: 'Adv. Diesel', color: 'text-orange-600' },
-    payment: { label: 'Payment', color: 'text-green-600' },
+    commission: { label: 'Commission', color: 'text-blue-600 dark:text-blue-400' },
+    advance_diesel: { label: 'Adv. Diesel', color: 'text-orange-600 dark:text-orange-400' },
+    payment: { label: 'Payment', color: 'text-green-600 dark:text-green-400' },
   };
 
   return (
@@ -196,8 +196,8 @@ export default function Transporters() {
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
         {/* Left: list */}
         <div className="card p-0 overflow-hidden">
-          <div className="border-b border-card-border px-4 py-3 bg-orange-50">
-            <p className="font-semibold text-orange-700 text-sm">All Transporters</p>
+          <div className="border-b border-card-border px-4 py-3 bg-orange-50 dark:bg-orange-900/30">
+            <p className="font-semibold text-orange-700 dark:text-orange-300 text-sm">All Transporters</p>
           </div>
           {loadingList ? (
             <div className="p-6 text-center text-heading/50 text-sm">Loading…</div>
@@ -211,7 +211,7 @@ export default function Transporters() {
                   onClick={() => setSelectedId(t.id === selectedId ? null : t.id)}
                   className={`cursor-pointer px-4 py-3 transition-colors ${
                     selectedId === t.id
-                      ? 'bg-orange-50 border-l-4 border-l-orange-500'
+                      ? 'bg-orange-50 dark:bg-orange-900/30 border-l-4 border-l-orange-500'
                       : 'hover:bg-surface border-l-4 border-l-transparent'
                   }`}
                 >
@@ -222,7 +222,7 @@ export default function Transporters() {
                       <p className="text-xs text-heading/50">{t.trip_count} trips</p>
                     </div>
                     <div className="text-right shrink-0">
-                      <p className={`text-xs font-semibold ${t.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                      <p className={`text-xs font-semibold ${t.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                         {formatINR(t.outstanding)}
                       </p>
                       <p className="text-xs text-heading/50">outstanding</p>
@@ -258,22 +258,22 @@ export default function Transporters() {
             <>
               {/* Summary cards */}
               <div className="grid grid-cols-4 gap-3">
-                <div className="card p-4 text-center bg-blue-50 border-blue-200">
-                  <p className="text-xs text-blue-600 font-medium uppercase tracking-wide">Total Receivable</p>
+                <div className="card p-4 text-center bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+                  <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wide">Total Receivable</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalEarned)}</p>
                   <p className="text-xs text-blue-500 mt-0.5">Commission + Diesel</p>
                 </div>
-                <div className="card p-4 text-center bg-orange-50 border-orange-200">
-                  <p className="text-xs text-orange-600 font-medium uppercase tracking-wide">Paid Out</p>
+                <div className="card p-4 text-center bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800">
+                  <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wide">Paid Out</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalPaid)}</p>
                 </div>
-                <div className="card p-4 text-center bg-green-50 border-green-200">
-                  <p className="text-xs text-green-600 font-medium uppercase tracking-wide">Received</p>
+                <div className="card p-4 text-center bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800">
+                  <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wide">Received</p>
                   <p className="text-lg font-bold text-heading">{formatINR(ledger.totalReceived ?? 0)}</p>
                 </div>
-                <div className={`card p-4 text-center ${ledger.outstanding > 0 ? 'bg-red-50 border-red-200' : 'bg-green-50 border-green-200'}`}>
-                  <p className={`text-xs font-medium uppercase tracking-wide ${ledger.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>Outstanding</p>
-                  <p className={`text-lg font-bold ${ledger.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>{formatINR(ledger.outstanding)}</p>
+                <div className={`card p-4 text-center ${ledger.outstanding > 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800'}`}>
+                  <p className={`text-xs font-medium uppercase tracking-wide ${ledger.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>Outstanding</p>
+                  <p className={`text-lg font-bold ${ledger.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{formatINR(ledger.outstanding)}</p>
                 </div>
               </div>
 
@@ -354,7 +354,7 @@ export default function Transporters() {
                             {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
                           </select>
                           {cashHandlers.length === 0 && (
-                            <p className="mt-1 text-xs text-amber-600">Add one in Capital → Add Cash Handler.</p>
+                            <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Add one in Capital → Add Cash Handler.</p>
                           )}
                         </div>
                       )}
@@ -376,8 +376,8 @@ export default function Transporters() {
 
               {/* Ledger table */}
               <div className="card overflow-hidden p-0">
-                <div className="border-b border-card-border px-4 py-3 bg-orange-50">
-                  <p className="font-medium text-orange-700 text-sm">Ledger — {ledger.transporter.name}</p>
+                <div className="border-b border-card-border px-4 py-3 bg-orange-50 dark:bg-orange-900/30">
+                  <p className="font-medium text-orange-700 dark:text-orange-300 text-sm">Ledger — {ledger.transporter.name}</p>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -402,21 +402,21 @@ export default function Transporters() {
                           const isPaid = isPayment && (row.payment_type ?? 'paid') === 'paid';
                           const isReceived = isPayment && row.payment_type === 'received';
                           return (
-                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? (isReceived ? 'hover:bg-green-50/40' : 'hover:bg-red-50/40') : 'hover:bg-blue-50/40'} transition-colors`}>
+                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? (isReceived ? 'hover:bg-green-50 dark:hover:bg-green-900/30/40' : 'hover:bg-red-50 dark:hover:bg-red-900/30/40') : 'hover:bg-blue-50 dark:hover:bg-blue-900/30/40'} transition-colors`}>
                               <td className="px-4 py-3 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                               <td className="px-4 py-3">
                                 {isPayment ? (
                                   isReceived ? (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-2 py-0.5 text-xs font-medium text-green-700">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">
                                       <TrendingDown className="h-3 w-3" /> Received
                                     </span>
                                   ) : (
-                                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700">
+                                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-900/40 px-2 py-0.5 text-xs font-medium text-red-700 dark:text-red-300">
                                       <TrendingUp className="h-3 w-3" /> Paid
                                     </span>
                                   )
                                 ) : (
-                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.color === 'text-blue-600' ? 'bg-blue-100 text-blue-700' : 'bg-orange-100 text-orange-700'}`}>
+                                  <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${meta.color === 'text-blue-600 dark:text-blue-400' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-700 dark:text-blue-300' : 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300'}`}>
                                     <TrendingUp className="h-3 w-3" /> {meta.label}
                                   </span>
                                 )}
@@ -432,13 +432,13 @@ export default function Transporters() {
                                   : <span>{[row.truck_number, row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination, row.material_name].filter(Boolean).join(' · ')}</span>
                                 }
                               </td>
-                              <td className="px-4 py-3 text-right font-medium text-blue-700">
+                              <td className="px-4 py-3 text-right font-medium text-blue-700 dark:text-blue-300">
                                 {!isPayment ? formatINR(row.amount) : '—'}
                               </td>
-                              <td className="px-4 py-3 text-right font-medium text-green-700">
-                                {isReceived ? formatINR(row.amount) : (isPaid ? <span className="text-red-600">{formatINR(row.amount)}</span> : '—')}
+                              <td className="px-4 py-3 text-right font-medium text-green-700 dark:text-green-300">
+                                {isReceived ? formatINR(row.amount) : (isPaid ? <span className="text-red-600 dark:text-red-400">{formatINR(row.amount)}</span> : '—')}
                               </td>
-                              <td className={`px-4 py-3 text-right font-semibold ${row.balance > 0 ? 'text-red-600' : 'text-green-600'}`}>
+                              <td className={`px-4 py-3 text-right font-semibold ${row.balance > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>
                                 {formatINR(row.balance)}
                               </td>
                               <td className="px-4 py-3">
@@ -446,7 +446,7 @@ export default function Transporters() {
                                   <button
                                     type="button"
                                     onClick={() => handleDeletePayment(row, selectedId!)}
-                                    className="rounded p-1 text-red-500 hover:bg-red-50 transition-colors"
+                                    className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                                     title="Delete payment"
                                   >
                                     <Trash2 className="h-3.5 w-3.5" />

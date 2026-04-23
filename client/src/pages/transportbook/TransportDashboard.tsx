@@ -96,28 +96,28 @@ export default function TransportDashboard() {
           label="Trips This Month"
           value={String(stats.tripsThisMonth)}
           icon={FileText}
-          color="bg-indigo-50 text-indigo-600"
+          color="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
         />
         <StatCard
           label="Registered Trucks"
           value={String(stats.totalTrucks)}
           sub="truck owners"
           icon={Truck}
-          color="bg-indigo-50 text-indigo-600"
+          color="bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400"
         />
         <StatCard
           label="Pending Invoice Amount"
           value={formatINR(stats.pendingInvoiceAmount)}
           sub="from ACC"
           icon={Clock}
-          color="bg-amber-50 text-amber-600"
+          color="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
         />
         <StatCard
           label="Received from ACC"
           value={formatINR(stats.doneInvoiceAmount)}
           sub="invoices cleared"
           icon={IndianRupee}
-          color="bg-green-50 text-green-600"
+          color="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
         />
       </div>
 
@@ -130,9 +130,9 @@ export default function TransportDashboard() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-indigo-50 text-left">
-                <th className="px-4 py-3 font-medium text-indigo-700">Partner</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Current Balance</th>
+              <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Partner</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Current Balance</th>
               </tr>
             </thead>
             <tbody>
@@ -142,9 +142,9 @@ export default function TransportDashboard() {
                 </tr>
               ) : (
                 stats.partnerSummary.map((p, i) => (
-                  <tr key={i} className="border-b border-card-border last:border-0 hover:bg-indigo-50/40 transition-colors">
-                    <td className="px-4 py-3 font-medium text-indigo-600">{p.name}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${p.balance >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  <tr key={i} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/40 transition-colors">
+                    <td className="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400">{p.name}</td>
+                    <td className={`px-4 py-3 text-right font-semibold ${p.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(p.balance)}
                     </td>
                   </tr>
@@ -153,9 +153,9 @@ export default function TransportDashboard() {
             </tbody>
             {stats.partnerSummary.length > 0 && (
               <tfoot>
-                <tr className="bg-indigo-50 font-semibold border-t-2 border-indigo-200">
-                  <td className="px-4 py-3 text-indigo-700">Total Capital</td>
-                  <td className={`px-4 py-3 text-right ${stats.partnerSummary.reduce((s, p) => s + p.balance, 0) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                <tr className="bg-indigo-50 dark:bg-indigo-900/30 font-semibold border-t-2 border-indigo-200 dark:border-indigo-800">
+                  <td className="px-4 py-3 text-indigo-700 dark:text-indigo-300">Total Capital</td>
+                  <td className={`px-4 py-3 text-right ${stats.partnerSummary.reduce((s, p) => s + p.balance, 0) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                     {formatINR(stats.partnerSummary.reduce((s, p) => s + p.balance, 0))}
                   </td>
                 </tr>
@@ -200,11 +200,11 @@ export default function TransportDashboard() {
           <div className="space-y-3">
             <div className="flex justify-between items-center">
               <span className="text-sm text-heading/70">Pending / Partial</span>
-              <span className="text-sm font-semibold text-amber-600">{formatINR(stats.pendingInvoiceAmount)}</span>
+              <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{formatINR(stats.pendingInvoiceAmount)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-heading/70">Received (Done)</span>
-              <span className="text-sm font-semibold text-green-600">{formatINR(stats.doneInvoiceAmount)}</span>
+              <span className="text-sm font-semibold text-green-600 dark:text-green-400">{formatINR(stats.doneInvoiceAmount)}</span>
             </div>
             <div className="border-t border-card-border pt-2 flex justify-between items-center">
               <span className="text-sm font-medium text-heading/80">Total Invoiced</span>

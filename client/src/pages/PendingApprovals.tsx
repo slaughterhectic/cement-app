@@ -32,10 +32,10 @@ interface PendingEntry {
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
 
 const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: string }> = {
-  sale:     { label: 'Sale',     icon: TrendingUp,  color: 'text-blue-700',   bg: 'bg-blue-100' },
+  sale:     { label: 'Sale',     icon: TrendingUp,  color: 'text-blue-700 dark:text-blue-300',   bg: 'bg-blue-100 dark:bg-blue-900/40' },
   purchase: { label: 'Purchase', icon: ShoppingCart, color: 'text-violet-700', bg: 'bg-violet-100' },
-  payment:  { label: 'Payment',  icon: CreditCard,  color: 'text-green-700',  bg: 'bg-green-100' },
-  expense:  { label: 'Expense',  icon: Receipt,     color: 'text-orange-700', bg: 'bg-orange-100' },
+  payment:  { label: 'Payment',  icon: CreditCard,  color: 'text-green-700 dark:text-green-300',  bg: 'bg-green-100 dark:bg-green-900/40' },
+  expense:  { label: 'Expense',  icon: Receipt,     color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-100 dark:bg-orange-900/40' },
 };
 
 function formatDateTime(ts: string) {
@@ -176,9 +176,9 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
         {(
           [
             { key: 'all',      label: 'Total',    count: rows.length,    color: 'text-heading/70',   ring: 'ring-gray-400' },
-            { key: 'pending',  label: 'Pending',  count: pendingCount,   color: 'text-amber-600',  ring: 'ring-amber-400' },
-            { key: 'approved', label: 'Approved', count: approvedCount,  color: 'text-green-600',  ring: 'ring-green-500' },
-            { key: 'rejected', label: 'Rejected', count: rejectedCount,  color: 'text-red-600',    ring: 'ring-red-400' },
+            { key: 'pending',  label: 'Pending',  count: pendingCount,   color: 'text-amber-600 dark:text-amber-400',  ring: 'ring-amber-400' },
+            { key: 'approved', label: 'Approved', count: approvedCount,  color: 'text-green-600 dark:text-green-400',  ring: 'ring-green-500' },
+            { key: 'rejected', label: 'Rejected', count: rejectedCount,  color: 'text-red-600 dark:text-red-400',    ring: 'ring-red-400' },
           ] as const
         ).map(({ key, label, count, color, ring }) => (
           <button
@@ -229,10 +229,10 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
                         </span>
                         <span className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium ${
                           entry.status === 'pending'
-                            ? 'bg-amber-100 text-amber-700'
+                            ? 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300'
                             : entry.status === 'approved'
-                            ? 'bg-green-100 text-green-700'
-                            : 'bg-red-100 text-red-700'
+                            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300'
+                            : 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300'
                         }`}>
                           {entry.status === 'pending'  && <Clock className="h-3 w-3" />}
                           {entry.status === 'approved' && <CheckCircle2 className="h-3 w-3" />}
@@ -252,7 +252,7 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
                         {entry.status !== 'pending' && entry.reviewed_by_name && (
                           <>
                             <span>·</span>
-                            <span className={entry.status === 'approved' ? 'text-green-600' : 'text-red-600'}>
+                            <span className={entry.status === 'approved' ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}>
                               {entry.status === 'approved' ? 'Approved' : 'Rejected'} by {entry.reviewed_by_name}
                             </span>
                           </>
@@ -272,7 +272,7 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
                           <button
                             type="button"
                             onClick={() => { setActionTarget({ entry, action: 'approve' }); setAdminNote(''); }}
-                            className="rounded-lg p-1.5 text-green-600 hover:bg-green-50 transition-colors"
+                            className="rounded-lg p-1.5 text-green-600 dark:text-green-400 hover:bg-green-50 dark:hover:bg-green-900/30 transition-colors"
                             title="Approve"
                           >
                             <CheckCircle2 className="h-4 w-4" />
@@ -280,7 +280,7 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
                           <button
                             type="button"
                             onClick={() => { setActionTarget({ entry, action: 'reject' }); setAdminNote(''); }}
-                            className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                            className="rounded-lg p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                             title="Reject"
                           >
                             <XCircle className="h-4 w-4" />

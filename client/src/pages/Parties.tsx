@@ -58,17 +58,17 @@ type PartyFormValues = z.infer<typeof partySchema>;
 function typeBadgeClass(type: string | null | undefined): string {
   switch (type) {
     case 'dealer':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200';
     case 'contractor':
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200';
     case 'builder':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200';
     case 'institution':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200';
     case 'damage_buyer':
-      return 'bg-orange-100 text-orange-800';
+      return 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200';
     case 'supplier':
-      return 'bg-indigo-100 text-indigo-800';
+      return 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200';
     default:
       return 'bg-surface text-heading/80';
   }
@@ -242,7 +242,7 @@ export default function Parties() {
         cell: ({ row }) => {
           const n = Number(row.original.total_sales) || 0;
           if (n === 0) return <span className="text-heading/50">—</span>;
-          return <span className="text-emerald-700 font-medium">{formatINR(n)}</span>;
+          return <span className="text-emerald-700 dark:text-emerald-300 font-medium">{formatINR(n)}</span>;
         },
       },
       {
@@ -251,7 +251,7 @@ export default function Parties() {
         cell: ({ row }) => {
           const n = Number(row.original.total_purchases) || 0;
           if (n === 0) return <span className="text-heading/50">—</span>;
-          return <span className="text-indigo-700 font-medium">{formatINR(n)}</span>;
+          return <span className="text-indigo-700 dark:text-indigo-300 font-medium">{formatINR(n)}</span>;
         },
       },
       {
@@ -273,7 +273,7 @@ export default function Parties() {
           if (isSupplier) {
             return (
               <div>
-                <span className="font-semibold text-orange-600">{formatINR(n)}</span>
+                <span className="font-semibold text-orange-600 dark:text-orange-400">{formatINR(n)}</span>
                 <p className="text-xs text-orange-500">We owe them</p>
               </div>
             );
@@ -312,7 +312,7 @@ export default function Parties() {
             <button
               type="button"
               onClick={() => handleDelete(row.original)}
-              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+              className="inline-flex items-center gap-1 rounded-md border border-red-200 dark:border-red-800 bg-card px-2 py-1 text-xs font-medium text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30"
               aria-label={`Delete ${row.original.name}`}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -357,12 +357,12 @@ export default function Parties() {
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Name *</label>
             <input className="input-field" {...register('name')} />
-            {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
+            {errors.name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Phone</label>
             <input className="input-field" maxLength={10} placeholder="10 digits" {...register('phone')} />
-            {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
+            {errors.phone && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.phone.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Location</label>
@@ -406,7 +406,7 @@ export default function Parties() {
                 : (watchedType === 'supplier' ? 'Cr — We owe them (credit)' : 'Cr — We owe them (credit)')}
             </p>
             {errors.opening_balance && (
-              <p className="mt-1 text-xs text-red-600">{errors.opening_balance.message}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.opening_balance.message}</p>
             )}
           </div>
           <div className="flex justify-end gap-2 border-t border-card-border pt-4">
@@ -437,12 +437,12 @@ export default function Parties() {
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Name *</label>
             <input className="input-field" {...register('name')} />
-            {errors.name && <p className="mt-1 text-xs text-red-600">{errors.name.message}</p>}
+            {errors.name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.name.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Phone</label>
             <input className="input-field" maxLength={10} placeholder="10 digits" {...register('phone')} />
-            {errors.phone && <p className="mt-1 text-xs text-red-600">{errors.phone.message}</p>}
+            {errors.phone && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.phone.message}</p>}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Location</label>
@@ -486,7 +486,7 @@ export default function Parties() {
                 : (watchedType === 'supplier' ? 'Cr — We owe them (credit)' : 'Cr — We owe them (credit)')}
             </p>
             {errors.opening_balance && (
-              <p className="mt-1 text-xs text-red-600">{errors.opening_balance.message}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.opening_balance.message}</p>
             )}
           </div>
           <div className="flex justify-end gap-2 border-t border-card-border pt-4">

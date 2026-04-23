@@ -135,19 +135,19 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Date *</label>
           <input type="date" className="input-field w-full" {...register('date')} />
-          {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
+          {errors.date && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.date.message}</p>}
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Description *</label>
           <input type="text" className="input-field w-full" {...register('description')} />
-          {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description.message}</p>}
+          {errors.description && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.description.message}</p>}
         </div>
 
         <div>
           <label className="mb-1 block text-sm font-medium text-heading">Amount *</label>
           <input type="number" step="0.01" min={0} className="input-field w-full" {...register('amount')} />
-          {errors.amount && <p className="mt-1 text-xs text-red-600">{errors.amount.message}</p>}
+          {errors.amount && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.amount.message}</p>}
         </div>
 
         <div>
@@ -160,7 +160,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
               </option>
             ))}
           </select>
-          {errors.category && <p className="mt-1 text-xs text-red-600">{errors.category.message}</p>}
+          {errors.category && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.category.message}</p>}
         </div>
 
         <div>
@@ -204,9 +204,9 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
               ))}
             </select>
             {banks.length === 0 && (
-              <p className="mt-1 text-xs text-amber-600">No banks configured. Add banks in Settings → Banks.</p>
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">No banks configured. Add banks in Settings → Banks.</p>
             )}
-            {errors.bank_name && <p className="mt-1 text-xs text-red-600">{errors.bank_name.message}</p>}
+            {errors.bank_name && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.bank_name.message}</p>}
           </div>
         )}
 
@@ -221,9 +221,9 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
                 </option>
               ))}
             </select>
-            {errors.cash_handler && <p className="mt-1 text-xs text-red-600">{errors.cash_handler.message}</p>}
+            {errors.cash_handler && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.cash_handler.message}</p>}
             {cashHandlers.length === 0 && (
-              <p className="mt-1 text-xs text-amber-600">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
+              <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
             )}
             <p className="mt-1 text-xs text-heading/60">This cash expense will be deducted from the handler's cash book automatically.</p>
           </div>

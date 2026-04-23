@@ -401,7 +401,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     <Modal isOpen={isOpen} onClose={onClose} title={editData ? 'Edit sale' : 'New sale'} size="xl">
       <form onSubmit={handleSubmit(onSubmit)} className="flex flex-col gap-4">
         {lockFields && (
-          <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-2 text-sm text-amber-800">
+          <div className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 px-4 py-2 text-sm text-amber-800 dark:text-amber-200">
             Only the <strong>invoice number</strong> can be edited. Contact an admin to change other fields.
           </div>
         )}
@@ -409,7 +409,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Date *</label>
             <input type="date" className="input-field w-full" disabled={lockFields} {...register('date')} />
-            {errors.date && <p className="mt-1 text-xs text-red-600">{errors.date.message}</p>}
+            {errors.date && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.date.message}</p>}
           </div>
 
           <div className="relative sm:col-span-2" ref={partyWrapRef}>
@@ -447,7 +447,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 ))}
               </ul>
             )}
-            {errors.party_id && <p className="mt-1 text-xs text-red-600">{errors.party_id.message}</p>}
+            {errors.party_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.party_id.message}</p>}
           </div>
 
           <div>
@@ -465,7 +465,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 );
               })}
             </select>
-            {errors.brand_id && <p className="mt-1 text-xs text-red-600">{errors.brand_id.message}</p>}
+            {errors.brand_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.brand_id.message}</p>}
           </div>
 
           <div>
@@ -503,8 +503,8 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               disabled={lockFields}
               {...register('bags', { valueAsNumber: true })}
             />
-            {stockZeroMessage && <p className="mt-1 text-sm text-red-600">{stockZeroMessage}</p>}
-            {errors.bags && <p className="mt-1 text-xs text-red-600">{errors.bags.message}</p>}
+            {stockZeroMessage && <p className="mt-1 text-sm text-red-600 dark:text-red-400">{stockZeroMessage}</p>}
+            {errors.bags && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.bags.message}</p>}
           </div>
 
           <div>
@@ -557,18 +557,18 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               {...register('sale_rate', { valueAsNumber: true })}
             />
             {errors.sale_rate && (
-              <p className="mt-1 text-xs text-red-600">{errors.sale_rate.message}</p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.sale_rate.message}</p>
             )}
             {selectedCostRate > 0 && Number(saleRate) > 0 && (
-              <p className={`mt-1 text-xs font-medium ${Number(saleRate) > selectedCostRate ? 'text-green-600' : 'text-red-600'}`}>
+              <p className={`mt-1 text-xs font-medium ${Number(saleRate) > selectedCostRate ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                 Margin: {formatINR(Number(saleRate) - selectedCostRate)}/bag
               </p>
             )}
           </div>
 
           {/* GST Breakdown */}
-          <div className="sm:col-span-2 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3">
-            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700">
+          <div className="sm:col-span-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 px-4 py-3">
+            <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300">
               Amount Breakdown (GST {gstRate}% — {gstRate / 2}% CGST + {gstRate / 2}% SGST)
             </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
@@ -586,7 +586,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               </div>
               <div>
                 <p className="text-xs text-heading/60">Total (entered)</p>
-                <p className="text-xl font-bold text-emerald-900">{formatINR(saleAmount)}</p>
+                <p className="text-xl font-bold text-emerald-900 dark:text-emerald-100">{formatINR(saleAmount)}</p>
               </div>
             </div>
           </div>
@@ -630,16 +630,16 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
           {/* Invoice / Billing section */}
           <div className={`sm:col-span-2 rounded-lg border p-3 transition-colors ${
             isDealer
-              ? 'border-amber-300 bg-amber-50'
+              ? 'border-amber-300 bg-amber-50 dark:bg-amber-900/30'
               : invoiceNumber?.trim()
-                ? 'border-emerald-300 bg-emerald-50'
+                ? 'border-emerald-300 bg-emerald-50 dark:bg-emerald-900/30'
                 : 'border-card-border bg-surface'
           }`}>
             <p className={`mb-3 text-xs font-semibold uppercase tracking-wide ${
               isDealer
-                ? 'text-amber-700'
+                ? 'text-amber-700 dark:text-amber-300'
                 : invoiceNumber?.trim()
-                  ? 'text-emerald-700'
+                  ? 'text-emerald-700 dark:text-emerald-300'
                   : 'text-heading/60'
             }`}>
               {isDealer
@@ -653,7 +653,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 <label className="mb-1 block text-sm font-medium text-heading">Invoice number</label>
                 <input type="text" className="input-field w-full" placeholder="e.g. APL/2026-27/001" {...register('invoice_number')} />
                 {!isDealer && (
-                  <p className="mt-1 text-xs text-emerald-700">Row turns green once invoice number is entered — confirms sale is billed.</p>
+                  <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Row turns green once invoice number is entered — confirms sale is billed.</p>
                 )}
               </div>
               <div>
@@ -670,7 +670,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 ) : (
                   <input type="text" className="input-field w-full" disabled={lockFields} {...register('billed_party')} />
                 )}
-                {errors.billed_party && <p className="mt-1 text-xs text-red-600">{errors.billed_party.message}</p>}
+                {errors.billed_party && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.billed_party.message}</p>}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-heading">
@@ -685,20 +685,20 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 {isDealer && bags > 0 && (
                   <p className="mt-1 text-xs text-heading/60">Max {bags} bags (matches sale quantity)</p>
                 )}
-                {errors.billed_quantity && <p className="mt-1 text-xs text-red-600">{errors.billed_quantity.message}</p>}
+                {errors.billed_quantity && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.billed_quantity.message}</p>}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-heading">
                   Billed rate{isDealer ? ' *' : ''}
                 </label>
                 <input type="number" min={0} step={0.01} className="input-field w-full" disabled={lockFields} {...register('billed_rate', { valueAsNumber: true })} />
-                {errors.billed_rate && <p className="mt-1 text-xs text-red-600">{errors.billed_rate.message}</p>}
+                {errors.billed_rate && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.billed_rate.message}</p>}
               </div>
               <div>
                 <label className="mb-1 block text-sm font-medium text-heading">
                   Billed amount{isDealer ? ' *' : ''}
                   {isDealer && Number(billedQty) > 0 && Number(billedRate) > 0 && (
-                    <span className="ml-2 text-xs font-normal text-emerald-600">auto-calculated</span>
+                    <span className="ml-2 text-xs font-normal text-emerald-600 dark:text-emerald-400">auto-calculated</span>
                   )}
                 </label>
                 <input
@@ -709,7 +709,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   readOnly={lockFields || (isDealer && Number(billedQty) > 0 && Number(billedRate) > 0)}
                   {...register('billed_amount', { valueAsNumber: true })}
                 />
-                {errors.billed_amount && <p className="mt-1 text-xs text-red-600">{errors.billed_amount.message}</p>}
+                {errors.billed_amount && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.billed_amount.message}</p>}
               </div>
             </div>
           </div>

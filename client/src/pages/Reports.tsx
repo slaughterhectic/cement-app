@@ -254,7 +254,7 @@ export default function Reports() {
         header: 'Avg Margin/Bag (₹)',
         cell: ({ getValue }: any) => {
           const v = Number(getValue()) || 0;
-          const cls = v >= 0 ? 'text-emerald-600' : 'text-red-600';
+          const cls = v >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400';
           return <span className={`font-medium ${cls}`}>{formatINR(v)}</span>;
         },
       },
@@ -263,7 +263,7 @@ export default function Reports() {
         header: 'Total Profit (₹)',
         cell: ({ getValue }: any) => {
           const v = Number(getValue()) || 0;
-          const cls = v >= 0 ? 'text-green-600' : 'text-red-600';
+          const cls = v >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400';
           return <span className={`font-semibold ${cls}`}>{formatINR(v)}</span>;
         },
       },
@@ -297,7 +297,7 @@ export default function Reports() {
       sortingFn: (a, b, col) =>
         Number(a.getValue(col)) - Number(b.getValue(col)),
       cell: ({ getValue }) => (
-        <span className="font-semibold text-red-600">{formatINR(Number(getValue()) || 0)}</span>
+        <span className="font-semibold text-red-600 dark:text-red-400">{formatINR(Number(getValue()) || 0)}</span>
       ),
     },
     {
@@ -435,26 +435,26 @@ export default function Reports() {
           ) : pnl ? (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
-                <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-blue-800/80">Total Purchases</p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums text-blue-900">
+                <div className="rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-blue-800 dark:text-blue-200/80">Total Purchases</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-blue-900 dark:text-blue-100">
                     {formatINR(Number(pnl.totalPurchases) || 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-green-100 bg-green-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-green-800/80">Total Sales</p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums text-green-900">
+                <div className="rounded-lg border border-green-100 bg-green-50 dark:bg-green-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-green-800 dark:text-green-200/80">Total Sales</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-green-900 dark:text-green-100">
                     {formatINR(Number(pnl.totalSales) || 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-emerald-100 bg-emerald-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-emerald-800/80">Gross Profit</p>
-                  <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-900">
+                <div className="rounded-lg border border-emerald-100 bg-emerald-50 dark:bg-emerald-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-emerald-800 dark:text-emerald-200/80">Gross Profit</p>
+                  <p className="mt-1 text-lg font-semibold tabular-nums text-emerald-900 dark:text-emerald-100">
                     {formatINR(Number(pnl.grossProfit) || 0)}
                   </p>
                 </div>
-                <div className="rounded-lg border border-amber-100 bg-amber-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-amber-900/80">Expenses</p>
+                <div className="rounded-lg border border-amber-100 bg-amber-50 dark:bg-amber-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-amber-900 dark:text-amber-100/80">Expenses</p>
                   <p className="mt-1 text-lg font-semibold tabular-nums text-amber-950">
                     {formatINR(Number(pnl.totalExpenses) || 0)}
                   </p>
@@ -462,14 +462,14 @@ export default function Reports() {
                 <div
                   className={`rounded-lg border p-4 sm:col-span-2 lg:col-span-2 xl:col-span-2 ${
                     (Number(pnl.netProfit) || 0) >= 0
-                      ? 'border-emerald-200 bg-emerald-50/90'
-                      : 'border-red-200 bg-red-50/90'
+                      ? 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/90'
+                      : 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/90'
                   }`}
                 >
                   <p className="text-xs font-medium uppercase tracking-wide text-heading/70">Net Profit</p>
                   <p
                     className={`mt-1 text-2xl font-bold tabular-nums ${
-                      (Number(pnl.netProfit) || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'
+                      (Number(pnl.netProfit) || 0) >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'
                     }`}
                   >
                     {formatINR(Number(pnl.netProfit) || 0)}
@@ -537,14 +537,14 @@ export default function Reports() {
                           {dailyPnlRows.map((r: any) => {
                             const net = Number(r.net_profit);
                             return (
-                              <tr key={r.date} className={net >= 0 ? 'bg-card hover:bg-emerald-50' : 'bg-card hover:bg-red-50'}>
+                              <tr key={r.date} className={net >= 0 ? 'bg-card hover:bg-emerald-50 dark:hover:bg-emerald-900/30' : 'bg-card hover:bg-red-50 dark:hover:bg-red-900/30'}>
                                 <td className="px-3 py-2 font-medium">{formatDate(r.date)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{formatNumber(Number(r.bags_sold) || 0)}</td>
-                                <td className="px-3 py-2 text-right tabular-nums text-green-700">{formatINR(Number(r.sales))}</td>
-                                <td className="px-3 py-2 text-right tabular-nums text-blue-700">{formatINR(Number(r.purchases))}</td>
-                                <td className="px-3 py-2 text-right tabular-nums text-amber-700">{formatINR(Number(r.expenses))}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(Number(r.sales))}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-blue-700 dark:text-blue-300">{formatINR(Number(r.purchases))}</td>
+                                <td className="px-3 py-2 text-right tabular-nums text-amber-700 dark:text-amber-300">{formatINR(Number(r.expenses))}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{formatINR(Number(r.gross_profit))}</td>
-                                <td className={`px-3 py-2 text-right tabular-nums font-semibold ${net >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                                <td className={`px-3 py-2 text-right tabular-nums font-semibold ${net >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
                                   {formatINR(net)}
                                 </td>
                               </tr>
@@ -552,14 +552,14 @@ export default function Reports() {
                           })}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t-2 border-gray-300 bg-surface font-semibold">
+                          <tr className="border-t-2 border-card-border bg-surface font-semibold">
                             <td className="px-3 py-2">Total</td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatNumber(dailyPnlRows.reduce((s: number, r: any) => s + (Number(r.bags_sold) || 0), 0))}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-green-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.sales), 0))}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-blue-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.purchases), 0))}</td>
-                            <td className="px-3 py-2 text-right tabular-nums text-amber-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.expenses), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.sales), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-blue-700 dark:text-blue-300">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.purchases), 0))}</td>
+                            <td className="px-3 py-2 text-right tabular-nums text-amber-700 dark:text-amber-300">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.expenses), 0))}</td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.gross_profit), 0))}</td>
-                            <td className={`px-3 py-2 text-right tabular-nums ${dailyPnlRows.reduce((s: number, r: any) => s + Number(r.net_profit), 0) >= 0 ? 'text-emerald-700' : 'text-red-700'}`}>
+                            <td className={`px-3 py-2 text-right tabular-nums ${dailyPnlRows.reduce((s: number, r: any) => s + Number(r.net_profit), 0) >= 0 ? 'text-emerald-700 dark:text-emerald-300' : 'text-red-700 dark:text-red-300'}`}>
                               {formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.net_profit), 0))}
                             </td>
                           </tr>
@@ -593,7 +593,7 @@ export default function Reports() {
         <section className="space-y-4">
           <div className="rounded-lg border border-card-border bg-card p-4 shadow-sm">
             <p className="text-xs font-medium uppercase tracking-wide text-heading/60">Total outstanding (all parties)</p>
-            <p className="mt-1 text-xl font-bold tabular-nums text-red-600">{formatINR(totalOutstanding)}</p>
+            <p className="mt-1 text-xl font-bold tabular-nums text-red-600 dark:text-red-400">{formatINR(totalOutstanding)}</p>
           </div>
           <DataTable<OutstandingRow>
             data={outstanding}
@@ -652,21 +652,21 @@ export default function Reports() {
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-3">
-                <div className="rounded-lg border border-green-100 bg-green-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-green-800/80">Total Collected</p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-green-900">
+                <div className="rounded-lg border border-green-100 bg-green-50 dark:bg-green-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-green-800 dark:text-green-200/80">Total Collected</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-green-900 dark:text-green-100">
                     {formatINR(collectionData.daily.reduce((s: number, d: any) => s + Number(d.total), 0))}
                   </p>
                 </div>
-                <div className="rounded-lg border border-blue-100 bg-blue-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-blue-800/80">Via Bank</p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-blue-900">
+                <div className="rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-blue-800 dark:text-blue-200/80">Via Bank</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-blue-900 dark:text-blue-100">
                     {formatINR(collectionData.daily.reduce((s: number, d: any) => s + Number(d.bank), 0))}
                   </p>
                 </div>
-                <div className="rounded-lg border border-amber-100 bg-amber-50/80 p-4">
-                  <p className="text-xs font-medium uppercase tracking-wide text-amber-800/80">Via Cash</p>
-                  <p className="mt-1 text-xl font-bold tabular-nums text-amber-900">
+                <div className="rounded-lg border border-amber-100 bg-amber-50 dark:bg-amber-900/30/80 p-4">
+                  <p className="text-xs font-medium uppercase tracking-wide text-amber-800 dark:text-amber-200/80">Via Cash</p>
+                  <p className="mt-1 text-xl font-bold tabular-nums text-amber-900 dark:text-amber-100">
                     {formatINR(collectionData.daily.reduce((s: number, d: any) => s + Number(d.cash), 0))}
                   </p>
                 </div>
@@ -692,9 +692,9 @@ export default function Reports() {
                         <tr key={d.date} className="hover:bg-surface">
                           <td className="px-4 py-3 font-medium">{formatDate(d.date)}</td>
                           <td className="px-4 py-3 text-right tabular-nums">{d.count}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-blue-700">{formatINR(Number(d.bank))}</td>
-                          <td className="px-4 py-3 text-right tabular-nums text-amber-700">{formatINR(Number(d.cash))}</td>
-                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(d.total))}</td>
+                          <td className="px-4 py-3 text-right tabular-nums text-blue-700 dark:text-blue-300">{formatINR(Number(d.bank))}</td>
+                          <td className="px-4 py-3 text-right tabular-nums text-amber-700 dark:text-amber-300">{formatINR(Number(d.cash))}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700 dark:text-green-300">{formatINR(Number(d.total))}</td>
                         </tr>
                       ))}
                     </tbody>
@@ -723,9 +723,9 @@ export default function Reports() {
                         <tr key={r.id} className="hover:bg-surface">
                           <td className="px-4 py-3">{formatDate(r.date)}</td>
                           <td className="px-4 py-3 font-medium">{r.party_name}</td>
-                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(r.amount))}</td>
+                          <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700 dark:text-green-300">{formatINR(Number(r.amount))}</td>
                           <td className="px-4 py-3">
-                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${r.mode === 'bank' ? 'bg-blue-100 text-blue-800' : 'bg-amber-100 text-amber-800'}`}>
+                            <span className={`inline-flex rounded-full px-2 py-0.5 text-xs font-semibold ${r.mode === 'bank' ? 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200' : 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200'}`}>
                               {r.mode}
                             </span>
                           </td>

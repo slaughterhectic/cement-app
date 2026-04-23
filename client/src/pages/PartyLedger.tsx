@@ -49,17 +49,17 @@ export type LedgerTableRow = {
 function typeBadgeClass(type: string | null | undefined): string {
   switch (type) {
     case 'dealer':
-      return 'bg-blue-100 text-blue-800';
+      return 'bg-blue-100 dark:bg-blue-900/40 text-blue-800 dark:text-blue-200';
     case 'contractor':
-      return 'bg-emerald-100 text-emerald-800';
+      return 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-800 dark:text-emerald-200';
     case 'builder':
-      return 'bg-amber-100 text-amber-800';
+      return 'bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-200';
     case 'institution':
-      return 'bg-purple-100 text-purple-800';
+      return 'bg-purple-100 dark:bg-purple-900/40 text-purple-800 dark:text-purple-200';
     case 'damage_buyer':
-      return 'bg-orange-100 text-orange-800';
+      return 'bg-orange-100 dark:bg-orange-900/40 text-orange-800 dark:text-orange-200';
     case 'supplier':
-      return 'bg-indigo-100 text-indigo-800';
+      return 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-800 dark:text-indigo-200';
     default:
       return 'bg-surface text-heading/80';
   }
@@ -223,7 +223,7 @@ export default function PartyLedger() {
           const n = Number(getValue()) || 0;
           if (n <= 0) return '—';
           return (
-            <span className={`font-medium ${isSupplier ? 'text-emerald-600' : 'text-red-600'}`}>
+            <span className={`font-medium ${isSupplier ? 'text-emerald-600 dark:text-emerald-400' : 'text-red-600 dark:text-red-400'}`}>
               {formatINR(n)}
             </span>
           );
@@ -238,7 +238,7 @@ export default function PartyLedger() {
           const n = Number(getValue()) || 0;
           if (n <= 0) return '—';
           return (
-            <span className={`font-medium ${isSupplier ? 'text-orange-600' : 'text-emerald-600'}`}>
+            <span className={`font-medium ${isSupplier ? 'text-orange-600 dark:text-orange-400' : 'text-emerald-600 dark:text-emerald-400'}`}>
               {formatINR(n)}
             </span>
           );
@@ -252,7 +252,7 @@ export default function PartyLedger() {
           let cls: string;
           if (isSupplier) {
             // positive = we owe them (orange/payable), negative = they owe us (green/profit)
-            cls = n > 0 ? 'font-semibold text-orange-600' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-heading/50';
+            cls = n > 0 ? 'font-semibold text-orange-600 dark:text-orange-400' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-heading/50';
           } else {
             cls = n > 0 ? 'font-semibold text-outstanding' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-heading/50';
           }
@@ -351,8 +351,8 @@ export default function PartyLedger() {
       <div className="card space-y-4">
         {loading && !party ? (
           <div className="animate-pulse space-y-3">
-            <div className="h-8 w-48 rounded bg-gray-200" />
-            <div className="h-4 w-full max-w-md rounded bg-gray-200" />
+            <div className="h-8 w-48 rounded bg-card-border/60" />
+            <div className="h-4 w-full max-w-md rounded bg-card-border/60" />
           </div>
         ) : party ? (
           <>
@@ -374,7 +374,7 @@ export default function PartyLedger() {
               <div className="text-right">
                 {outstanding > 0 ? (
                   <div>
-                    <p className={`text-2xl font-bold ${party?.type === 'supplier' ? 'text-orange-600' : 'text-outstanding'}`}>
+                    <p className={`text-2xl font-bold ${party?.type === 'supplier' ? 'text-orange-600 dark:text-orange-400' : 'text-outstanding'}`}>
                       {formatINR(outstanding)}
                     </p>
                     <p className={`text-sm font-semibold mt-0.5 ${party?.type === 'supplier' ? 'text-orange-500' : 'text-outstanding/80'}`}>
@@ -474,7 +474,7 @@ export default function PartyLedger() {
             {party?.type === 'supplier' ? 'Total Paid (incl. advance)' : 'Total Received'}
           </p>
           {/* For suppliers: payments + opening advance go into debit column (totalCharged); for non-suppliers: totalReceived */}
-          <p className="mt-1 text-xl font-semibold text-emerald-700">
+          <p className="mt-1 text-xl font-semibold text-emerald-700 dark:text-emerald-300">
             {formatINR(party?.type === 'supplier' ? summary.totalCharged : summary.totalReceived)}
           </p>
         </div>

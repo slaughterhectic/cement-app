@@ -270,7 +270,7 @@ export default function TripLog() {
           <button
             type="button"
             onClick={() => { setFilterTruck(''); setFilterMonth(''); }}
-            className="text-sm text-orange-600 hover:underline font-medium"
+            className="text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium"
           >
             Clear filters
           </button>
@@ -280,25 +280,25 @@ export default function TripLog() {
       {/* Summary Strip */}
       {rows.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-5">
-          <div className="card p-4 text-center border-orange-200 bg-orange-50">
-            <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Total Qty</p>
+          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Qty</p>
             <p className="text-xl font-bold text-heading">{totalRow.quantity.toFixed(1)} T</p>
           </div>
-          <div className="card p-4 text-center border-orange-200 bg-orange-50">
-            <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Net Freight</p>
+          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Net Freight</p>
             <p className="text-xl font-bold text-heading">{formatINR(totalRow.net_freight)}</p>
           </div>
-          <div className="card p-4 text-center border-orange-200 bg-orange-50">
-            <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Total Fuel</p>
-            <p className="text-xl font-bold text-red-600">{formatINR(totalRow.total_fuel)}</p>
+          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Fuel</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(totalRow.total_fuel)}</p>
           </div>
-          <div className="card p-4 text-center border-orange-200 bg-orange-50">
-            <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Total Toll</p>
-            <p className="text-xl font-bold text-red-600">{formatINR(totalRow.total_toll)}</p>
+          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Toll</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(totalRow.total_toll)}</p>
           </div>
-          <div className="card p-4 text-center border-orange-200 bg-orange-50">
-            <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Net Profit</p>
-            <p className={`text-xl font-bold ${totalRow.net_profit >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Net Profit</p>
+            <p className={`text-xl font-bold ${totalRow.net_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
               {formatINR(totalRow.net_profit)}
             </p>
           </div>
@@ -310,16 +310,16 @@ export default function TripLog() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-orange-50 text-left">
-                <th className="px-4 py-3 font-medium text-orange-700">Date</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Truck</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Driver</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Material</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Qty (T)</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Route</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Net Freight</th>
-                <th className="px-4 py-3 font-medium text-orange-700 text-right">Net Profit</th>
-                <th className="px-4 py-3 font-medium text-orange-700">Actions</th>
+              <tr className="border-b border-card-border bg-orange-50 dark:bg-orange-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Date</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Truck</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Driver</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Material</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Qty (T)</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Route</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Freight</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Profit</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -329,14 +329,14 @@ export default function TripLog() {
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No trips found</p>
-                    <button type="button" onClick={openAdd} className="text-orange-600 hover:underline text-sm font-medium">Log first trip</button>
+                    <button type="button" onClick={openAdd} className="text-orange-600 dark:text-orange-400 hover:underline text-sm font-medium">Log first trip</button>
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50 dark:hover:bg-orange-900/30/40 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.date)}</td>
-                    <td className="px-4 py-3 font-medium text-orange-600">{row.truck_number}</td>
+                    <td className="px-4 py-3 font-medium text-orange-600 dark:text-orange-400">{row.truck_number}</td>
                     <td className="px-4 py-3 text-heading/70">{row.driver_name || '—'}</td>
                     <td className="px-4 py-3 text-heading/70">{row.material_name || '—'}</td>
                     <td className="px-4 py-3 text-right">{row.quantity || '—'}</td>
@@ -344,16 +344,16 @@ export default function TripLog() {
                       {row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination || '—'}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.net_freight))}</td>
-                    <td className={`px-4 py-3 text-right font-semibold ${Number(row.net_profit) >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                    <td className={`px-4 py-3 text-right font-semibold ${Number(row.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(Number(row.net_profit))}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 hover:text-orange-600 transition-colors" title="Edit">
+                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-600 dark:text-orange-400 transition-colors" title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
                         {isAdmin() && (
-                          <button type="button" onClick={() => handleDelete(row)} className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors" title="Delete">
+                          <button type="button" onClick={() => handleDelete(row)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors" title="Delete">
                             <Trash2 className="h-4 w-4" />
                           </button>
                         )}
@@ -451,10 +451,10 @@ export default function TripLog() {
                         <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" required />
                       </div>
                       <div className="flex items-end">
-                        <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs w-full">
+                        <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs w-full">
                           <span className="text-heading/60">Total Freight </span>
-                          <span className="text-orange-600 text-[10px]">({n(form.quantity)} × {n(form.freight_rate)})</span>
-                          <p className="font-bold text-orange-700 text-sm mt-0.5">{formatINR(live.total_freight)}</p>
+                          <span className="text-orange-600 dark:text-orange-400 text-[10px]">({n(form.quantity)} × {n(form.freight_rate)})</span>
+                          <p className="font-bold text-orange-700 dark:text-orange-300 text-sm mt-0.5">{formatINR(live.total_freight)}</p>
                         </div>
                       </div>
                       <div>
@@ -472,7 +472,7 @@ export default function TripLog() {
                           {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                         </select>
                         {live.advance_deduction > 0 && (
-                          <p className="text-xs text-orange-600 mt-1">
+                          <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
                             Advance deduction: {formatINR(live.advance_deduction)} → goes to {transporters.find(t => String(t.id) === form.diesel_from_id)?.name || '—'}'s ledger
                           </p>
                         )}
@@ -516,9 +516,9 @@ export default function TripLog() {
                         <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" required />
                       </div>
-                      <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs flex flex-wrap gap-3">
-                        <span><span className="text-heading/60">Trip Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span></span>
-                        <span><span className="text-heading/60">Adv Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span></span>
+                      <div className="col-span-2 rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs flex flex-wrap gap-3">
+                        <span><span className="text-heading/60">Trip Diesel: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.diesel_amount)}</span></span>
+                        <span><span className="text-heading/60">Adv Diesel: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.advance_deduction)}</span></span>
                       </div>
                     </div>
                   </div>
@@ -536,9 +536,9 @@ export default function TripLog() {
                         <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" required />
                       </div>
                       {live.total_km > 0 && (
-                        <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
+                        <div className="col-span-2 rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs">
                           <span className="text-heading/60">Distance: </span>
-                          <span className="font-semibold text-orange-700">{live.total_km} km</span>
+                          <span className="font-semibold text-orange-700 dark:text-orange-300">{live.total_km} km</span>
                         </div>
                       )}
                       <div className="col-span-2">

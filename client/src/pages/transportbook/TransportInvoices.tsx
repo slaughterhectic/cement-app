@@ -34,13 +34,13 @@ function computeStatus(invoiceAmount: number, receivedAmount: number): 'pending'
 
 function StatusBadge({ status }: { status: string }) {
   if (status === 'done') return (
-    <span className="inline-flex items-center rounded-full bg-green-100 px-2.5 py-0.5 text-xs font-medium text-green-700">Done</span>
+    <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2.5 py-0.5 text-xs font-medium text-green-700 dark:text-green-300">Done</span>
   );
   if (status === 'partial') return (
-    <span className="inline-flex items-center rounded-full bg-blue-100 px-2.5 py-0.5 text-xs font-medium text-blue-700">Partial</span>
+    <span className="inline-flex items-center rounded-full bg-blue-100 dark:bg-blue-900/40 px-2.5 py-0.5 text-xs font-medium text-blue-700 dark:text-blue-300">Partial</span>
   );
   return (
-    <span className="inline-flex items-center rounded-full bg-amber-100 px-2.5 py-0.5 text-xs font-medium text-amber-700">Pending</span>
+    <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Pending</span>
   );
 }
 
@@ -170,20 +170,20 @@ export default function TransportInvoices() {
       {/* Summary Cards */}
       {rows.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
-          <div className="card p-4 bg-indigo-50 border-indigo-200 text-center">
-            <p className="text-xs text-indigo-600 font-medium uppercase tracking-wider">Total Invoiced</p>
+          <div className="card p-4 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800 text-center">
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wider">Total Invoiced</p>
             <p className="text-xl font-bold text-heading">{formatINR(totals.invoice_amount)}</p>
           </div>
-          <div className="card p-4 bg-green-50 border-green-200 text-center">
-            <p className="text-xs text-green-600 font-medium uppercase tracking-wider">Total Received</p>
+          <div className="card p-4 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800 text-center">
+            <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Total Received</p>
             <p className="text-xl font-bold text-heading">{formatINR(totals.received_amount)}</p>
           </div>
-          <div className="card p-4 bg-amber-50 border-amber-200 text-center">
-            <p className="text-xs text-amber-600 font-medium uppercase tracking-wider">Total TDS</p>
+          <div className="card p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-center">
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wider">Total TDS</p>
             <p className="text-xl font-bold text-heading">{formatINR(totals.tds_amount)}</p>
           </div>
-          <div className="card p-4 bg-red-50 border-red-200 text-center">
-            <p className="text-xs text-red-600 font-medium uppercase tracking-wider">Total Pending</p>
+          <div className="card p-4 bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800 text-center">
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Total Pending</p>
             <p className="text-xl font-bold text-heading">{formatINR(totals.pending)}</p>
           </div>
         </div>
@@ -194,16 +194,16 @@ export default function TransportInvoices() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="border-b border-card-border bg-indigo-50 text-left">
-                <th className="px-4 py-3 font-medium text-indigo-700">Invoice No.</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Invoice Date</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Invoice Amt</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Received Date</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Received Amt</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">TDS (2%)</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 text-right">Pending</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Status</th>
-                <th className="px-4 py-3 font-medium text-indigo-700">Actions</th>
+              <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Invoice No.</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Invoice Date</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Invoice Amt</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Received Date</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Received Amt</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">TDS (2%)</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Pending</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Status</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -213,28 +213,28 @@ export default function TransportInvoices() {
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No invoices yet</p>
-                    <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Add your first invoice</button>
+                    <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Add your first invoice</button>
                   </td>
                 </tr>
               ) : (
                 rows.map((row) => {
                   const pending = Math.max(0, Number(row.invoice_amount) - Number(row.received_amount));
                   return (
-                    <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-4 py-3 font-medium text-indigo-600">{row.invoice_number}</td>
+                    <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors">
+                      <td className="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400">{row.invoice_number}</td>
                       <td className="px-4 py-3 text-heading/70">{row.invoice_date ? formatDate(row.invoice_date) : '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.invoice_amount))}</td>
                       <td className="px-4 py-3 text-heading/70">{row.payment_receive_date ? formatDate(row.payment_receive_date) : '—'}</td>
-                      <td className="px-4 py-3 text-right text-green-600">{formatINR(Number(row.received_amount))}</td>
-                      <td className="px-4 py-3 text-right text-amber-600">{formatINR(Number(row.tds_amount))}</td>
-                      <td className="px-4 py-3 text-right text-red-600">{pending > 0 ? formatINR(pending) : '—'}</td>
+                      <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">{formatINR(Number(row.received_amount))}</td>
+                      <td className="px-4 py-3 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.tds_amount))}</td>
+                      <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{pending > 0 ? formatINR(pending) : '—'}</td>
                       <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button
                             type="button"
                             onClick={() => openEdit(row)}
-                            className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                            className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
                             title="Edit"
                           >
                             <Pencil className="h-4 w-4" />
@@ -243,7 +243,7 @@ export default function TransportInvoices() {
                             <button
                               type="button"
                               onClick={() => handleDelete(row)}
-                              className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                              className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
                               title="Delete"
                             >
                               <Trash2 className="h-4 w-4" />
@@ -258,13 +258,13 @@ export default function TransportInvoices() {
             </tbody>
             {rows.length > 0 && (
               <tfoot>
-                <tr className="bg-indigo-50 font-semibold border-t-2 border-indigo-200">
-                  <td className="px-4 py-3 text-indigo-700" colSpan={2}>Total ({rows.length})</td>
+                <tr className="bg-indigo-50 dark:bg-indigo-900/30 font-semibold border-t-2 border-indigo-200 dark:border-indigo-800">
+                  <td className="px-4 py-3 text-indigo-700 dark:text-indigo-300" colSpan={2}>Total ({rows.length})</td>
                   <td className="px-4 py-3 text-right">{formatINR(totals.invoice_amount)}</td>
                   <td className="px-4 py-3">—</td>
-                  <td className="px-4 py-3 text-right text-green-600">{formatINR(totals.received_amount)}</td>
-                  <td className="px-4 py-3 text-right text-amber-600">{formatINR(totals.tds_amount)}</td>
-                  <td className="px-4 py-3 text-right text-red-600">{formatINR(totals.pending)}</td>
+                  <td className="px-4 py-3 text-right text-green-600 dark:text-green-400">{formatINR(totals.received_amount)}</td>
+                  <td className="px-4 py-3 text-right text-amber-600 dark:text-amber-400">{formatINR(totals.tds_amount)}</td>
+                  <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(totals.pending)}</td>
                   <td className="px-4 py-3" colSpan={2}>—</td>
                 </tr>
               </tfoot>
@@ -313,9 +313,9 @@ export default function TransportInvoices() {
                   <input type="number" min="0" step="0.01" className="input-field" value={form.tds_amount} onChange={f('tds_amount')} placeholder="0" />
                 </div>
                 {form.invoice_amount && form.received_amount && (
-                  <div className="col-span-2 rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-2 text-xs">
+                  <div className="col-span-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs">
                     <span className="text-heading/60">Auto Status: </span>
-                    <span className="font-semibold text-indigo-600">
+                    <span className="font-semibold text-indigo-600 dark:text-indigo-400">
                       {computeStatus(Number(form.invoice_amount), Number(form.received_amount))}
                     </span>
                   </div>
