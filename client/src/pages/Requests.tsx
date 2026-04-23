@@ -169,7 +169,7 @@ export default function Requests({ source = 'cementbook' }: { source?: 'cementbo
           <div className="p-8 text-center text-heading/50 text-sm">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="p-12 flex flex-col items-center gap-3 text-center">
-            <MessageSquarePlus className="h-10 w-10 text-gray-300" />
+            <MessageSquarePlus className="h-10 w-10 text-heading/40" />
             <p className="text-heading/50">
               {filter !== 'all' ? `No ${filter} requests` : 'No requests yet'}
             </p>

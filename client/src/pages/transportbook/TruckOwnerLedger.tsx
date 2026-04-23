@@ -248,7 +248,7 @@ export default function TruckOwnerLedger() {
                       <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.builty_number || '—'}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.do_number || '—'}</td>
-                      <td className="px-3 py-2.5 font-medium text-gray-800">{row.party_name}</td>
+                      <td className="px-3 py-2.5 font-medium text-heading/90">{row.party_name}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.location || '—'}</td>
                       <td className="px-3 py-2.5">
                         {row.dch_type ? (

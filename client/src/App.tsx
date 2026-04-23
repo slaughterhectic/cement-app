@@ -72,11 +72,11 @@ function NoAccessPage() {
       <div className="w-full max-w-sm text-center">
         <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-2xl bg-gray-100">
           <div className="flex gap-2">
-            <Building2 className="h-7 w-7 text-gray-300" />
-            <Truck className="h-7 w-7 text-gray-300" />
+            <Building2 className="h-7 w-7 text-heading/40" />
+            <Truck className="h-7 w-7 text-heading/40" />
           </div>
         </div>
-        <h1 className="text-xl font-bold text-gray-800">No Pages Assigned</h1>
+        <h1 className="text-xl font-bold text-heading/90">No Pages Assigned</h1>
         <p className="mt-2 text-sm text-gray-500">
           Hi <span className="font-medium text-gray-700">{user?.display_name || 'there'}</span>, your account doesn't have access to any section yet.
         </p>

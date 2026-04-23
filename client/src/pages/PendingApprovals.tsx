@@ -199,7 +199,7 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
           <div className="p-8 text-center text-heading/50 text-sm">Loading…</div>
         ) : filtered.length === 0 ? (
           <div className="p-12 flex flex-col items-center gap-3 text-center">
-            <ClipboardCheck className="h-10 w-10 text-gray-300" />
+            <ClipboardCheck className="h-10 w-10 text-heading/40" />
             <p className="text-heading/50">
               {filter === 'pending' ? 'No pending entries' : `No ${filter} entries`}
             </p>

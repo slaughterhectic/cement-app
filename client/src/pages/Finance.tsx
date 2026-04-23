@@ -71,7 +71,7 @@ function EMICalculator() {
           </div>
           <div className="rounded-lg border border-card-border bg-surface p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-heading/70">Total Payable</p>
-            <p className="mt-1 text-2xl font-bold tabular-nums text-gray-800">{formatINR(totalPayable ?? 0)}</p>
+            <p className="mt-1 text-2xl font-bold tabular-nums text-heading/90">{formatINR(totalPayable ?? 0)}</p>
           </div>
         </div>
       )}

@@ -334,15 +334,15 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
               <div>
                 <p className="text-xs text-heading/60">Purchase amount</p>
-                <p className="font-semibold text-gray-800">{formatINR(purchaseAmount)}</p>
+                <p className="font-semibold text-heading/90">{formatINR(purchaseAmount)}</p>
               </div>
               <div>
                 <p className="text-xs text-heading/60">Base (excl GST)</p>
-                <p className="font-semibold text-gray-800">{formatINR(base)}</p>
+                <p className="font-semibold text-heading/90">{formatINR(base)}</p>
               </div>
               <div>
                 <p className="text-xs text-heading/60">CGST + SGST</p>
-                <p className="font-semibold text-gray-800">{formatINR(cgst + sgst)}</p>
+                <p className="font-semibold text-heading/90">{formatINR(cgst + sgst)}</p>
               </div>
               {freightAmount > 0 && (
                 <div>

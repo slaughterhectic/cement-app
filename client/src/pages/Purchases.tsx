@@ -238,7 +238,7 @@ export default function Purchases() {
         cell: ({ getValue }) => {
           const v = getValue() as string | null;
           return v
-            ? <span className="text-sm text-gray-800">{v}</span>
+            ? <span className="text-sm text-heading/90">{v}</span>
             : <span className="text-heading/50 text-xs">—</span>;
         },
       },

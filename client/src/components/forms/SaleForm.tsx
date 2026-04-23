@@ -574,15 +574,15 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
               <div>
                 <p className="text-xs text-heading/60">Base amount</p>
-                <p className="font-semibold text-gray-800">{formatINR(base)}</p>
+                <p className="font-semibold text-heading/90">{formatINR(base)}</p>
               </div>
               <div>
                 <p className="text-xs text-heading/60">CGST ({gstRate / 2}%)</p>
-                <p className="font-semibold text-gray-800">{formatINR(cgst)}</p>
+                <p className="font-semibold text-heading/90">{formatINR(cgst)}</p>
               </div>
               <div>
                 <p className="text-xs text-heading/60">SGST ({gstRate / 2}%)</p>
-                <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
+                <p className="font-semibold text-heading/90">{formatINR(sgst)}</p>
               </div>
               <div>
                 <p className="text-xs text-heading/60">Total (entered)</p>

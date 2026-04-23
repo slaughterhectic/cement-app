@@ -180,7 +180,14 @@ function OutstandingBreakdownModal({
 
   const isPayable = type === 'payable';
   const title = isPayable ? 'Outstanding Payables Breakdown' : 'Outstanding Receivables Breakdown';
-  const accentColor = isPayable ? 'orange' : 'blue';
+  // Tailwind JIT cannot see dynamic class names built from template literals,
+  // so emit full class strings for the accent color.
+  const headerBg = isPayable
+    ? 'bg-orange-50/60 dark:bg-orange-900/30'
+    : 'bg-blue-50/60 dark:bg-blue-900/30';
+  const totalTone = isPayable
+    ? 'text-orange-700 dark:text-orange-300'
+    : 'text-blue-700 dark:text-blue-300';
 
   const TypeBadge = ({ t }: { t: string }) => {
     const colors: Record<string, string> = {
@@ -202,7 +209,7 @@ function OutstandingBreakdownModal({
       className="hover:bg-surface cursor-pointer transition-colors"
       onClick={() => onPartyClick(r.id)}
     >
-      <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px] truncate">{r.name}</td>
+      <td className="px-4 py-2.5 font-medium text-heading/90 max-w-[200px] truncate">{r.name}</td>
       <td className="px-3 py-2.5"><TypeBadge t={r.type} /></td>
       <td className="px-3 py-2.5 text-heading/60 max-w-[120px] truncate">{r.location || '—'}</td>
       <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${
@@ -223,11 +230,11 @@ function OutstandingBreakdownModal({
         style={{ animation: 'fadeSlideUp 0.25s ease-out' }}
       >
         {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b border-card-border bg-${accentColor}-50/50 rounded-t-2xl`}>
+        <div className={`flex items-center justify-between px-6 py-4 border-b border-card-border rounded-t-2xl ${headerBg}`}>
           <div>
-            <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-            <p className="text-sm text-heading/60 mt-0.5">
-              {filtered.length} {filtered.length === 1 ? 'party' : 'parties'} · Net total: <span className={`font-semibold ${total >= 0 ? `text-${accentColor}-700` : 'text-red-600 dark:text-red-400'}`}>{formatINR(total)}</span>
+            <h2 className="text-lg font-bold text-heading">{title}</h2>
+            <p className="text-sm text-heading/70 mt-0.5">
+              {filtered.length} {filtered.length === 1 ? 'party' : 'parties'} · Net total: <span className={`font-semibold ${total >= 0 ? totalTone : 'text-red-600 dark:text-red-400'}`}>{formatINR(total)}</span>
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-card-border/60 rounded-full transition-colors" aria-label="Close">

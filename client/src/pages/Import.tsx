@@ -240,7 +240,7 @@ export default function Import() {
             const done = step > s.n;
             return (
               <li key={s.n} className="flex items-center gap-2">
-                {s.n > 1 && <span className="hidden text-gray-300 sm:inline">—</span>}
+                {s.n > 1 && <span className="hidden text-heading/40 sm:inline">—</span>}
                 <div
                   className={[
                     'flex items-center gap-2 rounded-full border px-3 py-1.5 text-sm font-medium',
@@ -393,7 +393,7 @@ export default function Import() {
                     previewBody.map((row, ri) => (
                       <tr key={ri} className={ri % 2 === 0 ? 'bg-card' : 'bg-surface/50'}>
                         {(row as unknown[]).map((cell, ci) => (
-                          <td key={ci} className="border-b border-card-border px-3 py-2 text-gray-800">
+                          <td key={ci} className="border-b border-card-border px-3 py-2 text-heading/90">
                             {cell === '' || cell == null ? '—' : String(cell)}
                           </td>
                         ))}
@@ -462,7 +462,7 @@ export default function Import() {
               <ul className="divide-y divide-card-border">
                 {targets.map((t) => (
                   <li key={t.key} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
-                    <span className="text-sm font-medium text-gray-800">{t.label}</span>
+                    <span className="text-sm font-medium text-heading/90">{t.label}</span>
                     <select
                       value={columnMapping[t.key] ?? ''}
                       onChange={(e) =>

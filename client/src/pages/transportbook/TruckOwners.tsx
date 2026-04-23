@@ -214,7 +214,7 @@ export default function TruckOwners() {
                         {row.truck_number}
                       </button>
                     </td>
-                    <td className="px-4 py-3 font-medium text-gray-800">{row.owner_name}</td>
+                    <td className="px-4 py-3 font-medium text-heading/90">{row.owner_name}</td>
                     <td className="px-4 py-3 text-heading/70">{row.owner_phone || '—'}</td>
                     <td className="px-4 py-3 text-heading/70">{row.driver_name || '—'}</td>
                     <td className="px-4 py-3 text-heading/70 font-mono text-xs">{maskAccount(row.bank_account)}</td>
