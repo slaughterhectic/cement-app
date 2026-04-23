@@ -8,6 +8,7 @@ import {
   ClipboardCheck,
   CreditCard,
   FileText,
+  ShieldCheck,
   Landmark,
   LayoutDashboard,
   LogOut,
@@ -84,6 +85,7 @@ const transportNavItems = [
   { to: '/transportbook/trucks', label: 'Trucks', icon: Truck },
   { to: '/transportbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/transportbook/invoices', label: 'ACC Billing', icon: Receipt },
+  { to: '/transportbook/compliance', label: 'Compliance', icon: ShieldCheck },
   { to: '/transportbook/partners', label: 'Partners', icon: Users },
   { to: '/transportbook/rates', label: 'Rates', icon: Settings, permission: 'manage_transport_rates' },
 ];

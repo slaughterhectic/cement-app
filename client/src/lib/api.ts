@@ -296,12 +296,19 @@ export const api = {
     create: (data: any) => request<any>('/rl/trips', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/rl/trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/rl/trips/${id}`, { method: 'DELETE' }),
+    ewayAlerts: () => request<{ atRisk: any[]; counts: { expired: number; risk: number; warning: number; ok: number } }>('/rl/trips/eway-alerts'),
   },
   rlInvoices: {
     list: () => request<any[]>('/rl/invoices'),
     create: (data: any) => request<any>('/rl/invoices', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/rl/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/rl/invoices/${id}`, { method: 'DELETE' }),
+    complianceSummary: (period?: string) =>
+      request<{ total: number; gstr1_filed: number; gstr1_mismatch: number; gstr3b_filed: number; gstr3b_mismatch: number; itc_claimed: number; itc_reconciled: number; itc_disputed: number }>(
+        `/rl/invoices/compliance-summary${period ? `?period=${encodeURIComponent(period)}` : ''}`
+      ),
+    patchCompliance: (id: number, data: any) =>
+      request<any>(`/rl/invoices/${id}/compliance`, { method: 'PATCH', body: JSON.stringify(data) }),
   },
   rlPartners: {
     list: () => request<any[]>('/rl/partners'),

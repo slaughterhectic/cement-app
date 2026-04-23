@@ -12,6 +12,20 @@ function handlingRateFor(materialType: string | null | undefined, s: Settings): 
   return 0;
 }
 
+// eway_status: delivered | expired | risk (<6h) | warning (6-24h) | ok (>=24h) | none (no bill)
+function ewayStatusFor(row: any): { eway_status: string; eway_hours_left: number | null } {
+  if (row.delivery_status === 'delivered') return { eway_status: 'delivered', eway_hours_left: null };
+  if (!row.eway_bill_valid_until) return { eway_status: 'none', eway_hours_left: null };
+  const until = new Date(row.eway_bill_valid_until).getTime();
+  if (Number.isNaN(until)) return { eway_status: 'none', eway_hours_left: null };
+  const now = Date.now();
+  const hoursLeft = (until - now) / 3_600_000;
+  if (hoursLeft <= 0) return { eway_status: 'expired', eway_hours_left: hoursLeft };
+  if (hoursLeft < 6) return { eway_status: 'risk', eway_hours_left: hoursLeft };
+  if (hoursLeft < 24) return { eway_status: 'warning', eway_hours_left: hoursLeft };
+  return { eway_status: 'ok', eway_hours_left: hoursLeft };
+}
+
 function computeTrip(t: any, s: Settings) {
   const qty = Number(t.qty);
   const accFreightRate = Number(t.acc_freight_rate);
@@ -41,6 +55,7 @@ function computeTrip(t: any, s: Settings) {
     handling_charge,
     bill_amount,
     final_payment,
+    ...ewayStatusFor(t),
   };
 }
 
@@ -58,6 +73,13 @@ function normalizeMaterialType(v: any): string | null {
   if (!v) return null;
   const s = String(v).trim();
   return MATERIAL_TYPES.has(s) ? s : null;
+}
+
+const DELIVERY_STATUSES = new Set(['pending', 'in_transit', 'delivered']);
+function normalizeDeliveryStatus(v: any): string {
+  if (!v) return 'pending';
+  const s = String(v).trim();
+  return DELIVERY_STATUSES.has(s) ? s : 'pending';
 }
 
 // GET /rl/trips — list with optional filters
@@ -93,6 +115,30 @@ router.get('/', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// GET /rl/trips/eway-alerts — trips with at-risk E-Way Bills (not delivered)
+router.get('/eway-alerts', async (_req, res) => {
+  try {
+    const rows = await getAll(
+      `SELECT t.*, o.truck_number, o.owner_name
+       FROM rl_trips t
+       JOIN rl_truck_owners o ON t.truck_owner_id = o.id
+       WHERE t.eway_bill_valid_until IS NOT NULL
+         AND (t.delivery_status IS NULL OR t.delivery_status <> 'delivered')
+       ORDER BY t.eway_bill_valid_until ASC`
+    );
+    const settings = await loadSettings();
+    const all = rows.map(r => computeTrip(r, settings));
+    const atRisk = all.filter((r: any) => ['risk', 'warning', 'expired'].includes(r.eway_status));
+    const counts = {
+      expired: all.filter((r: any) => r.eway_status === 'expired').length,
+      risk: all.filter((r: any) => r.eway_status === 'risk').length,
+      warning: all.filter((r: any) => r.eway_status === 'warning').length,
+      ok: all.filter((r: any) => r.eway_status === 'ok').length,
+    };
+    res.json({ atRisk, counts });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 // POST /rl/trips
 router.post('/', async (req, res) => {
   try {
@@ -100,6 +146,8 @@ router.post('/', async (req, res) => {
       date, builty_number, do_number, truck_owner_id, party_name, location,
       dch_type, material_type, qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
       petrol_slip_number, epod_bill_number, difference_rate, remarks,
+      eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
+      delivery_status, delivered_at,
     } = req.body;
 
     if (!date) return res.status(400).json({ error: 'Date is required' });
@@ -110,8 +158,10 @@ router.post('/', async (req, res) => {
       `INSERT INTO rl_trips
         (date, builty_number, do_number, truck_owner_id, party_name, location, dch_type, material_type,
          qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
-         petrol_slip_number, epod_bill_number, difference_rate, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17)
+         petrol_slip_number, epod_bill_number, difference_rate, remarks,
+         eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
+         delivery_status, delivered_at)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
        RETURNING *`,
       [
         date,
@@ -131,6 +181,11 @@ router.post('/', async (req, res) => {
         epod_bill_number?.trim() || null,
         Number(difference_rate) || 0,
         remarks?.trim() || null,
+        eway_bill_number?.trim() || null,
+        eway_bill_generated_at || null,
+        eway_bill_valid_until || null,
+        normalizeDeliveryStatus(delivery_status),
+        delivered_at || null,
       ]
     );
 
@@ -146,6 +201,8 @@ router.put('/:id', async (req, res) => {
       date, builty_number, do_number, truck_owner_id, party_name, location,
       dch_type, material_type, qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
       petrol_slip_number, epod_bill_number, difference_rate, remarks,
+      eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
+      delivery_status, delivered_at,
     } = req.body;
 
     if (!date) return res.status(400).json({ error: 'Date is required' });
@@ -157,8 +214,10 @@ router.put('/:id', async (req, res) => {
         date=$1, builty_number=$2, do_number=$3, truck_owner_id=$4, party_name=$5,
         location=$6, dch_type=$7, material_type=$8, qty=$9, acc_freight_rate=$10, commission_pct=$11,
         diesel_advance=$12, cash_advance=$13, petrol_slip_number=$14, epod_bill_number=$15,
-        difference_rate=$16, remarks=$17
-       WHERE id=$18 RETURNING *`,
+        difference_rate=$16, remarks=$17,
+        eway_bill_number=$18, eway_bill_generated_at=$19, eway_bill_valid_until=$20,
+        delivery_status=$21, delivered_at=$22
+       WHERE id=$23 RETURNING *`,
       [
         date,
         builty_number?.trim() || null,
@@ -177,6 +236,11 @@ router.put('/:id', async (req, res) => {
         epod_bill_number?.trim() || null,
         Number(difference_rate) || 0,
         remarks?.trim() || null,
+        eway_bill_number?.trim() || null,
+        eway_bill_generated_at || null,
+        eway_bill_valid_until || null,
+        normalizeDeliveryStatus(delivery_status),
+        delivered_at || null,
         req.params.id,
       ]
     );

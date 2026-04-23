@@ -594,6 +594,22 @@ export async function initializeDatabase() {
       WHERE is_active = 1 AND active_since IS NULL
     `);
 
+    // E-Way Bill tracking on trips
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS eway_bill_number TEXT`);
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS eway_bill_generated_at TEXT`);
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS eway_bill_valid_until TEXT`);
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS delivered_at TEXT`);
+
+    // Compliance tracking on invoices — GSTR / ITC status
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gstr1_status TEXT DEFAULT 'pending'`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gstr1_period TEXT`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gstr3b_status TEXT DEFAULT 'pending'`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gstr3b_period TEXT`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_status TEXT DEFAULT 'not_claimed'`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_period TEXT`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS compliance_remarks TEXT`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

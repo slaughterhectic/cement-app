@@ -33,6 +33,13 @@ interface TripRow {
   epod_bill_number: string | null;
   difference_rate: number;
   remarks: string | null;
+  eway_bill_number: string | null;
+  eway_bill_generated_at: string | null;
+  eway_bill_valid_until: string | null;
+  delivery_status: 'pending' | 'in_transit' | 'delivered' | null;
+  delivered_at: string | null;
+  eway_status: 'delivered' | 'expired' | 'risk' | 'warning' | 'ok' | 'none';
+  eway_hours_left: number | null;
 }
 
 interface OwnerOption { id: number; truck_number: string; owner_name: string; }
@@ -55,10 +62,33 @@ const emptyForm = {
   epod_bill_number: '',
   difference_rate: '',
   remarks: '',
+  eway_bill_number: '',
+  eway_bill_generated_at: '',
+  eway_bill_valid_until: '',
+  delivery_status: 'pending' as 'pending' | 'in_transit' | 'delivered',
+  delivered_at: '',
 };
 
 const DCH_TYPES = ['IT', 'DC', 'DE', 'IS'];
 const MATERIAL_TYPES = ['Non-Trade', 'SOW', 'Normal'];
+const DELIVERY_STATUSES: Array<'pending' | 'in_transit' | 'delivered'> = ['pending', 'in_transit', 'delivered'];
+
+const EWAY_STATUS_STYLES: Record<string, { label: string; cls: string }> = {
+  ok: { label: 'OK', cls: 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300' },
+  warning: { label: 'Expiring Soon', cls: 'bg-amber-100 dark:bg-amber-900/40 text-amber-700 dark:text-amber-300' },
+  risk: { label: 'At Risk', cls: 'bg-orange-100 dark:bg-orange-900/40 text-orange-700 dark:text-orange-300 animate-pulse' },
+  expired: { label: 'Expired', cls: 'bg-red-100 dark:bg-red-900/40 text-red-700 dark:text-red-300' },
+  delivered: { label: 'Delivered', cls: 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300' },
+  none: { label: 'No E-Way', cls: 'bg-surface text-heading/60' },
+};
+
+function formatHoursLeft(h: number | null): string {
+  if (h === null || h === undefined) return '';
+  if (h <= 0) return `expired ${Math.abs(Math.round(h))}h ago`;
+  if (h < 1) return `${Math.round(h * 60)}m left`;
+  if (h < 48) return `${h.toFixed(1)}h left`;
+  return `${Math.round(h / 24)}d left`;
+}
 
 interface RateSettings {
   handling_non_trade: number;
@@ -109,6 +139,7 @@ export default function TransportTrips() {
   const [saving, setSaving] = useState(false);
   const [filterOwner, setFilterOwner] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [filterEwayAtRisk, setFilterEwayAtRisk] = useState(false);
   const [rates, setRates] = useState<RateSettings>(DEFAULT_RATES);
 
   const live = computeLive(form, rates);
@@ -167,6 +198,11 @@ export default function TransportTrips() {
       epod_bill_number: row.epod_bill_number || '',
       difference_rate: String(row.difference_rate || ''),
       remarks: row.remarks || '',
+      eway_bill_number: row.eway_bill_number || '',
+      eway_bill_generated_at: row.eway_bill_generated_at ? row.eway_bill_generated_at.slice(0, 16) : '',
+      eway_bill_valid_until: row.eway_bill_valid_until ? row.eway_bill_valid_until.slice(0, 16) : '',
+      delivery_status: (row.delivery_status || 'pending') as 'pending' | 'in_transit' | 'delivered',
+      delivered_at: row.delivered_at ? row.delivered_at.slice(0, 16) : '',
     });
     setModalOpen(true);
   };
@@ -195,6 +231,11 @@ export default function TransportTrips() {
         epod_bill_number: form.epod_bill_number || null,
         difference_rate: n(form.difference_rate),
         remarks: form.remarks || null,
+        eway_bill_number: form.eway_bill_number || null,
+        eway_bill_generated_at: form.eway_bill_generated_at ? new Date(form.eway_bill_generated_at).toISOString() : null,
+        eway_bill_valid_until: form.eway_bill_valid_until ? new Date(form.eway_bill_valid_until).toISOString() : null,
+        delivery_status: form.delivery_status,
+        delivered_at: form.delivered_at ? new Date(form.delivered_at).toISOString() : null,
       };
       if (editing) {
         await api.rlTrips.update(editing.id, payload);
@@ -225,7 +266,11 @@ export default function TransportTrips() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const totals = rows.reduce(
+  const visibleRows = filterEwayAtRisk
+    ? rows.filter((r) => ['risk', 'warning', 'expired'].includes(r.eway_status))
+    : rows;
+
+  const totals = visibleRows.reduce(
     (acc, r) => ({
       qty: acc.qty + Number(r.qty),
       acc_amount: acc.acc_amount + Number(r.acc_amount),
@@ -242,7 +287,7 @@ export default function TransportTrips() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Trip Log</h1>
-          <p className="text-sm text-heading/60 mt-1">{rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
+          <p className="text-sm text-heading/60 mt-1">{visibleRows.length} of {rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
         </div>
         <button
           type="button"
@@ -278,10 +323,19 @@ export default function TransportTrips() {
             onChange={(e) => setFilterMonth(e.target.value)}
           />
         </div>
-        {(filterOwner || filterMonth) && (
+        <label className="inline-flex items-center gap-2 text-sm text-heading/70 cursor-pointer">
+          <input
+            type="checkbox"
+            className="rounded border-card-border"
+            checked={filterEwayAtRisk}
+            onChange={(e) => setFilterEwayAtRisk(e.target.checked)}
+          />
+          <span>E-Way at-risk only</span>
+        </label>
+        {(filterOwner || filterMonth || filterEwayAtRisk) && (
           <button
             type="button"
-            onClick={() => { setFilterOwner(''); setFilterMonth(''); }}
+            onClick={() => { setFilterOwner(''); setFilterMonth(''); setFilterEwayAtRisk(false); }}
             className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
           >
             Clear filters
@@ -290,7 +344,7 @@ export default function TransportTrips() {
       </div>
 
       {/* Summary Strip */}
-      {rows.length > 0 && (
+      {visibleRows.length > 0 && (
         <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">
           <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Total Qty</p>
@@ -338,22 +392,27 @@ export default function TransportTrips() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Bilty</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Advances</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final Pay</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">E-Way</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={14} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
-              ) : rows.length === 0 ? (
+                <tr><td colSpan={15} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
+              ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-4 py-12 text-center">
-                    <p className="text-heading/50 mb-3">No trips found</p>
-                    <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Log first trip</button>
+                  <td colSpan={15} className="px-4 py-12 text-center">
+                    <p className="text-heading/50 mb-3">{rows.length === 0 ? 'No trips found' : 'No trips match current filters'}</p>
+                    {rows.length === 0 && (
+                      <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Log first trip</button>
+                    )}
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30 transition-colors">
+                visibleRows.map((row) => {
+                  const risky = row.eway_status === 'expired' || row.eway_status === 'risk';
+                  return (
+                  <tr key={row.id} className={`border-b border-card-border last:border-0 transition-colors ${risky ? 'bg-red-50/60 dark:bg-red-900/20 hover:bg-red-50 dark:hover:bg-red-900/30' : 'hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30'}`}>
                     <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-3 py-2.5 text-heading/70 text-xs">{row.builty_number || '—'}</td>
                     <td className="px-3 py-2.5 font-medium text-indigo-600 dark:text-indigo-400">{row.truck_number}</td>
@@ -378,6 +437,19 @@ export default function TransportTrips() {
                     </td>
                     <td className="px-3 py-2.5 text-right font-semibold text-green-600 dark:text-green-400">{formatINR(Number(row.final_payment))}</td>
                     <td className="px-3 py-2.5">
+                      <div className="flex flex-col gap-0.5">
+                        <span className={`inline-flex w-fit items-center rounded-full px-2 py-0.5 text-xs font-medium ${EWAY_STATUS_STYLES[row.eway_status]?.cls || EWAY_STATUS_STYLES.none.cls}`}>
+                          {EWAY_STATUS_STYLES[row.eway_status]?.label || 'No E-Way'}
+                        </span>
+                        {row.eway_status !== 'none' && row.eway_status !== 'delivered' && row.eway_hours_left !== null && (
+                          <span className="text-[10px] text-heading/50 ml-1">{formatHoursLeft(row.eway_hours_left)}</span>
+                        )}
+                        {row.eway_bill_number && (
+                          <span className="text-[10px] text-heading/50 ml-1 font-mono truncate max-w-[90px]" title={row.eway_bill_number}>{row.eway_bill_number}</span>
+                        )}
+                      </div>
+                    </td>
+                    <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -400,7 +472,8 @@ export default function TransportTrips() {
                       </div>
                     </td>
                   </tr>
-                ))
+                  );
+                })
               )}
             </tbody>
           </table>
@@ -532,6 +605,40 @@ export default function TransportTrips() {
                         <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
                         <input className="input-field" value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
                       </div>
+                    </div>
+                  </div>
+
+                  {/* E-Way Bill & Delivery */}
+                  <div>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">E-Way Bill & Delivery</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">E-Way Bill Number</label>
+                        <input className="input-field" value={form.eway_bill_number} onChange={f('eway_bill_number')} placeholder="12-digit EBN" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Generated At</label>
+                        <input type="datetime-local" className="input-field" value={form.eway_bill_generated_at} onChange={f('eway_bill_generated_at')} />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Valid Until *</label>
+                        <input type="datetime-local" className="input-field" value={form.eway_bill_valid_until} onChange={f('eway_bill_valid_until')} />
+                        <p className="mt-1 text-[10px] text-heading/50">Drives the at-risk alerts on the dashboard.</p>
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Delivery Status</label>
+                        <select className="input-field" value={form.delivery_status} onChange={f('delivery_status')}>
+                          {DELIVERY_STATUSES.map((s) => (
+                            <option key={s} value={s}>{s.replace('_', ' ')}</option>
+                          ))}
+                        </select>
+                      </div>
+                      {form.delivery_status === 'delivered' && (
+                        <div>
+                          <label className="block text-xs font-medium text-heading/70 mb-1">Delivered At</label>
+                          <input type="datetime-local" className="input-field" value={form.delivered_at} onChange={f('delivered_at')} />
+                        </div>
+                      )}
                     </div>
                   </div>
 
