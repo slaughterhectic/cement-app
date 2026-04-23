@@ -550,6 +550,50 @@ export async function initializeDatabase() {
       ON CONFLICT (name) DO NOTHING;
     `);
 
+    // Global key-value settings (handling charges, bilty rate, gps rent, etc.)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS app_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      INSERT INTO app_settings (key, value) VALUES
+        ('handling_non_trade_per_mt', '17'),
+        ('handling_sow_per_mt', '17'),
+        ('bilty_per_mt', '10'),
+        ('gps_rent_monthly', '250')
+      ON CONFLICT (key) DO NOTHING;
+    `);
+
+    // material_type on rl_trips (added incrementally — existing rows stay NULL)
+    await client.query(`
+      ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS material_type TEXT
+    `);
+
+    // Monthly GPS rent debit log — one row per (truck_owner, YYYY-MM)
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_gps_rent_debits (
+        id SERIAL PRIMARY KEY,
+        truck_owner_id INTEGER NOT NULL REFERENCES rl_truck_owners(id) ON DELETE CASCADE,
+        period TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        created_at TIMESTAMPTZ DEFAULT NOW(),
+        UNIQUE (truck_owner_id, period)
+      );
+    `);
+
+    // Track when an owner was activated so GPS backfill doesn't reach before that date
+    await client.query(`
+      ALTER TABLE rl_truck_owners ADD COLUMN IF NOT EXISTS active_since TEXT
+    `);
+    await client.query(`
+      UPDATE rl_truck_owners SET active_since = to_char(COALESCE(created_at, NOW()), 'YYYY-MM-DD')
+      WHERE is_active = 1 AND active_since IS NULL
+    `);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

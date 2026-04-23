@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, Eye } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, Eye, ToggleLeft, ToggleRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -128,6 +128,33 @@ export default function TruckOwners() {
     }
   };
 
+  const handleToggleActive = async (row: OwnerRow) => {
+    const nextActive = row.is_active === 1 ? 0 : 1;
+    const verb = nextActive === 1 ? 'activate' : 'deactivate';
+    if (nextActive === 1 &&
+        !window.confirm(`Activate ${row.truck_number}? GPS rent will start debiting from this month.`)) return;
+    if (nextActive === 0 &&
+        !window.confirm(`Deactivate ${row.truck_number}? GPS rent will stop accruing.`)) return;
+    try {
+      await api.rlTruckOwners.update(row.id, {
+        truck_number: row.truck_number,
+        owner_name: row.owner_name,
+        owner_phone: row.owner_phone,
+        driver_name: row.driver_name,
+        driver_phone: row.driver_phone,
+        bank_account: row.bank_account,
+        ifsc_code: row.ifsc_code,
+        beneficiary_name: row.beneficiary_name,
+        pan_number: row.pan_number,
+        is_active: nextActive,
+      });
+      addToast(`Truck ${verb}d`, 'success');
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : `Failed to ${verb}`, 'error');
+    }
+  };
+
   const f = (field: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -161,15 +188,16 @@ export default function TruckOwners() {
                 <th className="px-4 py-3 font-medium text-indigo-700">Bank Account</th>
                 <th className="px-4 py-3 font-medium text-indigo-700">PAN</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 text-right">Trips</th>
+                <th className="px-4 py-3 font-medium text-indigo-700">Status</th>
                 <th className="px-4 py-3 font-medium text-indigo-700">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={8} className="px-4 py-12 text-center">
+                  <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-gray-400 mb-3">No truck owners added yet</p>
                     <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Add your first truck owner</button>
                   </td>
@@ -197,6 +225,11 @@ export default function TruckOwners() {
                       </span>
                     </td>
                     <td className="px-4 py-3">
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${row.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                        {row.is_active ? 'Active' : 'Inactive'}
+                      </span>
+                    </td>
+                    <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
                         <button
                           type="button"
@@ -205,6 +238,14 @@ export default function TruckOwners() {
                           title="View Ledger"
                         >
                           <Eye className="h-4 w-4" />
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => handleToggleActive(row)}
+                          className={`rounded p-1.5 hover:bg-gray-100 transition-colors ${row.is_active ? 'text-green-600' : 'text-gray-400'}`}
+                          title={row.is_active ? 'Deactivate (stop GPS rent)' : 'Activate (start GPS rent)'}
+                        >
+                          {row.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
                         </button>
                         <button
                           type="button"

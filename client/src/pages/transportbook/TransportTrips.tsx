@@ -16,6 +16,7 @@ interface TripRow {
   party_name: string;
   location: string | null;
   dch_type: string | null;
+  material_type: string | null;
   qty: number;
   acc_freight_rate: number;
   commission_pct: number;
@@ -24,6 +25,9 @@ interface TripRow {
   acc_amount: number;
   commission_amount: number;
   builty_charge: number;
+  handling_rate: number;
+  handling_charge: number;
+  bill_amount: number;
   final_payment: number;
   petrol_slip_number: string | null;
   epod_bill_number: string | null;
@@ -41,6 +45,7 @@ const emptyForm = {
   party_name: '',
   location: '',
   dch_type: '',
+  material_type: '',
   qty: '',
   acc_freight_rate: '',
   commission_pct: '6.29',
@@ -53,10 +58,29 @@ const emptyForm = {
 };
 
 const DCH_TYPES = ['IT', 'DC', 'DE', 'IS'];
+const MATERIAL_TYPES = ['Non-Trade', 'SOW', 'Normal'];
+
+interface RateSettings {
+  handling_non_trade: number;
+  handling_sow: number;
+  bilty_per_mt: number;
+}
+
+const DEFAULT_RATES: RateSettings = {
+  handling_non_trade: 17,
+  handling_sow: 17,
+  bilty_per_mt: 10,
+};
 
 function n(v: string) { return Number(v) || 0; }
 
-function computeLive(form: typeof emptyForm) {
+function handlingRate(materialType: string, rates: RateSettings): number {
+  if (materialType === 'Non-Trade') return rates.handling_non_trade;
+  if (materialType === 'SOW') return rates.handling_sow;
+  return 0;
+}
+
+function computeLive(form: typeof emptyForm, rates: RateSettings) {
   const qty = n(form.qty);
   const accFreightRate = n(form.acc_freight_rate);
   const commissionPct = n(form.commission_pct);
@@ -65,10 +89,12 @@ function computeLive(form: typeof emptyForm) {
 
   const acc_amount = qty * accFreightRate;
   const commission_amount = acc_amount * commissionPct / 100;
-  const builty_charge = qty * 10;
+  const builty_charge = qty * rates.bilty_per_mt;
+  const handling_charge = qty * handlingRate(form.material_type, rates);
+  const bill_amount = acc_amount + handling_charge;
   const final_payment = acc_amount - commission_amount - builty_charge - dieselAdvance - cashAdvance;
 
-  return { acc_amount, commission_amount, builty_charge, final_payment };
+  return { acc_amount, commission_amount, builty_charge, handling_charge, bill_amount, final_payment };
 }
 
 export default function TransportTrips() {
@@ -83,8 +109,9 @@ export default function TransportTrips() {
   const [saving, setSaving] = useState(false);
   const [filterOwner, setFilterOwner] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [rates, setRates] = useState<RateSettings>(DEFAULT_RATES);
 
-  const live = computeLive(form);
+  const live = computeLive(form, rates);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -108,6 +135,15 @@ export default function TransportTrips() {
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadOwners(); }, [loadOwners]);
+  useEffect(() => {
+    api.settings.list()
+      .then((s) => setRates({
+        handling_non_trade: Number(s.handling_non_trade_per_mt) || DEFAULT_RATES.handling_non_trade,
+        handling_sow: Number(s.handling_sow_per_mt) || DEFAULT_RATES.handling_sow,
+        bilty_per_mt: Number(s.bilty_per_mt) || DEFAULT_RATES.bilty_per_mt,
+      }))
+      .catch(() => {});
+  }, []);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
 
@@ -121,6 +157,7 @@ export default function TransportTrips() {
       party_name: row.party_name,
       location: row.location || '',
       dch_type: row.dch_type || '',
+      material_type: row.material_type || '',
       qty: String(row.qty || ''),
       acc_freight_rate: String(row.acc_freight_rate || ''),
       commission_pct: String(row.commission_pct ?? 6.29),
@@ -148,6 +185,7 @@ export default function TransportTrips() {
         party_name: form.party_name.trim(),
         location: form.location || null,
         dch_type: form.dch_type || null,
+        material_type: form.material_type || null,
         qty: n(form.qty),
         acc_freight_rate: n(form.acc_freight_rate),
         commission_pct: n(form.commission_pct) || 6.29,
@@ -292,9 +330,12 @@ export default function TransportTrips() {
                 <th className="px-3 py-3 font-medium text-indigo-700">Truck</th>
                 <th className="px-3 py-3 font-medium text-indigo-700">Party</th>
                 <th className="px-3 py-3 font-medium text-indigo-700">DCH</th>
+                <th className="px-3 py-3 font-medium text-indigo-700">Material</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 text-right">Qty (T)</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 text-right">ACC Amt</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Handling</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 text-right">Commission</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 text-right">Bilty</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 text-right">Advances</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 text-right">Final Pay</th>
                 <th className="px-3 py-3 font-medium text-indigo-700">Actions</th>
@@ -302,10 +343,10 @@ export default function TransportTrips() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={11} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={14} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={11} className="px-4 py-12 text-center">
+                  <td colSpan={14} className="px-4 py-12 text-center">
                     <p className="text-gray-400 mb-3">No trips found</p>
                     <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Log first trip</button>
                   </td>
@@ -322,9 +363,16 @@ export default function TransportTrips() {
                         <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{row.dch_type}</span>
                       ) : '—'}
                     </td>
+                    <td className="px-3 py-2.5">
+                      {row.material_type ? (
+                        <span className="rounded-full bg-purple-100 px-2 py-0.5 text-xs font-medium text-purple-700">{row.material_type}</span>
+                      ) : '—'}
+                    </td>
                     <td className="px-3 py-2.5 text-right">{Number(row.qty).toFixed(2)}</td>
                     <td className="px-3 py-2.5 text-right font-medium">{formatINR(Number(row.acc_amount))}</td>
+                    <td className="px-3 py-2.5 text-right text-green-600">{formatINR(Number(row.handling_charge || 0))}</td>
                     <td className="px-3 py-2.5 text-right text-amber-600">{formatINR(Number(row.commission_amount))}</td>
+                    <td className="px-3 py-2.5 text-right text-amber-600">{formatINR(Number(row.builty_charge))}</td>
                     <td className="px-3 py-2.5 text-right text-red-600 text-xs">
                       D: {formatINR(Number(row.diesel_advance))} / C: {formatINR(Number(row.cash_advance))}
                     </td>
@@ -414,6 +462,13 @@ export default function TransportTrips() {
                           {DCH_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
+                      <div>
+                        <label className="block text-xs font-medium text-gray-600 mb-1">Material Type</label>
+                        <select className="input-field" value={form.material_type} onChange={f('material_type')}>
+                          <option value="">Select material</option>
+                          {MATERIAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                        </select>
+                      </div>
                     </div>
                   </div>
 
@@ -489,6 +544,10 @@ export default function TransportTrips() {
                         <p className="font-bold">{formatINR(live.acc_amount)}</p>
                       </div>
                       <div className="bg-white/10 rounded-lg p-2">
+                        <p className="text-xs opacity-70">Handling (+)</p>
+                        <p className="font-bold text-green-200">+{formatINR(live.handling_charge)}</p>
+                      </div>
+                      <div className="bg-white/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Commission</p>
                         <p className="font-bold text-yellow-200">−{formatINR(live.commission_amount)}</p>
                       </div>
@@ -496,12 +555,16 @@ export default function TransportTrips() {
                         <p className="text-xs opacity-70">Builty Charge</p>
                         <p className="font-bold text-yellow-200">−{formatINR(live.builty_charge)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-white/10 rounded-lg p-2 col-span-2 sm:col-span-4">
                         <p className="text-xs opacity-70">Advances</p>
                         <p className="font-bold text-red-200">−{formatINR(n(form.diesel_advance) + n(form.cash_advance))}</p>
                       </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
+                      <span className="text-sm font-medium">Bill to Party</span>
+                      <span className="text-lg font-bold text-green-100">{formatINR(live.bill_amount)}</span>
+                    </div>
+                    <div className="mt-2 flex items-center justify-between">
                       <span className="text-sm font-medium">Final Payment to Truck Owner</span>
                       <span className="text-xl font-bold">{formatINR(live.final_payment)}</span>
                     </div>

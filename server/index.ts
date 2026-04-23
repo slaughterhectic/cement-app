@@ -31,6 +31,8 @@ import rlTruckOwnersRouter from './routes/rlTruckOwners';
 import rlTripsRouter from './routes/rlTrips';
 import rlInvoicesRouter from './routes/rlInvoices';
 import rlPartnersRouter from './routes/rlPartners';
+import settingsRouter from './routes/settings';
+import { backfillGpsRent } from './lib/gpsRent';
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -78,6 +80,7 @@ app.use('/api/rl/truck-owners', rlTruckOwnersRouter);
 app.use('/api/rl/trips', rlTripsRouter);
 app.use('/api/rl/invoices', rlInvoicesRouter);
 app.use('/api/rl/partners', rlPartnersRouter);
+app.use('/api/settings', settingsRouter);
 
 // Godown CRUD
 app.get('/api/godowns', async (_req, res) => {
@@ -394,6 +397,8 @@ app.get('*', (_req, res) => {
 async function start() {
   try {
     await initializeDatabase();
+    try { await backfillGpsRent(); }
+    catch (e) { console.error('GPS rent backfill failed:', e); }
     app.listen(PORT, () => {
       console.log(`CementBook API running on http://localhost:${PORT}`);
     });

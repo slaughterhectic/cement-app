@@ -308,6 +308,11 @@ export const api = {
     addTransaction: (id: number, data: any) => request<any>(`/rl/partners/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
     deleteTransaction: (id: number, txId: number) => request<any>(`/rl/partners/${id}/transactions/${txId}`, { method: 'DELETE' }),
   },
+  settings: {
+    list: () => request<Record<string, string>>('/settings'),
+    update: (key: string, value: number | string) =>
+      request<{ key: string; value: string }>(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+  },
   import: {
     parse: async (file: File, fileType: string) => {
       const form = new FormData();

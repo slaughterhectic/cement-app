@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Database, Download, HardDrive, Pencil, Plus, Trash2, ToggleLeft, ToggleRight, Landmark } from 'lucide-react';
+import { Database, Download, HardDrive, Pencil, Plus, Trash2, ToggleLeft, ToggleRight, Landmark, Truck } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToastStore } from '../lib/store';
 import { Modal } from '../components/ui/Modal';
@@ -22,7 +22,7 @@ interface Godown {
   location: string | null;
 }
 
-type Tab = 'brands' | 'godowns' | 'banks' | 'expense-categories' | 'backup';
+type Tab = 'brands' | 'godowns' | 'banks' | 'expense-categories' | 'transport' | 'backup';
 
 const BRAND_TYPES = ['OPC', 'PPC', 'DAMAGE', 'OTHER'] as const;
 
@@ -622,6 +622,120 @@ function ExpenseCategoriesPanel() {
   );
 }
 
+// ─── Transport Rates Panel ────────────────────────────────────────────────────
+
+const TRANSPORT_FIELDS: { key: string; label: string; help: string }[] = [
+  {
+    key: 'handling_non_trade_per_mt',
+    label: 'Non-Trade Handling (₹ / MT)',
+    help: 'Added to the party bill when Material Type is Non-Trade.',
+  },
+  {
+    key: 'handling_sow_per_mt',
+    label: 'SOW Handling (₹ / MT)',
+    help: 'Added to the party bill when Material Type is SOW.',
+  },
+  {
+    key: 'bilty_per_mt',
+    label: 'Bilty Charge (₹ / MT)',
+    help: 'Deducted from the truck owner\'s final payment on every trip.',
+  },
+  {
+    key: 'gps_rent_monthly',
+    label: 'GPS Rent (₹ / month)',
+    help: 'Auto-debited on the 1st of each month from every active truck owner\'s ledger.',
+  },
+];
+
+function TransportRatesPanel() {
+  const addToast = useToastStore((s) => s.addToast);
+  const [values, setValues] = useState<Record<string, string>>({});
+  const [saving, setSaving] = useState<string | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  const load = async () => {
+    try {
+      setLoading(true);
+      const data = await api.settings.list();
+      setValues(data);
+    } catch (e: any) {
+      addToast(e.message || 'Failed to load settings', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSave = async (key: string) => {
+    const v = values[key];
+    if (v === undefined || v === '' || Number.isNaN(Number(v)) || Number(v) < 0) {
+      addToast('Enter a valid non-negative number', 'error');
+      return;
+    }
+    setSaving(key);
+    try {
+      await api.settings.update(key, Number(v));
+      addToast('Saved');
+    } catch (e: any) {
+      addToast(e.message || 'Save failed', 'error');
+    } finally {
+      setSaving(null);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="card">
+        <div className="flex items-start gap-4">
+          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-indigo-500/10 text-indigo-600">
+            <Truck className="h-5 w-5" />
+          </div>
+          <div className="flex-1">
+            <h2 className="text-lg font-semibold text-heading">Transport Rates</h2>
+            <p className="mt-1 text-sm text-gray-500">
+              Global per-MT / per-month rates used in Transport Book trip calculations and the GPS rent auto-debit.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {loading ? (
+        <div className="card p-8 text-center text-sm text-gray-400">Loading...</div>
+      ) : (
+        <div className="card divide-y divide-gray-100 p-0">
+          {TRANSPORT_FIELDS.map((f) => (
+            <div key={f.key} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+              <div className="flex-1">
+                <label className="block text-sm font-medium text-heading">{f.label}</label>
+                <p className="mt-0.5 text-xs text-gray-500">{f.help}</p>
+              </div>
+              <div className="flex items-center gap-2">
+                <input
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  className="input-field w-32"
+                  value={values[f.key] ?? ''}
+                  onChange={(e) => setValues((p) => ({ ...p, [f.key]: e.target.value }))}
+                />
+                <button
+                  type="button"
+                  onClick={() => handleSave(f.key)}
+                  disabled={saving === f.key}
+                  className="btn-primary disabled:opacity-50"
+                >
+                  {saving === f.key ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
 // ─── Backup Panel ────────────────────────────────────────────────────────────
 
 function BackupPanel() {
@@ -696,6 +810,7 @@ const TAB_LABELS: Record<Tab, string> = {
   godowns: 'Godowns',
   banks: 'Banks',
   'expense-categories': 'Expense Categories',
+  transport: 'Transport Rates',
   backup: 'Backup',
 };
 
@@ -711,7 +826,7 @@ export default function Settings() {
 
       {/* Tabs */}
       <div className="flex flex-wrap gap-1 rounded-lg border border-gray-200 bg-gray-50 p-1 w-fit">
-        {(['brands', 'godowns', 'banks', 'expense-categories', 'backup'] as Tab[]).map((t) => (
+        {(['brands', 'godowns', 'banks', 'expense-categories', 'transport', 'backup'] as Tab[]).map((t) => (
           <button
             key={t}
             type="button"
@@ -731,6 +846,7 @@ export default function Settings() {
       {tab === 'godowns' && <GodownsPanel />}
       {tab === 'banks' && <BanksPanel />}
       {tab === 'expense-categories' && <ExpenseCategoriesPanel />}
+      {tab === 'transport' && <TransportRatesPanel />}
       {tab === 'backup' && <BackupPanel />}
     </div>
   );
