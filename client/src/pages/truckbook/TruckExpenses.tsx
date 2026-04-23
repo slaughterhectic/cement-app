@@ -143,7 +143,7 @@ export default function TruckExpenses() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Truck Expenses</h1>
-          <p className="text-sm text-gray-500 mt-1">Fixed & periodic truck expenses</p>
+          <p className="text-sm text-heading/60 mt-1">Fixed & periodic truck expenses</p>
         </div>
         <button
           type="button"
@@ -158,7 +158,7 @@ export default function TruckExpenses() {
       {/* Filters */}
       <div className="card flex flex-wrap gap-4 p-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Truck:</label>
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Truck:</label>
           <select className="input-field py-1.5 text-sm min-w-[140px]" value={filterTruck}
             onChange={(e) => setFilterTruck(e.target.value)}>
             <option value="">All Trucks</option>
@@ -166,7 +166,7 @@ export default function TruckExpenses() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Month:</label>
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
           <input type="month" className="input-field py-1.5 text-sm" value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)} />
         </div>
@@ -217,11 +217,11 @@ export default function TruckExpenses() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={8} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : filteredRows.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="px-4 py-12 text-center">
-                    <p className="text-gray-400 mb-3">No expenses found</p>
+                    <p className="text-heading/50 mb-3">No expenses found</p>
                     <button type="button" onClick={() => setModalOpen(true)}
                       className="text-orange-600 hover:underline text-sm font-medium">Add first expense</button>
                   </td>
@@ -238,7 +238,7 @@ export default function TruckExpenses() {
                         </span>
                       ) : '—'}
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{row.description || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.description || '—'}</td>
                     <td className="px-4 py-3 text-right font-semibold">{formatINR(Number(row.amount))}</td>
                     <td className="px-4 py-3">
                       <span className={`inline-flex rounded-full px-2.5 py-0.5 text-xs font-medium ${
@@ -247,7 +247,7 @@ export default function TruckExpenses() {
                         {row.mode}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-500">
+                    <td className="px-4 py-3 text-heading/60">
                       {row.mode === 'cash' ? (row.cash_handler || '—') : (row.bank_name || '—')}
                     </td>
                     {isAdmin() && (
@@ -278,44 +278,44 @@ export default function TruckExpenses() {
       {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
+          <div className="w-full max-w-md rounded-xl bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
               <h2 className="font-semibold text-heading">Add Truck Expense</h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100">
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
                 <span className="sr-only">Close</span>
-                <Plus className="h-5 w-5 text-gray-500 rotate-45" />
+                <Plus className="h-5 w-5 text-heading/60 rotate-45" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Date *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Date *</label>
                   <input type="date" className="input-field" value={form.date} onChange={f('date')} required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Truck *</label>
                   <select className="input-field" value={form.truck_id} onChange={f('truck_id')} required>
                     <option value="">Select truck</option>
                     {trucks.map((t) => <option key={t.id} value={String(t.id)}>{t.truck_number}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Category *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Category *</label>
                   <select className="input-field" value={form.category} onChange={f('category')} required>
                     <option value="">Select category</option>
                     {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
                   </select>
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Amount (₹) *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Amount (₹) *</label>
                   <input type="number" min="0" step="0.01" className="input-field" value={form.amount} onChange={f('amount')} placeholder="0" required />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Description</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Description</label>
                   <input className="input-field" value={form.description} onChange={f('description')} placeholder="Optional description" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Mode</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Mode</label>
                   <select
                     className="input-field"
                     value={form.mode}
@@ -327,7 +327,7 @@ export default function TruckExpenses() {
                 </div>
                 {form.mode === 'bank' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Bank Name *</label>
+                    <label className="block text-sm font-medium text-heading/80 mb-1">Bank Name *</label>
                     <select className="input-field" value={form.bank_name} onChange={f('bank_name')}>
                       <option value="">Select bank</option>
                       {banks.map((b) => <option key={b.id} value={b.bank_name}>{b.bank_name}</option>)}
@@ -339,7 +339,7 @@ export default function TruckExpenses() {
                 )}
                 {form.mode === 'cash' && (
                   <div>
-                    <label className="block text-sm font-medium text-gray-700 mb-1">Cash Handler *</label>
+                    <label className="block text-sm font-medium text-heading/80 mb-1">Cash Handler *</label>
                     <select className="input-field" value={form.cash_handler} onChange={f('cash_handler')}>
                       <option value="">Select handler</option>
                       {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
@@ -351,7 +351,7 @@ export default function TruckExpenses() {
                 )}
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
                 <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 transition-colors">
                   {saving ? 'Saving…' : 'Add Expense'}
                 </button>

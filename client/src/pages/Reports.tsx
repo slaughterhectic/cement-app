@@ -406,8 +406,8 @@ export default function Reports() {
             className={[
               'inline-flex items-center gap-2 rounded-t-lg border border-b-0 px-4 py-2.5 text-sm font-medium transition-colors',
               tab === id
-                ? 'border-card-border bg-white text-brand-600 shadow-sm'
-                : 'border-transparent text-gray-600 hover:bg-gray-50 hover:text-gray-900',
+                ? 'border-card-border bg-card text-brand-600 shadow-sm'
+                : 'border-transparent text-heading/70 hover:bg-surface hover:text-heading',
             ].join(' ')}
           >
             <Icon className="h-4 w-4 shrink-0" />
@@ -419,19 +419,19 @@ export default function Reports() {
       {tab === 'pnl' && (
         <section className="space-y-6">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-heading/80">
               Month
               <input
                 type="month"
                 value={pnlMonth}
                 onChange={(e) => setPnlMonth(e.target.value)}
-                className="ml-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
+                className="ml-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
               />
             </label>
           </div>
 
           {pnlLoading ? (
-            <p className="text-sm text-gray-500">Loading P&amp;L…</p>
+            <p className="text-sm text-heading/60">Loading P&amp;L…</p>
           ) : pnl ? (
             <>
               <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
@@ -466,7 +466,7 @@ export default function Reports() {
                       : 'border-red-200 bg-red-50/90'
                   }`}
                 >
-                  <p className="text-xs font-medium uppercase tracking-wide text-gray-600">Net Profit</p>
+                  <p className="text-xs font-medium uppercase tracking-wide text-heading/70">Net Profit</p>
                   <p
                     className={`mt-1 text-2xl font-bold tabular-nums ${
                       (Number(pnl.netProfit) || 0) >= 0 ? 'text-emerald-700' : 'text-red-700'
@@ -474,9 +474,9 @@ export default function Reports() {
                   >
                     {formatINR(Number(pnl.netProfit) || 0)}
                   </p>
-                  <p className="mt-2 text-sm text-gray-600">
+                  <p className="mt-2 text-sm text-heading/70">
                     Profit margin:{' '}
-                    <span className="font-semibold text-gray-900">
+                    <span className="font-semibold text-heading">
                       {(Number(pnl.profitMargin) || 0).toFixed(1)}%
                     </span>
                   </p>
@@ -489,7 +489,7 @@ export default function Reports() {
                   <button
                     type="button"
                     onClick={() => setShowDailyPnl((v) => !v)}
-                    className="inline-flex items-center gap-1.5 rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+                    className="inline-flex items-center gap-1.5 rounded-md border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-heading/80 hover:bg-surface"
                   >
                     {showDailyPnl ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
                     Daily breakdown for {pnlMonth}
@@ -516,14 +516,14 @@ export default function Reports() {
                 <div className="mt-4 border-t border-card-border pt-4">
                   <h3 className="mb-3 text-sm font-semibold text-heading">Daily P&amp;L — {pnlMonth}</h3>
                   {dailyPnlLoading ? (
-                    <p className="text-sm text-gray-500">Loading…</p>
+                    <p className="text-sm text-heading/60">Loading…</p>
                   ) : dailyPnlRows.length === 0 ? (
-                    <p className="text-sm text-gray-500">No data for this month.</p>
+                    <p className="text-sm text-heading/60">No data for this month.</p>
                   ) : (
                     <div className="overflow-x-auto">
                       <table className="min-w-full text-sm">
                         <thead>
-                          <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                          <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                             <th className="px-3 py-2">Date</th>
                             <th className="px-3 py-2 text-right">Bags</th>
                             <th className="px-3 py-2 text-right">Sales (₹)</th>
@@ -533,11 +533,11 @@ export default function Reports() {
                             <th className="px-3 py-2 text-right">Net Profit (₹)</th>
                           </tr>
                         </thead>
-                        <tbody className="divide-y divide-gray-100">
+                        <tbody className="divide-y divide-card-border">
                           {dailyPnlRows.map((r: any) => {
                             const net = Number(r.net_profit);
                             return (
-                              <tr key={r.date} className={net >= 0 ? 'bg-white hover:bg-emerald-50' : 'bg-white hover:bg-red-50'}>
+                              <tr key={r.date} className={net >= 0 ? 'bg-card hover:bg-emerald-50' : 'bg-card hover:bg-red-50'}>
                                 <td className="px-3 py-2 font-medium">{formatDate(r.date)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums">{formatNumber(Number(r.bags_sold) || 0)}</td>
                                 <td className="px-3 py-2 text-right tabular-nums text-green-700">{formatINR(Number(r.sales))}</td>
@@ -552,7 +552,7 @@ export default function Reports() {
                           })}
                         </tbody>
                         <tfoot>
-                          <tr className="border-t-2 border-gray-300 bg-gray-50 font-semibold">
+                          <tr className="border-t-2 border-gray-300 bg-surface font-semibold">
                             <td className="px-3 py-2">Total</td>
                             <td className="px-3 py-2 text-right tabular-nums">{formatNumber(dailyPnlRows.reduce((s: number, r: any) => s + (Number(r.bags_sold) || 0), 0))}</td>
                             <td className="px-3 py-2 text-right tabular-nums text-green-700">{formatINR(dailyPnlRows.reduce((s: number, r: any) => s + Number(r.sales), 0))}</td>
@@ -572,7 +572,7 @@ export default function Reports() {
               </div>
             </>
           ) : (
-            <p className="text-sm text-gray-500">Could not load P&amp;L.</p>
+            <p className="text-sm text-heading/60">Could not load P&amp;L.</p>
           )}
         </section>
       )}
@@ -591,8 +591,8 @@ export default function Reports() {
 
       {tab === 'outstanding' && (
         <section className="space-y-4">
-          <div className="rounded-lg border border-card-border bg-white p-4 shadow-sm">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-500">Total outstanding (all parties)</p>
+          <div className="rounded-lg border border-card-border bg-card p-4 shadow-sm">
+            <p className="text-xs font-medium uppercase tracking-wide text-heading/60">Total outstanding (all parties)</p>
             <p className="mt-1 text-xl font-bold tabular-nums text-red-600">{formatINR(totalOutstanding)}</p>
           </div>
           <DataTable<OutstandingRow>
@@ -609,13 +609,13 @@ export default function Reports() {
       {tab === 'daily' && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-heading/80">
               Month
               <input
                 type="month"
                 value={dailyMonth}
                 onChange={(e) => setDailyMonth(e.target.value)}
-                className="ml-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
+                className="ml-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
               />
             </label>
           </div>
@@ -634,21 +634,21 @@ export default function Reports() {
       {tab === 'collection' && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-gray-700">
+            <label className="text-sm font-medium text-heading/80">
               Month
               <input
                 type="month"
                 value={collectionMonth}
                 onChange={(e) => setCollectionMonth(e.target.value)}
-                className="ml-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
+                className="ml-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
               />
             </label>
           </div>
 
           {collectionLoading ? (
-            <p className="text-sm text-gray-500">Loading…</p>
+            <p className="text-sm text-heading/60">Loading…</p>
           ) : !collectionData ? (
-            <p className="text-sm text-gray-500">Could not load collection data.</p>
+            <p className="text-sm text-heading/60">Could not load collection data.</p>
           ) : (
             <>
               <div className="grid gap-3 sm:grid-cols-3">
@@ -679,7 +679,7 @@ export default function Reports() {
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                         <th className="px-4 py-3">Date</th>
                         <th className="px-4 py-3 text-right">Transactions</th>
                         <th className="px-4 py-3 text-right">Bank (₹)</th>
@@ -687,9 +687,9 @@ export default function Reports() {
                         <th className="px-4 py-3 text-right">Total (₹)</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-card-border">
                       {collectionData.daily.map((d: any) => (
-                        <tr key={d.date} className="hover:bg-gray-50">
+                        <tr key={d.date} className="hover:bg-surface">
                           <td className="px-4 py-3 font-medium">{formatDate(d.date)}</td>
                           <td className="px-4 py-3 text-right tabular-nums">{d.count}</td>
                           <td className="px-4 py-3 text-right tabular-nums text-blue-700">{formatINR(Number(d.bank))}</td>
@@ -709,7 +709,7 @@ export default function Reports() {
                 <div className="overflow-x-auto">
                   <table className="min-w-full text-sm">
                     <thead>
-                      <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                      <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                         <th className="px-4 py-3">Date</th>
                         <th className="px-4 py-3">Party</th>
                         <th className="px-4 py-3 text-right">Amount (₹)</th>
@@ -718,9 +718,9 @@ export default function Reports() {
                         <th className="px-4 py-3">Remarks</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-gray-100">
+                    <tbody className="divide-y divide-card-border">
                       {collPg.pageData.map((r: any) => (
-                        <tr key={r.id} className="hover:bg-gray-50">
+                        <tr key={r.id} className="hover:bg-surface">
                           <td className="px-4 py-3">{formatDate(r.date)}</td>
                           <td className="px-4 py-3 font-medium">{r.party_name}</td>
                           <td className="px-4 py-3 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(r.amount))}</td>
@@ -729,8 +729,8 @@ export default function Reports() {
                               {r.mode}
                             </span>
                           </td>
-                          <td className="px-4 py-3 text-gray-600">{r.bank_name || '—'}</td>
-                          <td className="px-4 py-3 text-gray-600">{r.remarks || '—'}</td>
+                          <td className="px-4 py-3 text-heading/70">{r.bank_name || '—'}</td>
+                          <td className="px-4 py-3 text-heading/70">{r.remarks || '—'}</td>
                         </tr>
                       ))}
                     </tbody>

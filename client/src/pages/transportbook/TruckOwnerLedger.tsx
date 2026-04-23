@@ -101,13 +101,13 @@ export default function TruckOwnerLedger() {
         <button
           type="button"
           onClick={() => navigate('/transportbook/trucks')}
-          className="mt-1 rounded-lg border border-card-border p-2 hover:bg-gray-50 transition-colors"
+          className="mt-1 rounded-lg border border-card-border p-2 hover:bg-surface transition-colors"
         >
-          <ArrowLeft className="h-4 w-4 text-gray-500" />
+          <ArrowLeft className="h-4 w-4 text-heading/60" />
         </button>
         <div>
           <h1 className="text-2xl font-bold text-heading">{owner.truck_number}</h1>
-          <p className="text-sm text-gray-500 mt-0.5">{owner.owner_name} — Truck Owner Ledger</p>
+          <p className="text-sm text-heading/60 mt-0.5">{owner.owner_name} — Truck Owner Ledger</p>
         </div>
       </div>
 
@@ -116,42 +116,42 @@ export default function TruckOwnerLedger() {
         <h2 className="text-sm font-semibold text-indigo-600 uppercase tracking-wider mb-4">Owner Details</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-4">
           <div>
-            <p className="text-gray-500">Owner Name</p>
+            <p className="text-heading/60">Owner Name</p>
             <p className="font-medium text-heading">{owner.owner_name}</p>
           </div>
           {owner.owner_phone && (
             <div>
-              <p className="text-gray-500">Owner Phone</p>
+              <p className="text-heading/60">Owner Phone</p>
               <p className="font-medium text-heading">{owner.owner_phone}</p>
             </div>
           )}
           {owner.driver_name && (
             <div>
-              <p className="text-gray-500">Driver</p>
+              <p className="text-heading/60">Driver</p>
               <p className="font-medium text-heading">{owner.driver_name} {owner.driver_phone ? `(${owner.driver_phone})` : ''}</p>
             </div>
           )}
           {owner.bank_account && (
             <div>
-              <p className="text-gray-500">Bank Account</p>
+              <p className="text-heading/60">Bank Account</p>
               <p className="font-medium text-heading font-mono text-xs">{owner.bank_account}</p>
             </div>
           )}
           {owner.ifsc_code && (
             <div>
-              <p className="text-gray-500">IFSC</p>
+              <p className="text-heading/60">IFSC</p>
               <p className="font-medium text-heading">{owner.ifsc_code}</p>
             </div>
           )}
           {owner.beneficiary_name && (
             <div>
-              <p className="text-gray-500">Beneficiary</p>
+              <p className="text-heading/60">Beneficiary</p>
               <p className="font-medium text-heading">{owner.beneficiary_name}</p>
             </div>
           )}
           {owner.pan_number && (
             <div>
-              <p className="text-gray-500">PAN</p>
+              <p className="text-heading/60">PAN</p>
               <p className="font-medium text-heading">{owner.pan_number}</p>
             </div>
           )}
@@ -159,7 +159,7 @@ export default function TruckOwnerLedger() {
       </div>
 
       {/* Summary Cards */}
-      <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
         <div className="card p-4 bg-indigo-50 border-indigo-200">
           <p className="text-xs text-indigo-600 font-medium uppercase tracking-wider">Total Trips</p>
           <p className="text-2xl font-bold text-heading">{summary.totalTrips}</p>
@@ -176,20 +176,20 @@ export default function TruckOwnerLedger() {
         <div className="card p-4 bg-green-50 border-green-200">
           <p className="text-xs text-green-600 font-medium uppercase tracking-wider">Total Payable to Truck</p>
           <p className="text-xl font-bold text-heading">{formatINR(summary.netOwed ?? summary.totalFinalPayment)}</p>
-          <p className="text-xs text-gray-500 mt-0.5">
+          <p className="text-xs text-heading/60 mt-0.5">
             {summary.totalGpsRent ? `Less GPS rent ${formatINR(summary.totalGpsRent)}` : 'After deductions'}
           </p>
         </div>
       </div>
 
       {/* Advance Summary */}
-      <div className="grid grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <div className="card p-4">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Diesel Advances</p>
+          <p className="text-xs text-heading/60 font-medium uppercase tracking-wider">Total Diesel Advances</p>
           <p className="text-xl font-bold text-red-600">{formatINR(summary.totalDieselAdvance)}</p>
         </div>
         <div className="card p-4">
-          <p className="text-xs text-gray-500 font-medium uppercase tracking-wider">Total Cash Advances</p>
+          <p className="text-xs text-heading/60 font-medium uppercase tracking-wider">Total Cash Advances</p>
           <p className="text-xl font-bold text-red-600">{formatINR(summary.totalCashAdvance)}</p>
         </div>
       </div>
@@ -225,19 +225,19 @@ export default function TruckOwnerLedger() {
             <tbody>
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="px-4 py-8 text-center text-gray-400">No entries found for this truck owner</td>
+                  <td colSpan={17} className="px-4 py-8 text-center text-heading/50">No entries found for this truck owner</td>
                 </tr>
               ) : (
                 ledger.map((row) => {
                   if (row.kind === 'gps_rent') {
                     return (
                       <tr key={String(row.id)} className="border-b border-card-border last:border-0 bg-slate-50/70">
-                        <td className="px-3 py-2.5 whitespace-nowrap text-gray-600">{formatDate(row.date)}</td>
-                        <td className="px-3 py-2.5 text-gray-400" colSpan={5}>
+                        <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
+                        <td className="px-3 py-2.5 text-heading/50" colSpan={5}>
                           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700">GPS Rent</span>
-                          <span className="ml-2 text-xs text-gray-500">{row.period}</span>
+                          <span className="ml-2 text-xs text-heading/60">{row.period}</span>
                         </td>
-                        <td className="px-3 py-2.5 text-gray-400" colSpan={9} />
+                        <td className="px-3 py-2.5 text-heading/50" colSpan={9} />
                         <td className="px-3 py-2.5 text-right font-semibold text-red-600">−{formatINR(Number(row.amount || 0))}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-indigo-600">{formatINR(row.running_total)}</td>
                       </tr>
@@ -245,11 +245,11 @@ export default function TruckOwnerLedger() {
                   }
                   return (
                     <tr key={String(row.id)} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 transition-colors">
-                      <td className="px-3 py-2.5 whitespace-nowrap text-gray-600">{formatDate(row.date)}</td>
-                      <td className="px-3 py-2.5 text-gray-600">{row.builty_number || '—'}</td>
-                      <td className="px-3 py-2.5 text-gray-600">{row.do_number || '—'}</td>
+                      <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
+                      <td className="px-3 py-2.5 text-heading/70">{row.builty_number || '—'}</td>
+                      <td className="px-3 py-2.5 text-heading/70">{row.do_number || '—'}</td>
                       <td className="px-3 py-2.5 font-medium text-gray-800">{row.party_name}</td>
-                      <td className="px-3 py-2.5 text-gray-600">{row.location || '—'}</td>
+                      <td className="px-3 py-2.5 text-heading/70">{row.location || '—'}</td>
                       <td className="px-3 py-2.5">
                         {row.dch_type ? (
                           <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{row.dch_type}</span>
@@ -263,7 +263,7 @@ export default function TruckOwnerLedger() {
                       <td className="px-3 py-2.5 text-right">{Number(row.qty || 0).toFixed(2)}</td>
                       <td className="px-3 py-2.5 text-right">{formatINR(Number(row.acc_freight_rate || 0))}</td>
                       <td className="px-3 py-2.5 text-right font-medium">{formatINR(Number(row.acc_amount || 0))}</td>
-                      <td className="px-3 py-2.5 text-right text-gray-600">{row.commission_pct}%</td>
+                      <td className="px-3 py-2.5 text-right text-heading/70">{row.commission_pct}%</td>
                       <td className="px-3 py-2.5 text-right text-amber-600">{formatINR(Number(row.commission_amount || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-amber-600">{formatINR(Number(row.builty_charge || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-red-600">{formatINR(Number(row.diesel_advance || 0))}</td>

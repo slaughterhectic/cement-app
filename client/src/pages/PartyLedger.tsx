@@ -61,7 +61,7 @@ function typeBadgeClass(type: string | null | undefined): string {
     case 'supplier':
       return 'bg-indigo-100 text-indigo-800';
     default:
-      return 'bg-gray-100 text-gray-700';
+      return 'bg-surface text-heading/80';
   }
 }
 
@@ -252,9 +252,9 @@ export default function PartyLedger() {
           let cls: string;
           if (isSupplier) {
             // positive = we owe them (orange/payable), negative = they owe us (green/profit)
-            cls = n > 0 ? 'font-semibold text-orange-600' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-gray-400';
+            cls = n > 0 ? 'font-semibold text-orange-600' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-heading/50';
           } else {
-            cls = n > 0 ? 'font-semibold text-outstanding' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-gray-400';
+            cls = n > 0 ? 'font-semibold text-outstanding' : n < 0 ? 'font-semibold text-profit' : 'font-medium text-heading/50';
           }
           const display = isSupplier && n < 0 ? `(${formatINR(Math.abs(n))})` : formatINR(n);
           return <span className={cls}>{display}</span>;
@@ -314,7 +314,7 @@ export default function PartyLedger() {
   if (!Number.isFinite(partyId) || partyId <= 0) {
     return (
       <div className="text-heading">
-        <p className="text-gray-600">Invalid party.</p>
+        <p className="text-heading/70">Invalid party.</p>
         <Link to="/parties" className="mt-2 inline-block text-brand-600 hover:underline">
           Back to parties
         </Link>
@@ -330,7 +330,7 @@ export default function PartyLedger() {
   if (!loading && !party) {
     return (
       <div className="text-heading">
-        <p className="text-gray-600">Party not found.</p>
+        <p className="text-heading/70">Party not found.</p>
         <Link to="/parties" className="mt-2 inline-block text-brand-600 hover:underline">
           Back to parties
         </Link>
@@ -359,7 +359,7 @@ export default function PartyLedger() {
             <div className="flex flex-wrap items-start justify-between gap-4">
               <div>
                 <h1 className="text-2xl font-bold text-heading">{party.name}</h1>
-                <p className="mt-1 text-sm text-gray-600">
+                <p className="mt-1 text-sm text-heading/70">
                   {[party.location, party.district].filter(Boolean).join(', ') || '—'}
                   {party.phone ? ` · ${party.phone}` : ''}
                 </p>
@@ -426,7 +426,7 @@ export default function PartyLedger() {
                 type="button"
                 onClick={handleDownloadPdf}
                 disabled={!party}
-                className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface disabled:opacity-50"
               >
                 <FileDown className="h-4 w-4" />
                 Download PDF
@@ -455,13 +455,13 @@ export default function PartyLedger() {
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-heading/60">
             {party?.type === 'supplier' ? 'Total Bags Purchased' : 'Total Bags Sold'}
           </p>
           <p className="mt-1 text-xl font-semibold text-heading">{summary.totalBags}</p>
         </div>
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-heading/60">
             {party?.type === 'supplier' ? 'Total Purchases' : 'Total Charged'}
           </p>
           {/* For suppliers: purchases go into credit column (totalReceived); for non-suppliers: totalCharged */}
@@ -470,7 +470,7 @@ export default function PartyLedger() {
           </p>
         </div>
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-heading/60">
             {party?.type === 'supplier' ? 'Total Paid (incl. advance)' : 'Total Received'}
           </p>
           {/* For suppliers: payments + opening advance go into debit column (totalCharged); for non-suppliers: totalReceived */}
@@ -479,7 +479,7 @@ export default function PartyLedger() {
           </p>
         </div>
         <div className="card">
-          <p className="text-xs font-medium uppercase tracking-wide text-gray-500">
+          <p className="text-xs font-medium uppercase tracking-wide text-heading/60">
             {party?.type === 'supplier' ? 'Payable Balance' : 'Outstanding Balance'}
           </p>
           <p

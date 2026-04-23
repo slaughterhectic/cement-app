@@ -239,7 +239,7 @@ export default function Purchases() {
           const v = getValue() as string | null;
           return v
             ? <span className="text-sm text-gray-800">{v}</span>
-            : <span className="text-gray-400 text-xs">—</span>;
+            : <span className="text-heading/50 text-xs">—</span>;
         },
       },
       {
@@ -279,14 +279,14 @@ export default function Purchases() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Purchases</h1>
-          <div className="mt-2 flex flex-wrap gap-6 text-sm text-gray-600">
+          <div className="mt-2 flex flex-wrap gap-6 text-sm text-heading/70">
             <span>
               Total bags:{' '}
-              <span className="font-semibold text-gray-900">{totals.totalBags.toLocaleString('en-IN')}</span>
+              <span className="font-semibold text-heading">{totals.totalBags.toLocaleString('en-IN')}</span>
             </span>
             <span>
               Total amount:{' '}
-              <span className="font-semibold text-gray-900">{formatINR(totals.totalAmount)}</span>
+              <span className="font-semibold text-heading">{formatINR(totals.totalAmount)}</span>
             </span>
           </div>
         </div>
@@ -300,9 +300,9 @@ export default function Purchases() {
         </button>
       </div>
 
-      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-card-border bg-white p-4">
+      <div className="flex flex-wrap items-end gap-3 rounded-lg border border-card-border bg-card p-4">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">From</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">From</label>
           <input
             type="date"
             className="input-field"
@@ -311,7 +311,7 @@ export default function Purchases() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">To</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">To</label>
           <input
             type="date"
             className="input-field"
@@ -320,7 +320,7 @@ export default function Purchases() {
           />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Brand</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">Brand</label>
           <select
             className="input-field min-w-[160px]"
             value={brandFilter}
@@ -335,7 +335,7 @@ export default function Purchases() {
           </select>
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Supplier</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">Supplier</label>
           <input
             type="text"
             className="input-field min-w-[180px]"
@@ -347,7 +347,7 @@ export default function Purchases() {
         <button
           type="button"
           onClick={applyFilters}
-          className="rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+          className="rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
         >
           Apply
         </button>

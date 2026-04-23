@@ -242,7 +242,7 @@ export default function TransportTrips() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Trip Log</h1>
-          <p className="text-sm text-gray-500 mt-1">{rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
+          <p className="text-sm text-heading/60 mt-1">{rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
         </div>
         <button
           type="button"
@@ -257,7 +257,7 @@ export default function TransportTrips() {
       {/* Filters */}
       <div className="card flex flex-wrap gap-4 p-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Truck:</label>
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Truck:</label>
           <select
             className="input-field py-1.5 text-sm min-w-[160px]"
             value={filterOwner}
@@ -270,7 +270,7 @@ export default function TransportTrips() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Month:</label>
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
           <input
             type="month"
             className="input-field py-1.5 text-sm"
@@ -343,11 +343,11 @@ export default function TransportTrips() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={14} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={14} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={14} className="px-4 py-12 text-center">
-                    <p className="text-gray-400 mb-3">No trips found</p>
+                    <p className="text-heading/50 mb-3">No trips found</p>
                     <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Log first trip</button>
                   </td>
                 </tr>
@@ -355,9 +355,9 @@ export default function TransportTrips() {
                 rows.map((row) => (
                   <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 transition-colors">
                     <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
-                    <td className="px-3 py-2.5 text-gray-600 text-xs">{row.builty_number || '—'}</td>
+                    <td className="px-3 py-2.5 text-heading/70 text-xs">{row.builty_number || '—'}</td>
                     <td className="px-3 py-2.5 font-medium text-indigo-600">{row.truck_number}</td>
-                    <td className="px-3 py-2.5 text-gray-700">{row.party_name}</td>
+                    <td className="px-3 py-2.5 text-heading/80">{row.party_name}</td>
                     <td className="px-3 py-2.5">
                       {row.dch_type ? (
                         <span className="rounded-full bg-indigo-100 px-2 py-0.5 text-xs font-medium text-indigo-700">{row.dch_type}</span>
@@ -382,7 +382,7 @@ export default function TransportTrips() {
                         <button
                           type="button"
                           onClick={() => openEdit(row)}
-                          className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
@@ -411,11 +411,11 @@ export default function TransportTrips() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
           <div className="flex min-h-full items-start justify-center px-4 py-6">
-            <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
-              <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sticky top-0 bg-white z-10">
+            <div className="w-full max-w-2xl rounded-xl bg-card shadow-2xl">
+              <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sticky top-0 bg-card z-10">
                 <h2 className="font-semibold text-heading">{editing ? 'Edit Trip' : 'Add Trip'}</h2>
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-                  <X className="h-5 w-5 text-gray-500" />
+                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                  <X className="h-5 w-5 text-heading/60" />
                 </button>
               </div>
 
@@ -425,13 +425,13 @@ export default function TransportTrips() {
                   {/* Trip Info */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Trip Info</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
                         <input type="date" className="input-field" value={form.date} onChange={f('date')} required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Truck Owner *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Truck Owner *</label>
                         <select className="input-field" value={form.truck_owner_id} onChange={f('truck_owner_id')} required>
                           <option value="">Select truck owner</option>
                           {owners.map((o) => (
@@ -440,30 +440,30 @@ export default function TransportTrips() {
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Builty Number</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Builty Number</label>
                         <input className="input-field" value={form.builty_number} onChange={f('builty_number')} placeholder="Builty / LR number" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">DO Number</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">DO Number</label>
                         <input className="input-field" value={form.do_number} onChange={f('do_number')} placeholder="Delivery order number" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Party Name *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Party Name *</label>
                         <input className="input-field" value={form.party_name} onChange={f('party_name')} placeholder="e.g. ACC Limited" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Location</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Location</label>
                         <input className="input-field" value={form.location} onChange={f('location')} placeholder="Destination" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">DCH Type</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">DCH Type</label>
                         <select className="input-field" value={form.dch_type} onChange={f('dch_type')}>
                           <option value="">Select type</option>
                           {DCH_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Material Type</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Material Type</label>
                         <select className="input-field" value={form.material_type} onChange={f('material_type')}>
                           <option value="">Select material</option>
                           {MATERIAL_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
@@ -475,22 +475,22 @@ export default function TransportTrips() {
                   {/* Freight & Computation */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Freight Details</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Quantity (Tons) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Quantity (Tons) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.qty} onChange={f('qty')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">ACC Freight Rate (₹/T) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">ACC Freight Rate (₹/T) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.acc_freight_rate} onChange={f('acc_freight_rate')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Commission % *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Commission % *</label>
                         <input type="number" min="0" max="100" step="0.01" className="input-field" value={form.commission_pct} onChange={f('commission_pct')} placeholder="6.29" required />
                       </div>
                       <div className="flex items-end">
                         <div className="rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-2 text-xs w-full">
-                          <p className="text-gray-500">ACC Amount</p>
+                          <p className="text-heading/60">ACC Amount</p>
                           <p className="font-bold text-indigo-700 text-sm">{formatINR(live.acc_amount)}</p>
                         </div>
                       </div>
@@ -500,13 +500,13 @@ export default function TransportTrips() {
                   {/* Advances */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Advances</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Advance (₹)</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Advance (₹)</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_advance} onChange={f('diesel_advance')} placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Cash Advance (₹)</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Cash Advance (₹)</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.cash_advance} onChange={f('cash_advance')} placeholder="0" />
                       </div>
                     </div>
@@ -515,21 +515,21 @@ export default function TransportTrips() {
                   {/* Additional Details */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Additional Details</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Petrol Slip Number</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Petrol Slip Number</label>
                         <input className="input-field" value={form.petrol_slip_number} onChange={f('petrol_slip_number')} placeholder="Slip number" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">EPOD Bill Number</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">EPOD Bill Number</label>
                         <input className="input-field" value={form.epod_bill_number} onChange={f('epod_bill_number')} placeholder="EPOD number" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Difference Rate (₹/T)</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Difference Rate (₹/T)</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.difference_rate} onChange={f('difference_rate')} placeholder="0" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
                         <input className="input-field" value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
                       </div>
                     </div>
@@ -538,24 +538,24 @@ export default function TransportTrips() {
                   {/* Live Summary */}
                   <div className="rounded-xl bg-gradient-to-r from-indigo-500 to-indigo-600 p-4 text-white">
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Computation</p>
-                    <div className="grid grid-cols-2 gap-3 text-sm sm:grid-cols-4">
-                      <div className="bg-white/10 rounded-lg p-2">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm sm:grid-cols-4">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">ACC Amount</p>
                         <p className="font-bold">{formatINR(live.acc_amount)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Handling (+)</p>
                         <p className="font-bold text-green-200">+{formatINR(live.handling_charge)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Commission</p>
                         <p className="font-bold text-yellow-200">−{formatINR(live.commission_amount)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Builty Charge</p>
                         <p className="font-bold text-yellow-200">−{formatINR(live.builty_charge)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2 col-span-2 sm:col-span-4">
+                      <div className="bg-card/10 rounded-lg p-2 col-span-2 sm:col-span-4">
                         <p className="text-xs opacity-70">Advances</p>
                         <p className="font-bold text-red-200">−{formatINR(n(form.diesel_advance) + n(form.cash_advance))}</p>
                       </div>
@@ -575,7 +575,7 @@ export default function TransportTrips() {
                   <button
                     type="button"
                     onClick={() => setModalOpen(false)}
-                    className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                    className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors"
                   >
                     Cancel
                   </button>

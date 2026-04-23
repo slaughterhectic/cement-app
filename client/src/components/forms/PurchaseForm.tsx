@@ -248,7 +248,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
             />
             <input type="hidden" {...register('supplier_id', { valueAsNumber: true })} />
             {supplierMenuOpen && filteredSuppliers.length > 0 && (
-              <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-card-border bg-white py-1 shadow-lg">
+              <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-card-border bg-card py-1 shadow-lg">
                 {filteredSuppliers.map((p) => (
                   <li key={p.id}>
                     <button
@@ -262,7 +262,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
                     >
                       <span>{p.name}</span>
                       {p.type && (
-                        <span className="ml-2 rounded px-1.5 py-0.5 text-xs font-medium bg-gray-100 text-gray-500 capitalize">
+                        <span className="ml-2 rounded px-1.5 py-0.5 text-xs font-medium bg-surface text-heading/60 capitalize">
                           {p.type.replace(/_/g, ' ')}
                         </span>
                       )}
@@ -292,7 +292,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Cement type</label>
             <input type="text" className="input-field w-full" disabled={lockFields} {...register('cement_type')} />
-            <p className="mt-1 text-xs text-gray-500">Prefilled from brand; you can edit (OPC / PPC / DAMAGE).</p>
+            <p className="mt-1 text-xs text-heading/60">Prefilled from brand; you can edit (OPC / PPC / DAMAGE).</p>
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Bags *</label>
@@ -324,7 +324,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               disabled={lockFields}
               {...register('freight_rate')}
             />
-            <p className="mt-1 text-xs text-gray-500">Optional. Transport cost per bag.</p>
+            <p className="mt-1 text-xs text-heading/60">Optional. Transport cost per bag.</p>
           </div>
           {/* Amount Breakdown */}
           <div className="sm:col-span-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3">
@@ -333,25 +333,25 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
             </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3">
               <div>
-                <p className="text-xs text-gray-500">Purchase amount</p>
+                <p className="text-xs text-heading/60">Purchase amount</p>
                 <p className="font-semibold text-gray-800">{formatINR(purchaseAmount)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Base (excl GST)</p>
+                <p className="text-xs text-heading/60">Base (excl GST)</p>
                 <p className="font-semibold text-gray-800">{formatINR(base)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">CGST + SGST</p>
+                <p className="text-xs text-heading/60">CGST + SGST</p>
                 <p className="font-semibold text-gray-800">{formatINR(cgst + sgst)}</p>
               </div>
               {freightAmount > 0 && (
                 <div>
-                  <p className="text-xs text-gray-500">Freight ({formatINR(Number(freightRate) || 0)}/bag × {bagsNum})</p>
+                  <p className="text-xs text-heading/60">Freight ({formatINR(Number(freightRate) || 0)}/bag × {bagsNum})</p>
                   <p className="font-semibold text-amber-700">{formatINR(freightAmount)}</p>
                 </div>
               )}
               <div className={freightAmount > 0 ? 'sm:col-span-2' : 'sm:col-span-3'}>
-                <p className="text-xs text-gray-500">Total landed cost{freightAmount > 0 ? ' (purchase + freight)' : ''}</p>
+                <p className="text-xs text-heading/60">Total landed cost{freightAmount > 0 ? ' (purchase + freight)' : ''}</p>
                 <p className="text-xl font-bold text-brand-900">{formatINR(totalLandedCost)}</p>
               </div>
             </div>
@@ -402,7 +402,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
           >
             Cancel
           </button>

@@ -89,8 +89,8 @@ const howSteps = [
 
 export default function Landing() {
   return (
-    <div className="min-h-screen bg-white text-heading">
-      <header className="border-b border-card-border bg-white">
+    <div className="min-h-screen bg-card text-heading">
+      <header className="border-b border-card-border bg-card">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4 md:px-6">
           <span className="text-xl font-bold text-heading">
             <span className="text-brand-500">arm</span>tech
@@ -107,10 +107,10 @@ export default function Landing() {
             <h1 className="text-4xl font-bold tracking-tight text-heading md:text-6xl">
               <span className="text-brand-500">arm</span>tech
             </h1>
-            <p className="mt-1 text-sm font-medium uppercase tracking-widest text-gray-400">
+            <p className="mt-1 text-sm font-medium uppercase tracking-widest text-heading/50">
               Innovation and Excellence
             </p>
-            <p className="mt-4 text-lg text-gray-600">
+            <p className="mt-4 text-lg text-heading/70">
               Complete business management for cement traders.
             </p>
             <div className="mt-12 grid grid-cols-1 gap-8 sm:grid-cols-3">
@@ -129,25 +129,25 @@ export default function Landing() {
           </div>
         </section>
 
-        <section className="border-t border-card-border bg-white py-16 md:py-20">
+        <section className="border-t border-card-border bg-card py-16 md:py-20">
           <div className="mx-auto max-w-6xl px-4 md:px-6">
             <h2 className="text-center text-2xl font-bold text-heading md:text-3xl">
               Everything you need
             </h2>
-            <p className="mx-auto mt-2 max-w-xl text-center text-gray-600">
+            <p className="mx-auto mt-2 max-w-xl text-center text-heading/70">
               Built around how cement yards and distributors actually work.
             </p>
             <div className="mt-12 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-3">
               {features.map(({ icon: Icon, title, description }) => (
                 <div
                   key={title}
-                  className="rounded-xl border border-card-border bg-white p-6 shadow-sm"
+                  className="rounded-xl border border-card-border bg-card p-6 shadow-sm"
                 >
                   <div className="flex h-12 w-12 items-center justify-center rounded-full bg-brand-500">
                     <Icon className="h-6 w-6 text-white" aria-hidden />
                   </div>
                   <h3 className="mt-4 font-semibold text-heading">{title}</h3>
-                  <p className="mt-2 text-sm text-gray-500">{description}</p>
+                  <p className="mt-2 text-sm text-heading/60">{description}</p>
                 </div>
               ))}
             </div>

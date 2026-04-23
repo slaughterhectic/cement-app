@@ -1,6 +1,7 @@
 /** @type {import('tailwindcss').Config} */
 export default {
   content: ['./index.html', './src/**/*.{js,ts,jsx,tsx}'],
+  darkMode: 'class',
   theme: {
     extend: {
       colors: {
@@ -21,9 +22,11 @@ export default {
         outstanding: '#C0271E',
         'stock-warn': '#B8620A',
         profit: '#0F7A4B',
-        surface: '#F8F7F4',
-        'card-border': '#E5E4DF',
-        heading: '#1A1A2E',
+        // Semantic tokens backed by CSS variables so they swap with theme
+        surface: 'rgb(var(--color-surface) / <alpha-value>)',
+        'card-border': 'rgb(var(--color-card-border) / <alpha-value>)',
+        heading: 'rgb(var(--color-heading) / <alpha-value>)',
+        card: 'rgb(var(--color-card) / <alpha-value>)',
       },
     },
   },

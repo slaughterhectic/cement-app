@@ -13,20 +13,23 @@ import {
   LogOut,
   MapPin,
   MessageSquare,
+  Moon,
   Package,
   Receipt,
   Settings,
   Shield,
   ShoppingCart,
   Store,
+  Sun,
   TrendingUp,
   Truck,
   Upload,
   Users,
   Wallet,
+  X,
 } from 'lucide-react';
 import { NavLink, useLocation, useNavigate } from 'react-router-dom';
-import { useAuthStore, useSidebarStore } from '../../lib/store';
+import { useAuthStore, useMobileNavStore, useSidebarStore, useThemeStore } from '../../lib/store';
 import { api } from '../../lib/api';
 
 type Book = 'cement' | 'truck' | 'transport' | 'finance' | 'settings';
@@ -126,6 +129,10 @@ export function Sidebar() {
   const location = useLocation();
   const collapsed = useSidebarStore((s) => s.collapsed);
   const toggle = useSidebarStore((s) => s.toggle);
+  const mobileOpen = useMobileNavStore((s) => s.open);
+  const setMobileOpen = useMobileNavStore((s) => s.setOpen);
+  const theme = useThemeStore((s) => s.theme);
+  const toggleTheme = useThemeStore((s) => s.toggle);
   const logout = useAuthStore((s) => s.logout);
   const user = useAuthStore((s) => s.user);
   const isAdmin = useAuthStore((s) => s.isAdmin);
@@ -136,11 +143,29 @@ export function Sidebar() {
   const menuRef = useRef<HTMLDivElement>(null);
   const [pendingCount, setPendingCount] = useState(0);
   const [approvalsCount, setApprovalsCount] = useState(0);
+  const [isMobile, setIsMobile] = useState(() =>
+    typeof window !== 'undefined' ? window.innerWidth < 768 : false
+  );
+
+  // Track viewport so `collapsed` only applies on md+ screens
+  useEffect(() => {
+    if (!window.matchMedia) return;
+    const mq = window.matchMedia('(max-width: 767px)');
+    const onChange = (e: MediaQueryListEvent) => setIsMobile(e.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+
+  // On mobile the drawer is always expanded — collapsed only takes effect on md+
+  const effectiveCollapsed = collapsed && !isMobile;
 
   // Auto-switch book when navigating directly to a URL
   useEffect(() => {
     setBook(detectBook(location.pathname));
   }, [location.pathname]);
+
+  // Close mobile drawer whenever the route changes
+  useEffect(() => { setMobileOpen(false); }, [location.pathname, setMobileOpen]);
 
   // Poll pending request count for badge — scoped to current book
   useEffect(() => {
@@ -227,31 +252,44 @@ export function Sidebar() {
   const displayName = user?.display_name || 'User';
   const initial = displayName.charAt(0).toUpperCase();
 
+  // On mobile the drawer is always the full 220px width; `collapsed` only applies at md+.
+  const widthClass = `w-[220px] ${collapsed ? 'md:w-[72px]' : 'md:w-[220px]'}`;
+  const mobileVisibility = mobileOpen
+    ? 'translate-x-0'
+    : '-translate-x-full md:translate-x-0';
+
   return (
     <aside
-      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-card-border bg-white transition-[width] duration-200 ease-out ${
-        collapsed ? 'w-[72px]' : 'w-[220px]'
-      }`}
+      className={`fixed left-0 top-0 z-40 flex h-screen flex-col border-r border-card-border bg-card transition-transform duration-200 ease-out md:transition-[width] ${widthClass} ${mobileVisibility}`}
     >
       {/* Logo */}
       <div
         className={`flex shrink-0 items-center gap-2 border-b border-card-border py-4 ${
-          collapsed ? 'justify-center px-2' : 'px-4'
+          effectiveCollapsed ? 'justify-center px-2' : 'px-4'
         }`}
       >
         <div className="flex shrink-0 items-center justify-center rounded-lg bg-brand-500/10 p-2 text-brand-500">
           <Building2 className="h-6 w-6" strokeWidth={2} />
         </div>
-        {!collapsed && (
+        {!effectiveCollapsed && (
           <span className="truncate font-semibold tracking-tight text-heading">
             <span className="text-brand-500">arm</span>tech
           </span>
         )}
+        {/* Mobile close button */}
+        <button
+          type="button"
+          onClick={() => setMobileOpen(false)}
+          className="ml-auto rounded-lg p-1.5 text-heading/60 transition-colors hover:bg-surface md:hidden"
+          aria-label="Close navigation"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
 
       {/* Book Switcher */}
-      <div className={`shrink-0 border-b border-card-border ${collapsed ? 'px-2 py-2' : 'px-3 py-2'}`}>
-        {collapsed ? (
+      <div className={`shrink-0 border-b border-card-border ${effectiveCollapsed ? 'px-2 py-2' : 'px-3 py-2'}`}>
+        {effectiveCollapsed ? (
           <div
             className={`mx-auto h-3 w-3 rounded-full ${meta.dot}`}
             title={meta.label}
@@ -261,29 +299,29 @@ export function Sidebar() {
             <button
               type="button"
               onClick={() => setMenuOpen((o) => !o)}
-              className="flex w-full items-center justify-between rounded-lg border border-card-border bg-gray-50 px-3 py-2 text-xs font-semibold text-gray-700 transition-colors hover:bg-gray-100"
+              className="flex w-full items-center justify-between rounded-lg border border-card-border bg-surface px-3 py-2 text-xs font-semibold text-heading/80 transition-colors hover:bg-card-border/40"
             >
               <span className="flex items-center gap-2">
                 <span className={`h-2 w-2 rounded-full ${meta.dot}`} />
                 {meta.label}
               </span>
-              <ChevronDown className={`h-3.5 w-3.5 text-gray-400 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
+              <ChevronDown className={`h-3.5 w-3.5 text-heading/50 transition-transform ${menuOpen ? 'rotate-180' : ''}`} />
             </button>
 
             {menuOpen && (
-              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-card-border bg-white shadow-lg overflow-hidden">
+              <div className="absolute left-0 right-0 top-full z-50 mt-1 rounded-lg border border-card-border bg-card shadow-lg overflow-hidden">
                 {availableBooks.map((b) => (
                   <button
                     key={b}
                     type="button"
                     onClick={() => switchBook(b)}
                     className={`flex w-full items-center gap-2 px-3 py-2.5 text-xs font-medium transition-colors ${
-                      b === book ? 'bg-gray-100 text-gray-900' : 'text-gray-600 hover:bg-gray-50'
+                      b === book ? 'bg-surface text-heading' : 'text-heading/70 hover:bg-surface'
                     }`}
                   >
                     <span className={`h-2 w-2 rounded-full ${BOOK_META[b].dot}`} />
                     {BOOK_META[b].label}
-                    {b === book && <span className="ml-auto text-gray-400">✓</span>}
+                    {b === book && <span className="ml-auto text-heading/50">✓</span>}
                   </button>
                 ))}
               </div>
@@ -301,11 +339,11 @@ export function Sidebar() {
             key={to}
             to={to}
             end={to === '/truckbook' || to === '/dashboard' || to === '/transportbook'}
-            title={collapsed ? label : undefined}
+            title={effectiveCollapsed ? label : undefined}
             className={({ isActive }) =>
               [
                 'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
-                collapsed ? 'justify-center px-2' : 'px-3',
+                effectiveCollapsed ? 'justify-center px-2' : 'px-3',
                 isActive ? meta.activeClass : `text-heading/80 ${meta.hoverClass}`,
               ].join(' ')
             }
@@ -318,8 +356,8 @@ export function Sidebar() {
                 </span>
               )}
             </div>
-            {!collapsed && <span className="truncate flex-1">{label}</span>}
-            {!collapsed && badgeCount > 0 && (
+            {!effectiveCollapsed && <span className="truncate flex-1">{label}</span>}
+            {!effectiveCollapsed && badgeCount > 0 && (
               <span className="ml-auto rounded-full bg-red-500 px-1.5 py-0.5 text-[10px] font-bold text-white">
                 {badgeCount}
               </span>
@@ -331,10 +369,25 @@ export function Sidebar() {
 
       {/* Footer */}
       <div className="shrink-0 border-t border-card-border p-2">
+        {/* Theme toggle */}
+        <button
+          type="button"
+          onClick={toggleTheme}
+          className={`mb-2 flex w-full items-center rounded-lg border border-card-border py-2 text-sm font-medium text-heading/80 transition-colors hover:bg-surface ${
+            effectiveCollapsed ? 'justify-center px-2' : 'justify-center gap-2 px-3'
+          }`}
+          aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+          title={theme === 'dark' ? 'Light mode' : 'Dark mode'}
+        >
+          {theme === 'dark' ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+          {!effectiveCollapsed && <span>{theme === 'dark' ? 'Light mode' : 'Dark mode'}</span>}
+        </button>
+
+        {/* Collapse button — desktop only */}
         <button
           type="button"
           onClick={toggle}
-          className={`mb-2 flex w-full items-center rounded-lg border border-card-border py-2 text-sm font-medium text-heading/70 transition-colors hover:bg-surface ${
+          className={`mb-2 hidden w-full items-center rounded-lg border border-card-border py-2 text-sm font-medium text-heading/70 transition-colors hover:bg-surface md:flex ${
             collapsed ? 'justify-center px-2' : 'justify-center gap-2 px-3'
           }`}
           aria-label={collapsed ? 'Expand sidebar' : 'Collapse sidebar'}
@@ -351,7 +404,7 @@ export function Sidebar() {
 
         <div
           className={`flex items-center gap-3 rounded-lg bg-surface/80 p-2 ${
-            collapsed ? 'flex-col' : ''
+            effectiveCollapsed ? 'flex-col' : ''
           }`}
         >
           <div
@@ -360,17 +413,17 @@ export function Sidebar() {
           >
             {initial}
           </div>
-          {!collapsed && (
+          {!effectiveCollapsed && (
             <div className="min-w-0 flex-1">
               <p className="truncate text-sm font-medium text-heading">{displayName}</p>
-              <p className="truncate text-xs text-gray-500">{user?.role === 'admin' ? 'Admin' : 'User'}</p>
+              <p className="truncate text-xs text-heading/60">{user?.role === 'admin' ? 'Admin' : 'User'}</p>
             </div>
           )}
           <button
             type="button"
             onClick={handleLogout}
             title="Log out"
-            className="flex shrink-0 items-center justify-center rounded-lg p-2 text-heading/60 transition-colors hover:bg-white hover:text-outstanding"
+            className="flex shrink-0 items-center justify-center rounded-lg p-2 text-heading/60 transition-colors hover:bg-card hover:text-outstanding"
             aria-label="Log out"
           >
             <LogOut className="h-4 w-4" />

@@ -66,7 +66,7 @@ function BrandDonutChart({ data, title }: { data: { name: string; bags: number }
   if (sorted.length === 0) {
     return (
       <div className="card flex items-center justify-center min-h-[320px]">
-        <p className="text-sm text-gray-400">No data for this month</p>
+        <p className="text-sm text-heading/50">No data for this month</p>
       </div>
     );
   }
@@ -104,14 +104,14 @@ function BrandDonutChart({ data, title }: { data: { name: string; bags: number }
             return (
               <div key={d.name} className="flex items-center gap-2 text-xs">
                 <span className="h-2.5 w-2.5 shrink-0 rounded-full" style={{ background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
-                <span className="min-w-0 flex-1 truncate font-medium text-gray-700">{d.name}</span>
-                <span className="tabular-nums text-gray-500">{formatNumber(d.bags)}</span>
+                <span className="min-w-0 flex-1 truncate font-medium text-heading/80">{d.name}</span>
+                <span className="tabular-nums text-heading/60">{formatNumber(d.bags)}</span>
                 <div className="w-16 shrink-0">
                   <div className="h-1.5 rounded-full bg-gray-200">
                     <div className="h-1.5 rounded-full" style={{ width: `${pct}%`, background: DONUT_COLORS[i % DONUT_COLORS.length] }} />
                   </div>
                 </div>
-                <span className="w-8 text-right tabular-nums text-gray-400">{pct.toFixed(0)}%</span>
+                <span className="w-8 text-right tabular-nums text-heading/50">{pct.toFixed(0)}%</span>
               </div>
             );
           })}
@@ -187,7 +187,7 @@ function OutstandingBreakdownModal({
       dealer: 'bg-blue-100 text-blue-700',
       contractor: 'bg-purple-100 text-purple-700',
       supplier: 'bg-amber-100 text-amber-700',
-      other: 'bg-gray-100 text-gray-600',
+      other: 'bg-surface text-heading/70',
     };
     return (
       <span className={`inline-block rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${colors[t] || colors.other}`}>
@@ -199,48 +199,48 @@ function OutstandingBreakdownModal({
   const renderRow = (r: BreakdownRow) => (
     <tr
       key={r.id}
-      className="hover:bg-gray-50 cursor-pointer transition-colors"
+      className="hover:bg-surface cursor-pointer transition-colors"
       onClick={() => onPartyClick(r.id)}
     >
       <td className="px-4 py-2.5 font-medium text-gray-800 max-w-[200px] truncate">{r.name}</td>
       <td className="px-3 py-2.5"><TypeBadge t={r.type} /></td>
-      <td className="px-3 py-2.5 text-gray-500 max-w-[120px] truncate">{r.location || '—'}</td>
+      <td className="px-3 py-2.5 text-heading/60 max-w-[120px] truncate">{r.location || '—'}</td>
       <td className={`px-4 py-2.5 text-right tabular-nums font-semibold ${
         r.outstanding > 0 ? (isPayable ? 'text-orange-700' : 'text-green-700') :
-        r.outstanding < 0 ? 'text-red-600' : 'text-gray-400'
+        r.outstanding < 0 ? 'text-red-600' : 'text-heading/50'
       }`}>
         {r.outstanding < 0 && '−'}{formatINR(Math.abs(r.outstanding))}
       </td>
-      <td className="px-3 py-2.5 text-gray-400 text-xs tabular-nums">{r.last_transaction ? formatDate(r.last_transaction) : '—'}</td>
+      <td className="px-3 py-2.5 text-heading/50 text-xs tabular-nums">{r.last_transaction ? formatDate(r.last_transaction) : '—'}</td>
     </tr>
   );
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center bg-black/40 backdrop-blur-sm pt-8 pb-8 overflow-y-auto" onClick={onClose}>
       <div
-        className="bg-white rounded-2xl shadow-2xl w-full max-w-3xl mx-4 animate-in fade-in-0 slide-in-from-bottom-4"
+        className="bg-card rounded-2xl shadow-2xl w-full max-w-3xl mx-4 animate-in fade-in-0 slide-in-from-bottom-4"
         onClick={(e) => e.stopPropagation()}
         style={{ animation: 'fadeSlideUp 0.25s ease-out' }}
       >
         {/* Header */}
-        <div className={`flex items-center justify-between px-6 py-4 border-b border-gray-100 bg-${accentColor}-50/50 rounded-t-2xl`}>
+        <div className={`flex items-center justify-between px-6 py-4 border-b border-card-border bg-${accentColor}-50/50 rounded-t-2xl`}>
           <div>
             <h2 className="text-lg font-bold text-gray-800">{title}</h2>
-            <p className="text-sm text-gray-500 mt-0.5">
+            <p className="text-sm text-heading/60 mt-0.5">
               {filtered.length} {filtered.length === 1 ? 'party' : 'parties'} · Net total: <span className={`font-semibold ${total >= 0 ? `text-${accentColor}-700` : 'text-red-600'}`}>{formatINR(total)}</span>
             </p>
           </div>
           <button onClick={onClose} className="p-2 hover:bg-gray-200 rounded-full transition-colors" aria-label="Close">
-            <X className="h-5 w-5 text-gray-500" />
+            <X className="h-5 w-5 text-heading/60" />
           </button>
         </div>
 
         {/* Search */}
-        <div className="px-6 py-3 border-b border-gray-100">
+        <div className="px-6 py-3 border-b border-card-border">
           <input
             type="text"
             placeholder="Search by name, location, or type..."
-            className="w-full rounded-lg border border-gray-200 bg-gray-50 px-4 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
+            className="w-full rounded-lg border border-card-border bg-surface px-4 py-2 text-sm focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
             value={search}
             onChange={(e) => setSearch(e.target.value)}
             autoFocus
@@ -260,23 +260,23 @@ function OutstandingBreakdownModal({
               ))}
             </div>
           ) : sorted.length === 0 ? (
-            <p className="px-6 py-12 text-center text-sm text-gray-400">No parties match your search.</p>
+            <p className="px-6 py-12 text-center text-sm text-heading/50">No parties match your search.</p>
           ) : (
             <table className="w-full text-sm">
-              <thead className="sticky top-0 bg-white border-b border-gray-200 z-10">
-                <tr className="text-left text-xs font-medium uppercase tracking-wider text-gray-500">
-                  <th className="px-4 py-2.5 cursor-pointer hover:text-gray-700" onClick={() => toggleSort('name')}>
+              <thead className="sticky top-0 bg-card border-b border-card-border z-10">
+                <tr className="text-left text-xs font-medium uppercase tracking-wider text-heading/60">
+                  <th className="px-4 py-2.5 cursor-pointer hover:text-heading/80" onClick={() => toggleSort('name')}>
                     Party {sortBy === 'name' && (sortDir === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-3 py-2.5">Type</th>
                   <th className="px-3 py-2.5">Location</th>
-                  <th className="px-4 py-2.5 text-right cursor-pointer hover:text-gray-700" onClick={() => toggleSort('outstanding')}>
+                  <th className="px-4 py-2.5 text-right cursor-pointer hover:text-heading/80" onClick={() => toggleSort('outstanding')}>
                     Outstanding {sortBy === 'outstanding' && (sortDir === 'asc' ? '↑' : '↓')}
                   </th>
                   <th className="px-3 py-2.5">Last Txn</th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-card-border">
                 {/* Positive balances first */}
                 {positive.length > 0 && positive.map(renderRow)}
                 {/* Zero balances */}
@@ -299,11 +299,11 @@ function OutstandingBreakdownModal({
 
         {/* Footer summary */}
         {!loading && sorted.length > 0 && (
-          <div className="px-6 py-3 border-t border-gray-200 bg-gray-50/50 rounded-b-2xl flex items-center justify-between text-sm">
-            <span className="text-gray-500">
+          <div className="px-6 py-3 border-t border-card-border bg-surface/50 rounded-b-2xl flex items-center justify-between text-sm">
+            <span className="text-heading/60">
               {positive.length} owe{isPayable ? 'd' : ''} · {negative.length} overpaid · {zero.length} settled
             </span>
-            <span className="text-xs text-gray-400">Click a row to view ledger</span>
+            <span className="text-xs text-heading/50">Click a row to view ledger</span>
           </div>
         )}
       </div>
@@ -430,16 +430,16 @@ export default function Dashboard() {
               <span className="ml-auto text-xl font-bold tabular-nums text-blue-700">{formatINR(stats.bankBalance)}</span>
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-heading/70">
                 <span>Total received (bank)</span>
                 <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.bankReceived)}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-heading/70">
                 <span>Total paid out (bank)</span>
                 <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.bankPaid)}</span>
               </div>
-              <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
-                <span className="text-gray-700">Net bank</span>
+              <div className="border-t border-card-border pt-2 flex justify-between font-semibold">
+                <span className="text-heading/80">Net bank</span>
                 <span className={`tabular-nums ${stats.bankBalance >= 0 ? 'text-blue-700' : 'text-red-700'}`}>{formatINR(stats.bankBalance)}</span>
               </div>
             </div>
@@ -452,16 +452,16 @@ export default function Dashboard() {
               <span className="ml-auto text-xl font-bold tabular-nums text-amber-700">{formatINR(stats.cashBalance)}</span>
             </div>
             <div className="space-y-2 text-sm">
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-heading/70">
                 <span>Total received (cash)</span>
                 <span className="tabular-nums font-medium text-green-700">+{formatINR(stats.cashReceived)}</span>
               </div>
-              <div className="flex justify-between text-gray-600">
+              <div className="flex justify-between text-heading/70">
                 <span>Total paid out (cash)</span>
                 <span className="tabular-nums font-medium text-red-700">−{formatINR(stats.cashPaid)}</span>
               </div>
-              <div className="border-t border-gray-100 pt-2 flex justify-between font-semibold">
-                <span className="text-gray-700">Net cash</span>
+              <div className="border-t border-card-border pt-2 flex justify-between font-semibold">
+                <span className="text-heading/80">Net cash</span>
                 <span className={`tabular-nums ${stats.cashBalance >= 0 ? 'text-amber-700' : 'text-red-700'}`}>{formatINR(stats.cashBalance)}</span>
               </div>
             </div>
@@ -492,18 +492,18 @@ export default function Dashboard() {
               <div className="flex items-center gap-3">
                 <h3 className="text-base font-semibold text-heading">Collection</h3>
                 {/* Inline Daily / Monthly toggle */}
-                <div className="flex rounded-md border border-gray-200 bg-gray-50 p-0.5 text-xs font-medium">
+                <div className="flex rounded-md border border-card-border bg-surface p-0.5 text-xs font-medium">
                   <button
                     type="button"
                     onClick={() => collectionView !== 'daily' && switchCollectionView('daily')}
-                    className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'daily' ? 'bg-white text-heading shadow-sm' : 'text-gray-500 hover:text-heading'}`}
+                    className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'daily' ? 'bg-card text-heading shadow-sm' : 'text-heading/60 hover:text-heading'}`}
                   >
                     Daily
                   </button>
                   <button
                     type="button"
                     onClick={() => collectionView !== 'monthly' && switchCollectionView('monthly')}
-                    className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'monthly' ? 'bg-white text-heading shadow-sm' : 'text-gray-500 hover:text-heading'}`}
+                    className={`rounded px-2.5 py-1 transition-colors ${collectionView === 'monthly' ? 'bg-card text-heading shadow-sm' : 'text-heading/60 hover:text-heading'}`}
                   >
                     Monthly
                   </button>
@@ -524,7 +524,7 @@ export default function Dashboard() {
               <div className="flex items-center gap-2">
                 <input
                   type="date"
-                  className="rounded-md border border-gray-200 bg-white px-2.5 py-1 text-sm text-gray-700 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
+                  className="rounded-md border border-card-border bg-card px-2.5 py-1 text-sm text-heading/80 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
                   value={collectionDate}
                   onChange={(e) => handleCollectionDateChange(e.target.value)}
                 />
@@ -532,7 +532,7 @@ export default function Dashboard() {
                   <button
                     type="button"
                     onClick={() => setCollectionDate('')}
-                    className="text-xs text-gray-400 hover:text-gray-600"
+                    className="text-xs text-heading/50 hover:text-heading/70"
                   >
                     Show all
                   </button>
@@ -551,7 +551,7 @@ export default function Dashboard() {
               ))}
             </div>
           ) : !collection || collection.daily.length === 0 ? (
-            <p className="px-4 py-6 text-center text-sm text-gray-400">
+            <p className="px-4 py-6 text-center text-sm text-heading/50">
               {collectionView === 'daily' ? 'No collections recorded this month.' : 'No collection data available.'}
             </p>
           ) : (() => {
@@ -559,7 +559,7 @@ export default function Dashboard() {
               ? collection.daily.filter((d: any) => d.date === collectionDate)
               : collection.daily.slice().reverse();
             if (filteredRows.length === 0) return (
-              <p className="px-4 py-6 text-center text-sm text-gray-400">
+              <p className="px-4 py-6 text-center text-sm text-heading/50">
                 No collections on {collectionDate ? new Date(collectionDate + 'T00:00:00').toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' }) : 'selected date'}.
               </p>
             );
@@ -567,7 +567,7 @@ export default function Dashboard() {
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                     <th className="px-4 py-2">{collectionView === 'monthly' ? 'Month' : 'Date'}</th>
                     <th className="px-4 py-2 text-right">Txns</th>
                     <th className="px-4 py-2 text-right">Bank</th>
@@ -575,13 +575,13 @@ export default function Dashboard() {
                     <th className="px-4 py-2 text-right font-semibold text-green-700">Total</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-card-border">
                   {filteredRows.map((d: any) => (
-                    <tr key={d.date ?? d.month} className="hover:bg-gray-50">
+                    <tr key={d.date ?? d.month} className="hover:bg-surface">
                       <td className="px-4 py-2 font-medium">
                         {collectionView === 'monthly' ? d.month : formatDate(d.date)}
                       </td>
-                      <td className="px-4 py-2 text-right tabular-nums text-gray-500">{d.count}</td>
+                      <td className="px-4 py-2 text-right tabular-nums text-heading/60">{d.count}</td>
                       <td className="px-4 py-2 text-right tabular-nums text-blue-700">{formatINR(Number(d.bank))}</td>
                       <td className="px-4 py-2 text-right tabular-nums text-amber-700">{formatINR(Number(d.cash))}</td>
                       <td className="px-4 py-2 text-right tabular-nums font-semibold text-green-700">{formatINR(Number(d.total))}</td>

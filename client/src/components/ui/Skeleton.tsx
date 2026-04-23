@@ -21,7 +21,7 @@ export function SkeletonCard() {
 
 export function TableSkeleton({ rows = 5, columns = 4 }: { rows?: number; columns?: number }) {
   return (
-    <div className="overflow-hidden rounded-xl border border-card-border bg-white">
+    <div className="overflow-hidden rounded-xl border border-card-border bg-card">
       <div className="flex gap-3 border-b border-card-border bg-surface/50 px-4 py-3">
         {Array.from({ length: columns }).map((_, i) => (
           <SkeletonBlock key={`h-${i}`} className="h-4 flex-1" />

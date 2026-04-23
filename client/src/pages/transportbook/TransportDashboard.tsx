@@ -25,9 +25,9 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
         <Icon className="h-6 w-6" />
       </div>
       <div className="min-w-0">
-        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-sm text-heading/60">{label}</p>
         <p className="text-2xl font-bold text-heading truncate">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-heading/50 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -88,7 +88,7 @@ export default function TransportDashboard() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-heading">TransportBook Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Rudra Logistics — ACC Cement Transport Overview</p>
+        <p className="text-sm text-heading/60 mt-1">Rudra Logistics — ACC Cement Transport Overview</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -138,7 +138,7 @@ export default function TransportDashboard() {
             <tbody>
               {stats.partnerSummary.length === 0 ? (
                 <tr>
-                  <td colSpan={2} className="px-4 py-8 text-center text-gray-400">No partners yet</td>
+                  <td colSpan={2} className="px-4 py-8 text-center text-heading/50">No partners yet</td>
                 </tr>
               ) : (
                 stats.partnerSummary.map((p, i) => (
@@ -172,7 +172,7 @@ export default function TransportDashboard() {
             <TrendingUp className="h-5 w-5 text-indigo-500" />
             <h3 className="font-semibold text-heading">Business Model</h3>
           </div>
-          <ul className="space-y-2 text-sm text-gray-600">
+          <ul className="space-y-2 text-sm text-heading/70">
             <li className="flex items-start gap-2">
               <span className="mt-1 h-1.5 w-1.5 rounded-full bg-indigo-400 shrink-0" />
               ACC gives Rudra transport work orders
@@ -199,15 +199,15 @@ export default function TransportDashboard() {
           </div>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Pending / Partial</span>
+              <span className="text-sm text-heading/70">Pending / Partial</span>
               <span className="text-sm font-semibold text-amber-600">{formatINR(stats.pendingInvoiceAmount)}</span>
             </div>
             <div className="flex justify-between items-center">
-              <span className="text-sm text-gray-600">Received (Done)</span>
+              <span className="text-sm text-heading/70">Received (Done)</span>
               <span className="text-sm font-semibold text-green-600">{formatINR(stats.doneInvoiceAmount)}</span>
             </div>
             <div className="border-t border-card-border pt-2 flex justify-between items-center">
-              <span className="text-sm font-medium text-gray-700">Total Invoiced</span>
+              <span className="text-sm font-medium text-heading/80">Total Invoiced</span>
               <span className="text-sm font-bold text-heading">{formatINR(stats.pendingInvoiceAmount + stats.doneInvoiceAmount)}</span>
             </div>
           </div>

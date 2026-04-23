@@ -230,7 +230,7 @@ export default function TripLog() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Trip Log</h1>
-          <p className="text-sm text-gray-500 mt-1">{rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
+          <p className="text-sm text-heading/60 mt-1">{rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
         </div>
         <button
           type="button"
@@ -245,7 +245,7 @@ export default function TripLog() {
       {/* Filters */}
       <div className="card flex flex-wrap gap-4 p-4">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Truck:</label>
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Truck:</label>
           <select
             className="input-field py-1.5 text-sm min-w-[140px]"
             value={filterTruck}
@@ -258,7 +258,7 @@ export default function TripLog() {
           </select>
         </div>
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-600 whitespace-nowrap">Month:</label>
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
           <input
             type="month"
             className="input-field py-1.5 text-sm"
@@ -279,7 +279,7 @@ export default function TripLog() {
 
       {/* Summary Strip */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-5">
           <div className="card p-4 text-center border-orange-200 bg-orange-50">
             <p className="text-xs text-orange-600 font-medium uppercase tracking-wider">Total Qty</p>
             <p className="text-xl font-bold text-heading">{totalRow.quantity.toFixed(1)} T</p>
@@ -324,11 +324,11 @@ export default function TripLog() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
-                    <p className="text-gray-400 mb-3">No trips found</p>
+                    <p className="text-heading/50 mb-3">No trips found</p>
                     <button type="button" onClick={openAdd} className="text-orange-600 hover:underline text-sm font-medium">Log first trip</button>
                   </td>
                 </tr>
@@ -337,10 +337,10 @@ export default function TripLog() {
                   <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-4 py-3 font-medium text-orange-600">{row.truck_number}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.driver_name || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.material_name || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.driver_name || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.material_name || '—'}</td>
                     <td className="px-4 py-3 text-right">{row.quantity || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 text-xs max-w-[140px] truncate">
+                    <td className="px-4 py-3 text-heading/70 text-xs max-w-[140px] truncate">
                       {row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination || '—'}
                     </td>
                     <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.net_freight))}</td>
@@ -349,7 +349,7 @@ export default function TripLog() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-gray-500 hover:bg-orange-100 hover:text-orange-600 transition-colors" title="Edit">
+                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 hover:text-orange-600 transition-colors" title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
                         {isAdmin() && (
@@ -371,12 +371,12 @@ export default function TripLog() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
           <div className="flex min-h-full items-start justify-center px-4 py-6">
-            <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl">
+            <div className="w-full max-w-2xl rounded-xl bg-card shadow-2xl">
               {/* Header */}
               <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
                 <h2 className="font-semibold text-heading">{editing ? 'Edit Trip' : 'Add Trip'}</h2>
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-                  <X className="h-5 w-5 text-gray-500" />
+                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                  <X className="h-5 w-5 text-heading/60" />
                 </button>
               </div>
 
@@ -386,27 +386,27 @@ export default function TripLog() {
                   {/* 1. Trip Info */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Info</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
                         <input type="date" className="input-field" value={form.date} onChange={f('date')} required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Truck *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Truck *</label>
                         <select className="input-field" value={form.truck_id} onChange={f('truck_id')} required>
                           <option value="">Select truck</option>
                           {trucks.map((t) => <option key={t.id} value={String(t.id)}>{t.truck_number}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Driver *</label>
                         <select className="input-field" value={form.driver_id} onChange={f('driver_id')} required>
                           <option value="">Select driver</option>
                           {drivers.map((d) => <option key={d.id} value={String(d.id)}>{d.name}</option>)}
                         </select>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Transporter *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Transporter *</label>
                         <select className="input-field" value={form.transporter_id} onChange={f('transporter_id')} required>
                           <option value="">Select transporter</option>
                           {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
@@ -418,25 +418,25 @@ export default function TripLog() {
                   {/* 2. Loading Details */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Loading Details</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Material *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Material *</label>
                         <input className="input-field" value={form.material_name} onChange={f('material_name')} placeholder="e.g. Cement" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Quantity (tons) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Quantity (tons) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.quantity} onChange={f('quantity')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Load From *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Load From *</label>
                         <input className="input-field" value={form.load_from} onChange={f('load_from')} placeholder="Origin" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Billed Party *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Billed Party *</label>
                         <input className="input-field" value={form.billed_party} onChange={f('billed_party')} placeholder="Party name" required />
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Destination *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Destination *</label>
                         <input className="input-field" value={form.billed_destination} onChange={f('billed_destination')} placeholder="Destination" required />
                       </div>
                     </div>
@@ -445,28 +445,28 @@ export default function TripLog() {
                   {/* 3. Freight */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Freight</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Freight Rate (₹/ton) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Freight Rate (₹/ton) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" required />
                       </div>
                       <div className="flex items-end">
                         <div className="rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs w-full">
-                          <span className="text-gray-500">Total Freight </span>
+                          <span className="text-heading/60">Total Freight </span>
                           <span className="text-orange-600 text-[10px]">({n(form.quantity)} × {n(form.freight_rate)})</span>
                           <p className="font-bold text-orange-700 text-sm mt-0.5">{formatINR(live.total_freight)}</p>
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Diesel (Ltrs) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Diesel (Ltrs) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.advance_litres} onChange={f('advance_litres')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Advance Rate (₹/L) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Rate (₹/L) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.advance_rate} onChange={f('advance_rate')} placeholder="0" required />
                       </div>
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel From (Transporter) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel From (Transporter) *</label>
                         <select className="input-field" value={form.diesel_from_id} onChange={f('diesel_from_id')} required>
                           <option value="">Select transporter who provided diesel</option>
                           {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
@@ -478,11 +478,11 @@ export default function TripLog() {
                         )}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Toll Expense (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Toll Expense (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Transporter Commission (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Transporter Commission (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.transporter_commission} onChange={f('transporter_commission')} placeholder="0" required />
                       </div>
                     </div>
@@ -491,34 +491,34 @@ export default function TripLog() {
                   {/* 4. Trip Costs */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Costs</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Loading Charge (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Loading Charge (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Unloading Charge (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Unloading Charge (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Litres *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Litres *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Diesel Rate (₹/L) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Rate (₹/L) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Driver Payment (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Miscellaneous (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" required />
                       </div>
                       <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs flex flex-wrap gap-3">
-                        <span><span className="text-gray-500">Trip Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span></span>
-                        <span><span className="text-gray-500">Adv Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span></span>
+                        <span><span className="text-heading/60">Trip Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.diesel_amount)}</span></span>
+                        <span><span className="text-heading/60">Adv Diesel: </span><span className="font-semibold text-orange-700">{formatINR(live.advance_deduction)}</span></span>
                       </div>
                     </div>
                   </div>
@@ -526,23 +526,23 @@ export default function TripLog() {
                   {/* 5. Odometer & Remarks */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer & Remarks</p>
-                    <div className="grid grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer Start (km) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Odometer Start (km) *</label>
                         <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Odometer End (km) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Odometer End (km) *</label>
                         <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" required />
                       </div>
                       {live.total_km > 0 && (
                         <div className="col-span-2 rounded-lg bg-orange-50 border border-orange-200 px-3 py-2 text-xs">
-                          <span className="text-gray-500">Distance: </span>
+                          <span className="text-heading/60">Distance: </span>
                           <span className="font-semibold text-orange-700">{live.total_km} km</span>
                         </div>
                       )}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
                         <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
                       </div>
                     </div>
@@ -552,27 +552,27 @@ export default function TripLog() {
                   <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Summary</p>
                     <div className="grid grid-cols-3 gap-3 text-sm">
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Total Freight</p>
                         <p className="font-bold">{formatINR(live.total_freight)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Loading + Unloading</p>
                         <p className="font-bold">−{formatINR(n(form.loading_charge) + n(form.unloading_charge))}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Trip Diesel</p>
                         <p className="font-bold">−{formatINR(live.diesel_amount)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Adv Diesel (Ledger)</p>
                         <p className="font-bold text-yellow-200">{formatINR(live.advance_deduction)}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Driver + Misc</p>
                         <p className="font-bold">−{formatINR(n(form.driver_payment) + n(form.miscellaneous))}</p>
                       </div>
-                      <div className="bg-white/10 rounded-lg p-2">
+                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Toll + Commission</p>
                         <p className="font-bold">−{formatINR(n(form.toll_expense) + n(form.transporter_commission))}</p>
                       </div>
@@ -588,7 +588,7 @@ export default function TripLog() {
                 </div>
 
                 <div className="flex justify-end gap-3 border-t border-card-border px-5 py-4">
-                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
                     Cancel
                   </button>
                   <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 transition-colors">

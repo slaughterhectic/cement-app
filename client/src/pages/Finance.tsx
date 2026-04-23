@@ -47,15 +47,15 @@ function EMICalculator() {
       </h3>
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Principal Amount (₹)</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">Principal Amount (₹)</label>
           <input type="number" min={0} step={1000} className="input-field w-full" placeholder="e.g. 500000" value={p} onChange={(e) => setP(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Annual Interest Rate (%)</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">Annual Interest Rate (%)</label>
           <input type="number" min={0} step={0.1} className="input-field w-full" placeholder="e.g. 12" value={r} onChange={(e) => setR(e.target.value)} />
         </div>
         <div>
-          <label className="mb-1 block text-xs font-medium text-gray-600">Tenure (months)</label>
+          <label className="mb-1 block text-xs font-medium text-heading/70">Tenure (months)</label>
           <input type="number" min={1} step={1} className="input-field w-full" placeholder="e.g. 60" value={n} onChange={(e) => setN(e.target.value)} />
         </div>
       </div>
@@ -69,8 +69,8 @@ function EMICalculator() {
             <p className="text-xs font-medium uppercase tracking-wide text-amber-700">Total Interest</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-amber-800">{formatINR(totalInterest ?? 0)}</p>
           </div>
-          <div className="rounded-lg border border-gray-100 bg-gray-50 p-4">
-            <p className="text-xs font-medium uppercase tracking-wide text-gray-600">Total Payable</p>
+          <div className="rounded-lg border border-card-border bg-surface p-4">
+            <p className="text-xs font-medium uppercase tracking-wide text-heading/70">Total Payable</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-gray-800">{formatINR(totalPayable ?? 0)}</p>
           </div>
         </div>
@@ -180,7 +180,7 @@ function PartyLoansSection() {
       <div className="flex items-center justify-between">
         <div>
           <h2 className="text-lg font-semibold text-heading">Party Loans (Given)</h2>
-          <p className="text-xs text-gray-500 mt-0.5">Loans given to customers / dealers. Tracked in their ledger and affects capital.</p>
+          <p className="text-xs text-heading/60 mt-0.5">Loans given to customers / dealers. Tracked in their ledger and affects capital.</p>
         </div>
         <button
           type="button"
@@ -214,15 +214,15 @@ function PartyLoansSection() {
       {/* Table */}
       <div className="card overflow-hidden p-0">
         {loading ? (
-          <p className="px-4 py-8 text-center text-sm text-gray-500">Loading…</p>
+          <p className="px-4 py-8 text-center text-sm text-heading/60">Loading…</p>
         ) : partyLoans.length === 0 ? (
-          <p className="px-4 py-10 text-center text-sm text-gray-500">No party loans recorded yet.</p>
+          <p className="px-4 py-10 text-center text-sm text-heading/60">No party loans recorded yet.</p>
         ) : (
           <>
           <div className="overflow-x-auto">
             <table className="min-w-full text-sm">
               <thead>
-                <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Party</th>
                   <th className="px-4 py-3">Type</th>
@@ -232,9 +232,9 @@ function PartyLoansSection() {
                   {isAdmin && <th className="px-4 py-3"></th>}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-100">
+              <tbody className="divide-y divide-card-border">
                 {pg.pageData.map((l) => (
-                  <tr key={l.id} className="hover:bg-gray-50">
+                  <tr key={l.id} className="hover:bg-surface">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(l.date)}</td>
                     <td className="px-4 py-3 font-medium text-heading">{l.party_name}</td>
                     <td className="px-4 py-3">
@@ -253,10 +253,10 @@ function PartyLoansSection() {
                         {formatINR(l.amount)}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600 capitalize">
+                    <td className="px-4 py-3 text-heading/70 capitalize">
                       {l.mode}{l.bank_name ? ` — ${l.bank_name}` : ''}
                     </td>
-                    <td className="px-4 py-3 text-gray-600 max-w-[150px] truncate">{l.remarks || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70 max-w-[150px] truncate">{l.remarks || '—'}</td>
                     {isAdmin && (
                       <td className="px-4 py-3">
                         <button type="button" onClick={() => handleDelete(l.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50">
@@ -277,34 +277,34 @@ function PartyLoansSection() {
       {/* Add Entry Modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-xl">
             <h3 className="mb-4 text-base font-semibold text-heading">Add Party Loan Entry</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Date *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
                 <input type="date" className="input-field w-full" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Type *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Type *</label>
                 <div className="flex gap-2">
                   <button
                     type="button"
                     onClick={() => setForm((p) => ({ ...p, type: 'disbursement' }))}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${form.type === 'disbursement' ? 'border-amber-400 bg-amber-500 text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${form.type === 'disbursement' ? 'border-amber-400 bg-amber-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}
                   >
                     Disbursement
                   </button>
                   <button
                     type="button"
                     onClick={() => setForm((p) => ({ ...p, type: 'repayment' }))}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${form.type === 'repayment' ? 'border-green-400 bg-green-500 text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${form.type === 'repayment' ? 'border-green-400 bg-green-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}
                   >
                     Repayment
                   </button>
                 </div>
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">Party *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Party *</label>
                 <select className="input-field w-full" value={form.party_id} onChange={(e) => setForm((p) => ({ ...p, party_id: e.target.value }))}>
                   <option value="">Select party</option>
                   {parties.map((p) => (
@@ -313,25 +313,25 @@ function PartyLoansSection() {
                 </select>
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Amount (₹) *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
                 <input type="number" min={0} step={0.01} className="input-field w-full" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Mode *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Mode *</label>
                 <div className="flex gap-2">
                   <button type="button" onClick={() => setForm((p) => ({ ...p, mode: 'bank' }))}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${form.mode === 'bank' ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}>
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${form.mode === 'bank' ? 'border-brand-500 bg-brand-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}>
                     Bank
                   </button>
                   <button type="button" onClick={() => setForm((p) => ({ ...p, mode: 'cash' }))}
-                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${form.mode === 'cash' ? 'border-brand-500 bg-brand-500 text-white' : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'}`}>
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${form.mode === 'cash' ? 'border-brand-500 bg-brand-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}>
                     Cash
                   </button>
                 </div>
               </div>
               {form.mode === 'bank' && (
                 <div className="sm:col-span-2">
-                  <label className="mb-1 block text-xs font-medium text-gray-600">Bank</label>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Bank</label>
                   <select className="input-field w-full" value={form.bank_name} onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))}>
                     <option value="">Select bank</option>
                     {banks.map((b) => <option key={b.bank_name} value={b.bank_name}>{b.bank_name}</option>)}
@@ -339,7 +339,7 @@ function PartyLoansSection() {
                 </div>
               )}
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">Remarks</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
                 <input type="text" className="input-field w-full" value={form.remarks} onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))} />
               </div>
             </div>
@@ -510,15 +510,15 @@ export default function Finance() {
 
         <div className="card overflow-hidden p-0">
           {loading ? (
-            <p className="px-4 py-8 text-center text-sm text-gray-500">Loading…</p>
+            <p className="px-4 py-8 text-center text-sm text-heading/60">Loading…</p>
           ) : loans.length === 0 ? (
-            <p className="px-4 py-10 text-center text-sm text-gray-500">No loans recorded yet. Click "Add Loan" to start.</p>
+            <p className="px-4 py-10 text-center text-sm text-heading/60">No loans recorded yet. Click "Add Loan" to start.</p>
           ) : (
             <>
             <div className="overflow-x-auto">
               <table className="min-w-full text-sm">
                 <thead>
-                  <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                  <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                     <th className="px-4 py-3">Lender</th>
                     <th className="px-4 py-3 text-right">Principal (₹)</th>
                     <th className="px-4 py-3 text-right">Outstanding (₹)</th>
@@ -530,12 +530,12 @@ export default function Finance() {
                     <th className="px-4 py-3">Actions</th>
                   </tr>
                 </thead>
-                <tbody className="divide-y divide-gray-100">
+                <tbody className="divide-y divide-card-border">
                   {loanPg.pageData.map((loan) => {
                     const outstanding = loan.outstanding_principal ?? loan.principal;
                     const pct = loan.principal > 0 ? (outstanding / loan.principal) * 100 : 0;
                     return (
-                      <tr key={loan.id} className="hover:bg-gray-50">
+                      <tr key={loan.id} className="hover:bg-surface">
                         <td className="px-4 py-3 font-medium text-heading">{loan.lender_name}</td>
                         <td className="px-4 py-3 text-right tabular-nums">{formatINR(loan.principal)}</td>
                         <td className="px-4 py-3 text-right tabular-nums">
@@ -552,7 +552,7 @@ export default function Finance() {
                         </td>
                         <td className="px-4 py-3 whitespace-nowrap">{formatDate(loan.start_date)}</td>
                         <td className="px-4 py-3 text-right">{loan.tenure_months ?? '—'}</td>
-                        <td className="px-4 py-3 max-w-[150px] truncate text-gray-600">{loan.remarks || '—'}</td>
+                        <td className="px-4 py-3 max-w-[150px] truncate text-heading/70">{loan.remarks || '—'}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
                             <button type="button" onClick={() => openEdit(loan)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
@@ -579,31 +579,31 @@ export default function Finance() {
       {/* Add/Edit form */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white p-6 shadow-xl overflow-y-auto max-h-[90vh]">
+          <div className="w-full max-w-2xl rounded-xl bg-card p-6 shadow-xl overflow-y-auto max-h-[90vh]">
             <h3 className="mb-5 text-base font-semibold text-heading">{editLoan ? 'Edit Loan' : 'Add Loan'}</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">Lender Name *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Lender Name *</label>
                 <input type="text" className="input-field w-full" placeholder="e.g. HDFC Bank, Kotak" value={form.lender_name} onChange={(e) => setForm((p) => ({ ...p, lender_name: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Principal Amount (₹) *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Principal Amount (₹) *</label>
                 <input type="number" min={0} step={1000} className="input-field w-full" value={form.principal} onChange={(e) => setForm((p) => ({ ...p, principal: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Outstanding Principal (₹)</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Outstanding Principal (₹)</label>
                 <input type="number" min={0} step={1000} className="input-field w-full" placeholder="Defaults to principal if empty" value={form.outstanding_principal} onChange={(e) => setForm((p) => ({ ...p, outstanding_principal: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Annual Interest Rate (%) *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Annual Interest Rate (%) *</label>
                 <input type="number" min={0} step={0.1} className="input-field w-full" placeholder="e.g. 12.5" value={form.interest_rate} onChange={(e) => setForm((p) => ({ ...p, interest_rate: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Tenure (months)</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Tenure (months)</label>
                 <input type="number" min={1} step={1} className="input-field w-full" placeholder="e.g. 60" value={form.tenure_months} onChange={(e) => setForm((p) => ({ ...p, tenure_months: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">EMI Amount (₹/month)</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">EMI Amount (₹/month)</label>
                 <input type="number" min={0} step={100} className="input-field w-full" placeholder="Auto-calculated if empty" value={form.emi_amount} onChange={(e) => setForm((p) => ({ ...p, emi_amount: e.target.value }))} />
                 {form.principal && form.interest_rate && form.tenure_months && !form.emi_amount && (
                   <p className="mt-1 text-xs text-brand-600">
@@ -612,16 +612,16 @@ export default function Finance() {
                 )}
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Start Date *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Start Date *</label>
                 <input type="date" className="input-field w-full" value={form.start_date} onChange={(e) => setForm((p) => ({ ...p, start_date: e.target.value }))} />
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">Remarks</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
                 <textarea rows={2} className="input-field w-full resize-y" value={form.remarks} onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))} />
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
-              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
               <button type="button" onClick={handleSave} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Save</button>
             </div>
           </div>

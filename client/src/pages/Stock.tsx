@@ -94,7 +94,7 @@ function StockSummarySkeleton() {
       {Array.from({ length: 8 }, (_, i) => (
         <div
           key={i}
-          className="rounded-xl border-2 border-card-border bg-white p-5 shadow-sm"
+          className="rounded-xl border-2 border-card-border bg-card p-5 shadow-sm"
           role="status"
           aria-label="Loading"
         >
@@ -126,7 +126,7 @@ function GodownSectionSkeleton() {
       {Array.from({ length: 3 }, (_, i) => (
         <div
           key={i}
-          className="rounded-lg border border-card-border bg-white p-4 shadow-sm"
+          className="rounded-lg border border-card-border bg-card p-4 shadow-sm"
           role="status"
           aria-label="Loading"
         >
@@ -422,7 +422,7 @@ export default function Stock() {
             <Package className="h-8 w-8 text-brand-600" aria-hidden />
             Stock
           </h1>
-          <p className="mt-1 text-sm text-gray-600">Brand summary, movement log, and godown-wise quantities.</p>
+          <p className="mt-1 text-sm text-heading/70">Brand summary, movement log, and godown-wise quantities.</p>
         </div>
         <button
           type="button"
@@ -461,9 +461,9 @@ export default function Stock() {
         <h2 id="stock-movement-heading" className="text-lg font-semibold text-heading">
           Stock Movement
         </h2>
-        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-card-border bg-white p-4">
+        <div className="flex flex-wrap items-end gap-3 rounded-lg border border-card-border bg-card p-4">
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Brand</label>
+            <label className="mb-1 block text-xs font-medium text-heading/70">Brand</label>
             <select
               className="input-field min-w-[180px]"
               value={brandFilter}
@@ -478,7 +478,7 @@ export default function Stock() {
             </select>
           </div>
           <div>
-            <label className="mb-1 block text-xs font-medium text-gray-600">Godown</label>
+            <label className="mb-1 block text-xs font-medium text-heading/70">Godown</label>
             <select
               className="input-field min-w-[180px]"
               value={godownFilter}
@@ -510,33 +510,33 @@ export default function Stock() {
         {godownLoading ? (
           <GodownSectionSkeleton />
         ) : godownGroups.length === 0 ? (
-          <p className="text-sm text-gray-600">No godown stock to show.</p>
+          <p className="text-sm text-heading/70">No godown stock to show.</p>
         ) : (
           <div className="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
             {godownGroups.map((g) => (
               <div
                 key={g.id}
-                className="rounded-lg border border-card-border bg-white p-4 shadow-sm"
+                className="rounded-lg border border-card-border bg-card p-4 shadow-sm"
               >
                 <h3 className="text-base font-semibold text-heading">{g.name}</h3>
                 {g.location ? (
-                  <p className="mt-0.5 text-sm text-gray-500">{g.location}</p>
+                  <p className="mt-0.5 text-sm text-heading/60">{g.location}</p>
                 ) : null}
-                <ul className="mt-4 divide-y divide-gray-100">
+                <ul className="mt-4 divide-y divide-card-border">
                   {g.brands.map((b) => (
                     <li
                       key={`${g.id}-${b.brand_id}`}
                       className="flex flex-wrap items-center justify-between gap-2 py-2.5 text-sm first:pt-0"
                     >
                       <div>
-                        <span className="font-medium text-gray-900">{b.brand_name}</span>
-                        <span className="ml-2 text-xs text-gray-500">{b.brand_type}</span>
+                        <span className="font-medium text-heading">{b.brand_name}</span>
+                        <span className="ml-2 text-xs text-heading/60">{b.brand_type}</span>
                       </div>
                       <span className="tabular-nums font-semibold text-heading">{b.stock} bags</span>
                     </li>
                   ))}
                 </ul>
-                <div className="mt-3 border-t border-card-border pt-3 space-y-1.5 text-xs text-gray-500">
+                <div className="mt-3 border-t border-card-border pt-3 space-y-1.5 text-xs text-heading/60">
                   <div className="flex justify-between">
                     <span>Est. stock value</span>
                     <span className="font-medium text-heading">{formatINR(godownEstValue(g.brands))}</span>
@@ -548,16 +548,16 @@ export default function Stock() {
                         {p.opening_value ? (
                           <div className="flex justify-between">
                             <span>Opening stock value</span>
-                            <span className="font-medium text-gray-700">{formatINR(p.opening_value)}</span>
+                            <span className="font-medium text-heading/80">{formatINR(p.opening_value)}</span>
                           </div>
                         ) : null}
                         <div className="flex justify-between">
                           <span>Total purchases</span>
-                          <span className="font-medium text-gray-700">{formatINR(p.total_purchase)}</span>
+                          <span className="font-medium text-heading/80">{formatINR(p.total_purchase)}</span>
                         </div>
                         <div className="flex justify-between">
                           <span>Total sales</span>
-                          <span className="font-medium text-gray-700">{formatINR(p.total_sale)}</span>
+                          <span className="font-medium text-heading/80">{formatINR(p.total_sale)}</span>
                         </div>
                         <div className="flex justify-between border-t border-card-border pt-1.5">
                           <span className="font-semibold">Profit</span>
@@ -582,14 +582,14 @@ export default function Stock() {
         size="xl"
       >
         <div className="flex flex-col gap-5">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-heading/70">
             Record bags already on hand per godown per brand, before any purchase entries. One row per
             godown + brand; saving again overwrites the existing entry. Rate per bag is used to value the stock.
           </p>
 
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 lg:grid-cols-3">
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Godown *</label>
+              <label className="mb-1 block text-xs font-medium text-heading/70">Godown *</label>
               <select
                 className="input-field"
                 value={openingForm.godown_id}
@@ -602,7 +602,7 @@ export default function Stock() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Brand *</label>
+              <label className="mb-1 block text-xs font-medium text-heading/70">Brand *</label>
               <select
                 className="input-field"
                 value={openingForm.brand_id}
@@ -615,7 +615,7 @@ export default function Stock() {
               </select>
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Bags *</label>
+              <label className="mb-1 block text-xs font-medium text-heading/70">Bags *</label>
               <input
                 type="number"
                 min={0}
@@ -626,7 +626,7 @@ export default function Stock() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">Rate per bag *</label>
+              <label className="mb-1 block text-xs font-medium text-heading/70">Rate per bag *</label>
               <input
                 type="number"
                 min={0}
@@ -638,7 +638,7 @@ export default function Stock() {
               />
             </div>
             <div>
-              <label className="mb-1 block text-xs font-medium text-gray-600">As of date</label>
+              <label className="mb-1 block text-xs font-medium text-heading/70">As of date</label>
               <input
                 type="date"
                 className="input-field"
@@ -647,7 +647,7 @@ export default function Stock() {
               />
             </div>
             <div className="sm:col-span-2 lg:col-span-1">
-              <label className="mb-1 block text-xs font-medium text-gray-600">Remarks</label>
+              <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
               <input
                 type="text"
                 className="input-field"
@@ -660,7 +660,7 @@ export default function Stock() {
           <div className="flex items-center justify-end gap-2">
             <button
               type="button"
-              className="rounded-lg border border-card-border px-4 py-2 text-sm text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-card-border px-4 py-2 text-sm text-heading/80 hover:bg-surface"
               onClick={() => setOpeningForm(emptyOpeningForm)}
             >
               Clear
@@ -678,13 +678,13 @@ export default function Stock() {
           <div className="border-t border-card-border pt-4">
             <h3 className="mb-2 text-sm font-semibold text-heading">Existing opening stock</h3>
             {openingLoading ? (
-              <p className="text-sm text-gray-500">Loading…</p>
+              <p className="text-sm text-heading/60">Loading…</p>
             ) : openingRows.length === 0 ? (
-              <p className="text-sm text-gray-500">No opening stock recorded yet.</p>
+              <p className="text-sm text-heading/60">No opening stock recorded yet.</p>
             ) : (
               <div className="overflow-x-auto">
                 <table className="min-w-full divide-y divide-gray-200 text-sm">
-                  <thead className="bg-gray-50 text-xs font-medium uppercase text-gray-500">
+                  <thead className="bg-surface text-xs font-medium uppercase text-heading/60">
                     <tr>
                       <th className="px-3 py-2 text-left">Godown</th>
                       <th className="px-3 py-2 text-left">Brand</th>
@@ -695,7 +695,7 @@ export default function Stock() {
                       <th className="px-3 py-2"></th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-card-border">
                     {openingRows.map((r) => (
                       <tr key={r.id}>
                         <td className="px-3 py-2">{r.godown_name}</td>
@@ -710,7 +710,7 @@ export default function Stock() {
                           <div className="flex items-center justify-end gap-2">
                             <button
                               type="button"
-                              className="rounded p-1 text-gray-500 hover:bg-gray-100 hover:text-gray-700"
+                              className="rounded p-1 text-heading/60 hover:bg-card-border/50 hover:text-heading/80"
                               title="Edit"
                               onClick={() => handleEditOpening(r)}
                             >

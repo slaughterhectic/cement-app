@@ -91,3 +91,58 @@ export const useSidebarStore = create<SidebarState>((set) => ({
   collapsed: false,
   toggle: () => set((s) => ({ collapsed: !s.collapsed })),
 }));
+
+// ── Mobile drawer (off-canvas sidebar on small screens) ───────────────────────
+interface MobileNavState {
+  open: boolean;
+  setOpen: (open: boolean) => void;
+  toggle: () => void;
+}
+
+export const useMobileNavStore = create<MobileNavState>((set) => ({
+  open: false,
+  setOpen: (open) => set({ open }),
+  toggle: () => set((s) => ({ open: !s.open })),
+}));
+
+// ── Theme (light/dark) ────────────────────────────────────────────────────────
+type Theme = 'light' | 'dark';
+
+function readStoredTheme(): Theme {
+  if (typeof window === 'undefined') return 'light';
+  const stored = localStorage.getItem('theme');
+  if (stored === 'dark' || stored === 'light') return stored;
+  return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+}
+
+function applyTheme(theme: Theme) {
+  if (typeof document === 'undefined') return;
+  const root = document.documentElement;
+  if (theme === 'dark') root.classList.add('dark');
+  else root.classList.remove('dark');
+}
+
+interface ThemeState {
+  theme: Theme;
+  setTheme: (theme: Theme) => void;
+  toggle: () => void;
+}
+
+export const useThemeStore = create<ThemeState>((set) => {
+  const initial = readStoredTheme();
+  applyTheme(initial);
+  return {
+    theme: initial,
+    setTheme: (theme) => {
+      localStorage.setItem('theme', theme);
+      applyTheme(theme);
+      set({ theme });
+    },
+    toggle: () => set((s) => {
+      const next: Theme = s.theme === 'dark' ? 'light' : 'dark';
+      localStorage.setItem('theme', next);
+      applyTheme(next);
+      return { theme: next };
+    }),
+  };
+});

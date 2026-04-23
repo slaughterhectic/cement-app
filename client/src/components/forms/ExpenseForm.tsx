@@ -172,7 +172,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 mode === 'bank'
                   ? 'border-brand-500 bg-brand-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  : 'border-card-border bg-card text-heading/80 hover:bg-surface'
               }`}
             >
               Bank
@@ -183,7 +183,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 mode === 'cash'
                   ? 'border-brand-500 bg-brand-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  : 'border-card-border bg-card text-heading/80 hover:bg-surface'
               }`}
             >
               Cash
@@ -225,7 +225,7 @@ export function ExpenseForm({ isOpen, onClose, onSuccess }: ExpenseFormProps) {
             {cashHandlers.length === 0 && (
               <p className="mt-1 text-xs text-amber-600">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">This cash expense will be deducted from the handler's cash book automatically.</p>
+            <p className="mt-1 text-xs text-heading/60">This cash expense will be deducted from the handler's cash book automatically.</p>
           </div>
         )}
 

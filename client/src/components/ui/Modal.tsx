@@ -46,7 +46,7 @@ export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalPr
         role="dialog"
         aria-modal="true"
         aria-labelledby="modal-title"
-        className={`relative z-10 w-full rounded-xl border border-card-border bg-white shadow-xl ${sizeClass[size]}`}
+        className={`relative z-10 w-full rounded-xl border border-card-border bg-card shadow-xl ${sizeClass[size]}`}
       >
         <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
           <h2 id="modal-title" className="text-lg font-semibold text-heading">

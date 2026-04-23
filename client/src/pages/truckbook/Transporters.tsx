@@ -181,7 +181,7 @@ export default function Transporters() {
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Transporters</h1>
-          <p className="text-sm text-gray-500 mt-1">Ledger & payment tracking</p>
+          <p className="text-sm text-heading/60 mt-1">Ledger & payment tracking</p>
         </div>
         <button
           type="button"
@@ -200,9 +200,9 @@ export default function Transporters() {
             <p className="font-semibold text-orange-700 text-sm">All Transporters</p>
           </div>
           {loadingList ? (
-            <div className="p-6 text-center text-gray-400 text-sm">Loading…</div>
+            <div className="p-6 text-center text-heading/50 text-sm">Loading…</div>
           ) : transporters.length === 0 ? (
-            <div className="p-6 text-center text-gray-400 text-sm">No transporters yet</div>
+            <div className="p-6 text-center text-heading/50 text-sm">No transporters yet</div>
           ) : (
             <div className="divide-y divide-card-border">
               {transporters.map((t) => (
@@ -212,20 +212,20 @@ export default function Transporters() {
                   className={`cursor-pointer px-4 py-3 transition-colors ${
                     selectedId === t.id
                       ? 'bg-orange-50 border-l-4 border-l-orange-500'
-                      : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+                      : 'hover:bg-surface border-l-4 border-l-transparent'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-sm text-heading truncate">{t.name}</p>
-                      {t.phone && <p className="text-xs text-gray-400">{t.phone}</p>}
-                      <p className="text-xs text-gray-400">{t.trip_count} trips</p>
+                      {t.phone && <p className="text-xs text-heading/50">{t.phone}</p>}
+                      <p className="text-xs text-heading/50">{t.trip_count} trips</p>
                     </div>
                     <div className="text-right shrink-0">
                       <p className={`text-xs font-semibold ${t.outstanding > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {formatINR(t.outstanding)}
                       </p>
-                      <p className="text-xs text-gray-400">outstanding</p>
+                      <p className="text-xs text-heading/50">outstanding</p>
                     </div>
                   </div>
                   {isAdmin() && (
@@ -248,7 +248,7 @@ export default function Transporters() {
           {!selectedId ? (
             <div className="card flex flex-col items-center justify-center py-20 text-center">
               <Building2 className="h-12 w-12 text-orange-200 mb-3" />
-              <p className="text-gray-400">Select a transporter to view their ledger</p>
+              <p className="text-heading/50">Select a transporter to view their ledger</p>
             </div>
           ) : loadingLedger ? (
             <div className="card flex items-center justify-center py-20">
@@ -300,7 +300,7 @@ export default function Transporters() {
                         className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
                           payForm.payment_type === 'paid'
                             ? 'bg-red-500 border-red-500 text-white'
-                            : 'border-card-border text-gray-600 hover:bg-gray-50'
+                            : 'border-card-border text-heading/70 hover:bg-surface'
                         }`}
                       >
                         Paid to Transporter
@@ -311,25 +311,25 @@ export default function Transporters() {
                         className={`flex-1 rounded-lg border py-2 text-xs font-semibold transition-colors ${
                           payForm.payment_type === 'received'
                             ? 'bg-green-500 border-green-500 text-white'
-                            : 'border-card-border text-gray-600 hover:bg-gray-50'
+                            : 'border-card-border text-heading/70 hover:bg-surface'
                         }`}
                       >
                         Received from Transporter
                       </button>
                     </div>
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Date *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
                         <input type="date" className="input-field" value={payForm.date}
                           onChange={(e) => setPayForm((p) => ({ ...p, date: e.target.value }))} required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Amount (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Amount (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={payForm.amount}
                           onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Mode</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Mode</label>
                         <select className="input-field" value={payForm.mode}
                           onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '', cash_handler: '' }))}>
                           <option value="cash">Cash</option>
@@ -338,7 +338,7 @@ export default function Transporters() {
                       </div>
                       {payForm.mode === 'bank' ? (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Bank *</label>
+                          <label className="block text-xs font-medium text-heading/70 mb-1">Bank *</label>
                           <select className="input-field" value={payForm.bank_name}
                             onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
                             <option value="">Select bank</option>
@@ -347,7 +347,7 @@ export default function Transporters() {
                         </div>
                       ) : (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Cash Handler *</label>
+                          <label className="block text-xs font-medium text-heading/70 mb-1">Cash Handler *</label>
                           <select className="input-field" value={payForm.cash_handler}
                             onChange={(e) => setPayForm((p) => ({ ...p, cash_handler: e.target.value }))}>
                             <option value="">Select handler</option>
@@ -359,13 +359,13 @@ export default function Transporters() {
                         </div>
                       )}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
                         <input className="input-field" value={payForm.remarks}
                           onChange={(e) => setPayForm((p) => ({ ...p, remarks: e.target.value }))} placeholder="Optional" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-3">
-                      <button type="button" onClick={() => setAddPayOpen(false)} className="text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                      <button type="button" onClick={() => setAddPayOpen(false)} className="text-sm text-heading/60 hover:text-heading/80">Cancel</button>
                       <button type="submit" disabled={saving} className={`rounded-lg px-4 py-2 text-sm font-medium text-white disabled:opacity-60 transition-colors ${payForm.payment_type === 'received' ? 'bg-green-500 hover:bg-green-600' : 'bg-orange-500 hover:bg-orange-600'}`}>
                         {saving ? 'Saving…' : payForm.payment_type === 'received' ? 'Record Receipt' : 'Record Payment'}
                       </button>
@@ -382,28 +382,28 @@ export default function Transporters() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-card-border bg-gray-50 text-left">
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Date</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Type</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Details</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Received</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Paid</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Balance</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Action</th>
+                      <tr className="border-b border-card-border bg-surface text-left">
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Date</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Type</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Details</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70 text-right">Received</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70 text-right">Paid</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70 text-right">Balance</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ledger.ledger.length === 0 ? (
-                        <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No entries</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-heading/50">No entries</td></tr>
                       ) : (
                         ledger.ledger.map((row, i) => {
-                          const meta = ENTRY_LABELS[row.entry_type] || { label: row.entry_type, color: 'text-gray-600' };
+                          const meta = ENTRY_LABELS[row.entry_type] || { label: row.entry_type, color: 'text-heading/70' };
                           const isPayment = row.entry_type === 'payment';
                           const isPaid = isPayment && (row.payment_type ?? 'paid') === 'paid';
                           const isReceived = isPayment && row.payment_type === 'received';
                           return (
                             <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? (isReceived ? 'hover:bg-green-50/40' : 'hover:bg-red-50/40') : 'hover:bg-blue-50/40'} transition-colors`}>
-                              <td className="px-4 py-3 whitespace-nowrap text-gray-600">{formatDate(row.date)}</td>
+                              <td className="px-4 py-3 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                               <td className="px-4 py-3">
                                 {isPayment ? (
                                   isReceived ? (
@@ -421,7 +421,7 @@ export default function Transporters() {
                                   </span>
                                 )}
                               </td>
-                              <td className="px-4 py-3 text-xs text-gray-500 max-w-[180px]">
+                              <td className="px-4 py-3 text-xs text-heading/60 max-w-[180px]">
                                 {isPayment
                                   ? <span>
                                       {row.mode && <span className="capitalize">{row.mode}</span>}
@@ -470,29 +470,29 @@ export default function Transporters() {
       {modalOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
           <div className="flex min-h-full items-center justify-center px-4 py-6">
-            <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl">
+            <div className="w-full max-w-sm rounded-xl bg-card shadow-2xl">
               <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
                 <h2 className="font-semibold text-heading">Add Transporter</h2>
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100">
-                  <X className="h-5 w-5 text-gray-500" />
+                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                  <X className="h-5 w-5 text-heading/60" />
                 </button>
               </div>
               <form onSubmit={handleAddTransporter} className="p-5 flex flex-col gap-4">
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Name *</label>
+                  <label className="block text-xs font-medium text-heading/70 mb-1">Name *</label>
                   <input autoFocus className="input-field" value={tForm.name}
                     onChange={(e) => setTForm((p) => ({ ...p, name: e.target.value }))}
                     placeholder="Transporter name" required />
                 </div>
                 <div>
-                  <label className="block text-xs font-medium text-gray-600 mb-1">Phone</label>
+                  <label className="block text-xs font-medium text-heading/70 mb-1">Phone</label>
                   <input className="input-field" value={tForm.phone}
                     onChange={(e) => setTForm((p) => ({ ...p, phone: e.target.value }))}
                     placeholder="Optional" />
                 </div>
                 <div className="flex justify-end gap-3 pt-1">
                   <button type="button" onClick={() => setModalOpen(false)}
-                    className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                    className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">
                     Cancel
                   </button>
                   <button type="submit" disabled={tSaving || !tForm.name.trim()}

@@ -34,9 +34,9 @@ function StatCard({ label, value, sub, icon: Icon, color }: {
         <Icon className="h-6 w-6" />
       </div>
       <div className="min-w-0">
-        <p className="text-sm text-gray-500">{label}</p>
+        <p className="text-sm text-heading/60">{label}</p>
         <p className="text-2xl font-bold text-heading truncate">{value}</p>
-        {sub && <p className="text-xs text-gray-400 mt-0.5">{sub}</p>}
+        {sub && <p className="text-xs text-heading/50 mt-0.5">{sub}</p>}
       </div>
     </div>
   );
@@ -75,7 +75,7 @@ export default function TruckDashboard() {
     <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-bold text-heading">TruckBook Dashboard</h1>
-        <p className="text-sm text-gray-500 mt-1">Overview of your fleet performance</p>
+        <p className="text-sm text-heading/60 mt-1">Overview of your fleet performance</p>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -125,7 +125,7 @@ export default function TruckDashboard() {
             <tbody>
               {data.perTruck.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-gray-400">No trucks yet</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-heading/50">No trucks yet</td>
                 </tr>
               ) : (
                 data.perTruck.map((t) => (

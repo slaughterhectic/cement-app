@@ -2,10 +2,27 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  --color-surface: 248 247 244;      /* #F8F7F4 */
+  --color-card: 255 255 255;
+  --color-card-border: 229 228 223;  /* #E5E4DF */
+  --color-heading: 26 26 46;         /* #1A1A2E */
+}
+
+.dark {
+  --color-surface: 15 17 26;
+  --color-card: 24 27 41;
+  --color-card-border: 45 50 70;
+  --color-heading: 229 231 235;
+}
+
+html, body {
+  background-color: rgb(var(--color-surface));
+  color: rgb(var(--color-heading));
+}
+
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background-color: #F8F7F4;
-  color: #1A1A2E;
 }
 
 @layer base {
@@ -17,20 +34,27 @@ body {
   input[type='number'] {
     -moz-appearance: textfield;
   }
+
+  /* Make native date/month picker indicators visible against dark inputs */
+  .dark input[type='date']::-webkit-calendar-picker-indicator,
+  .dark input[type='month']::-webkit-calendar-picker-indicator,
+  .dark input[type='time']::-webkit-calendar-picker-indicator {
+    filter: invert(0.85);
+  }
 }
 
 @layer components {
   .input-field {
-    @apply w-full rounded-lg border border-card-border bg-white px-3 py-2 text-sm transition-colors focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20;
+    @apply w-full rounded-lg border border-card-border bg-card px-3 py-2 text-sm text-heading transition-colors placeholder:text-gray-400 focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/20 dark:placeholder:text-gray-500;
   }
   .btn-primary {
     @apply inline-flex items-center gap-2 rounded-lg bg-brand-500 px-4 py-2 text-sm font-medium text-white transition-colors hover:bg-brand-600 disabled:opacity-50 disabled:cursor-not-allowed;
   }
   .btn-secondary {
-    @apply inline-flex items-center gap-2 rounded-lg border border-card-border bg-white px-4 py-2 text-sm font-medium text-heading transition-colors hover:bg-gray-50;
+    @apply inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading transition-colors hover:bg-surface;
   }
   .card {
-    @apply rounded-xl border border-card-border bg-white p-5 shadow-sm;
+    @apply rounded-xl border border-card-border bg-card p-5 shadow-sm;
   }
 }
 

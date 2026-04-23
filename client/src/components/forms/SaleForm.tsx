@@ -429,7 +429,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             />
             <input type="hidden" {...register('party_id', { valueAsNumber: true })} />
             {partyMenuOpen && filteredParties.length > 0 && (
-              <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-card-border bg-white py-1 shadow-lg">
+              <ul className="absolute z-20 mt-1 max-h-48 w-full overflow-auto rounded-md border border-card-border bg-card py-1 shadow-lg">
                 {filteredParties.map((p) => (
                   <li key={p.id}>
                     <button
@@ -477,7 +477,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             <div className="mb-1 flex flex-wrap items-center gap-2">
               <label className="text-sm font-medium text-heading">Bags *</label>
               {brandId > 0 && (
-                <span className="text-sm text-gray-600">
+                <span className="text-sm text-heading/70">
                   {loadingStock || stocksForGodownLoading ? (
                     'Loading stock…'
                   ) : (
@@ -488,7 +488,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                           ? (purchaseRates.find((r) => Number(r.landed_rate) === selectedCostRate)?.available_bags ?? rateStock)
                           : effectiveMaxStock}
                       </span> bags
-                      {selectedCostRate > 0 && <span className="text-xs text-gray-400"> (at ₹{selectedCostRate}/bag)</span>}
+                      {selectedCostRate > 0 && <span className="text-xs text-heading/50"> (at ₹{selectedCostRate}/bag)</span>}
                     </>
                   )}
                 </span>
@@ -540,7 +540,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             {selectedCostRate > 0 && (() => {
               const selRate = purchaseRates.find((r) => Number(r.landed_rate) === selectedCostRate);
               return (
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-heading/60">
                   Cost: {formatINR(selectedCostRate)}/bag — Available at this rate: <span className="font-semibold">{selRate ? Number(selRate.available_bags) : rateStock} bags</span>
                 </p>
               );
@@ -573,19 +573,19 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
             </p>
             <div className="grid grid-cols-2 gap-x-6 gap-y-1 text-sm sm:grid-cols-4">
               <div>
-                <p className="text-xs text-gray-500">Base amount</p>
+                <p className="text-xs text-heading/60">Base amount</p>
                 <p className="font-semibold text-gray-800">{formatINR(base)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">CGST ({gstRate / 2}%)</p>
+                <p className="text-xs text-heading/60">CGST ({gstRate / 2}%)</p>
                 <p className="font-semibold text-gray-800">{formatINR(cgst)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">SGST ({gstRate / 2}%)</p>
+                <p className="text-xs text-heading/60">SGST ({gstRate / 2}%)</p>
                 <p className="font-semibold text-gray-800">{formatINR(sgst)}</p>
               </div>
               <div>
-                <p className="text-xs text-gray-500">Total (entered)</p>
+                <p className="text-xs text-heading/60">Total (entered)</p>
                 <p className="text-xl font-bold text-emerald-900">{formatINR(saleAmount)}</p>
               </div>
             </div>
@@ -620,7 +620,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 </select>
               )}
             />
-            <p className="mt-1 text-xs text-gray-500">When set, brand list and stock use this godown only.</p>
+            <p className="mt-1 text-xs text-heading/60">When set, brand list and stock use this godown only.</p>
           </div>
 
           <div>
@@ -633,14 +633,14 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               ? 'border-amber-300 bg-amber-50'
               : invoiceNumber?.trim()
                 ? 'border-emerald-300 bg-emerald-50'
-                : 'border-gray-200 bg-gray-50'
+                : 'border-card-border bg-surface'
           }`}>
             <p className={`mb-3 text-xs font-semibold uppercase tracking-wide ${
               isDealer
                 ? 'text-amber-700'
                 : invoiceNumber?.trim()
                   ? 'text-emerald-700'
-                  : 'text-gray-500'
+                  : 'text-heading/60'
             }`}>
               {isDealer
                 ? 'Dealer billing — all fields required'
@@ -683,7 +683,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   {...register('billed_quantity', { valueAsNumber: true })}
                 />
                 {isDealer && bags > 0 && (
-                  <p className="mt-1 text-xs text-gray-500">Max {bags} bags (matches sale quantity)</p>
+                  <p className="mt-1 text-xs text-heading/60">Max {bags} bags (matches sale quantity)</p>
                 )}
                 {errors.billed_quantity && <p className="mt-1 text-xs text-red-600">{errors.billed_quantity.message}</p>}
               </div>
@@ -705,7 +705,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   type="number"
                   min={0}
                   step={0.01}
-                  className="input-field w-full bg-gray-50"
+                  className="input-field w-full bg-surface"
                   readOnly={lockFields || (isDealer && Number(billedQty) > 0 && Number(billedRate) > 0)}
                   {...register('billed_amount', { valueAsNumber: true })}
                 />
@@ -723,7 +723,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
           <button
             type="button"
             onClick={onClose}
-            className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+            className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
           >
             Cancel
           </button>

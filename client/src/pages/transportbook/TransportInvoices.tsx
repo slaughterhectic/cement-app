@@ -155,7 +155,7 @@ export default function TransportInvoices() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">ACC Billing</h1>
-          <p className="text-sm text-gray-500 mt-1">{rows.length} invoice{rows.length !== 1 ? 's' : ''}</p>
+          <p className="text-sm text-heading/60 mt-1">{rows.length} invoice{rows.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           type="button"
@@ -169,7 +169,7 @@ export default function TransportInvoices() {
 
       {/* Summary Cards */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-2 gap-4 lg:grid-cols-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
           <div className="card p-4 bg-indigo-50 border-indigo-200 text-center">
             <p className="text-xs text-indigo-600 font-medium uppercase tracking-wider">Total Invoiced</p>
             <p className="text-xl font-bold text-heading">{formatINR(totals.invoice_amount)}</p>
@@ -208,11 +208,11 @@ export default function TransportInvoices() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
-                    <p className="text-gray-400 mb-3">No invoices yet</p>
+                    <p className="text-heading/50 mb-3">No invoices yet</p>
                     <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Add your first invoice</button>
                   </td>
                 </tr>
@@ -222,9 +222,9 @@ export default function TransportInvoices() {
                   return (
                     <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 transition-colors">
                       <td className="px-4 py-3 font-medium text-indigo-600">{row.invoice_number}</td>
-                      <td className="px-4 py-3 text-gray-600">{row.invoice_date ? formatDate(row.invoice_date) : '—'}</td>
+                      <td className="px-4 py-3 text-heading/70">{row.invoice_date ? formatDate(row.invoice_date) : '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.invoice_amount))}</td>
-                      <td className="px-4 py-3 text-gray-600">{row.payment_receive_date ? formatDate(row.payment_receive_date) : '—'}</td>
+                      <td className="px-4 py-3 text-heading/70">{row.payment_receive_date ? formatDate(row.payment_receive_date) : '—'}</td>
                       <td className="px-4 py-3 text-right text-green-600">{formatINR(Number(row.received_amount))}</td>
                       <td className="px-4 py-3 text-right text-amber-600">{formatINR(Number(row.tds_amount))}</td>
                       <td className="px-4 py-3 text-right text-red-600">{pending > 0 ? formatINR(pending) : '—'}</td>
@@ -234,7 +234,7 @@ export default function TransportInvoices() {
                           <button
                             type="button"
                             onClick={() => openEdit(row)}
-                            className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                            className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
                             title="Edit"
                           >
                             <Pencil className="h-4 w-4" />
@@ -276,52 +276,52 @@ export default function TransportInvoices() {
       {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+          <div className="w-full max-w-lg rounded-xl bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
               <h2 className="font-semibold text-heading">{editing ? 'Edit Invoice' : 'Add Invoice'}</h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-                <X className="h-5 w-5 text-gray-500" />
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                <X className="h-5 w-5 text-heading/60" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Number *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Invoice Number *</label>
                   <input className="input-field" value={form.invoice_number} onChange={f('invoice_number')} placeholder="e.g. ACC/2024/001" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Date</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Invoice Date</label>
                   <input type="date" className="input-field" value={form.invoice_date} onChange={f('invoice_date')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Invoice Amount (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Invoice Amount (₹)</label>
                   <input type="number" min="0" step="0.01" className="input-field" value={form.invoice_amount} onChange={f('invoice_amount')} placeholder="0" />
                   {form.invoice_amount && (
-                    <p className="text-xs text-gray-400 mt-1">TDS hint (2%): {formatINR(liveTds)}</p>
+                    <p className="text-xs text-heading/50 mt-1">TDS hint (2%): {formatINR(liveTds)}</p>
                   )}
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Payment Received Date</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Payment Received Date</label>
                   <input type="date" className="input-field" value={form.payment_receive_date} onChange={f('payment_receive_date')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Received Amount (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Received Amount (₹)</label>
                   <input type="number" min="0" step="0.01" className="input-field" value={form.received_amount} onChange={f('received_amount')} placeholder="0" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">TDS Amount (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">TDS Amount (₹)</label>
                   <input type="number" min="0" step="0.01" className="input-field" value={form.tds_amount} onChange={f('tds_amount')} placeholder="0" />
                 </div>
                 {form.invoice_amount && form.received_amount && (
                   <div className="col-span-2 rounded-lg bg-indigo-50 border border-indigo-200 px-3 py-2 text-xs">
-                    <span className="text-gray-500">Auto Status: </span>
+                    <span className="text-heading/60">Auto Status: </span>
                     <span className="font-semibold text-indigo-600">
                       {computeStatus(Number(form.invoice_amount), Number(form.received_amount))}
                     </span>
                   </div>
                 )}
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Remarks</label>
                   <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
                 </div>
               </div>
@@ -329,7 +329,7 @@ export default function TransportInvoices() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors"
                 >
                   Cancel
                 </button>

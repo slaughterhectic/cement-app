@@ -164,7 +164,7 @@ export default function TruckOwners() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Truck Owners</h1>
-          <p className="text-sm text-gray-500 mt-1">{rows.length} truck owner{rows.length !== 1 ? 's' : ''} registered</p>
+          <p className="text-sm text-heading/60 mt-1">{rows.length} truck owner{rows.length !== 1 ? 's' : ''} registered</p>
         </div>
         <button
           type="button"
@@ -194,11 +194,11 @@ export default function TruckOwners() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
-                    <p className="text-gray-400 mb-3">No truck owners added yet</p>
+                    <p className="text-heading/50 mb-3">No truck owners added yet</p>
                     <button type="button" onClick={openAdd} className="text-indigo-600 hover:underline text-sm font-medium">Add your first truck owner</button>
                   </td>
                 </tr>
@@ -215,17 +215,17 @@ export default function TruckOwners() {
                       </button>
                     </td>
                     <td className="px-4 py-3 font-medium text-gray-800">{row.owner_name}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.owner_phone || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.driver_name || '—'}</td>
-                    <td className="px-4 py-3 text-gray-600 font-mono text-xs">{maskAccount(row.bank_account)}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.pan_number || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.owner_phone || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.driver_name || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70 font-mono text-xs">{maskAccount(row.bank_account)}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.pan_number || '—'}</td>
                     <td className="px-4 py-3 text-right">
                       <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 px-2.5 py-0.5 text-xs font-medium text-indigo-700">
                         {row.trip_count}
                       </span>
                     </td>
                     <td className="px-4 py-3">
-                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${row.is_active ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-500'}`}>
+                      <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${row.is_active ? 'bg-green-100 text-green-700' : 'bg-surface text-heading/60'}`}>
                         {row.is_active ? 'Active' : 'Inactive'}
                       </span>
                     </td>
@@ -234,7 +234,7 @@ export default function TruckOwners() {
                         <button
                           type="button"
                           onClick={() => navigate(`/transportbook/trucks/${row.id}`)}
-                          className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
                           title="View Ledger"
                         >
                           <Eye className="h-4 w-4" />
@@ -242,7 +242,7 @@ export default function TruckOwners() {
                         <button
                           type="button"
                           onClick={() => handleToggleActive(row)}
-                          className={`rounded p-1.5 hover:bg-gray-100 transition-colors ${row.is_active ? 'text-green-600' : 'text-gray-400'}`}
+                          className={`rounded p-1.5 hover:bg-card-border/50 transition-colors ${row.is_active ? 'text-green-600' : 'text-heading/50'}`}
                           title={row.is_active ? 'Deactivate (stop GPS rent)' : 'Activate (start GPS rent)'}
                         >
                           {row.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
@@ -250,7 +250,7 @@ export default function TruckOwners() {
                         <button
                           type="button"
                           onClick={() => openEdit(row)}
-                          className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
                           title="Edit"
                         >
                           <Pencil className="h-4 w-4" />
@@ -278,54 +278,54 @@ export default function TruckOwners() {
       {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-2xl rounded-xl bg-white shadow-2xl max-h-[90vh] overflow-y-auto">
-            <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sticky top-0 bg-white z-10">
+          <div className="w-full max-w-2xl rounded-xl bg-card shadow-2xl max-h-[90vh] overflow-y-auto">
+            <div className="flex items-center justify-between border-b border-card-border px-5 py-4 sticky top-0 bg-card z-10">
               <h2 className="font-semibold text-heading">{editing ? 'Edit Truck Owner' : 'Add Truck Owner'}</h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-                <X className="h-5 w-5 text-gray-500" />
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                <X className="h-5 w-5 text-heading/60" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500">Truck & Owner Details</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck Number *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Truck Number *</label>
                   <input className="input-field" value={form.truck_number} onChange={f('truck_number')} placeholder="e.g. HR55AB1234" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner Name *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Owner Name *</label>
                   <input className="input-field" value={form.owner_name} onChange={f('owner_name')} placeholder="Owner's full name" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Owner Phone</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Owner Phone</label>
                   <input className="input-field" value={form.owner_phone} onChange={f('owner_phone')} placeholder="Mobile number" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Driver Name</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Driver Name</label>
                   <input className="input-field" value={form.driver_name} onChange={f('driver_name')} placeholder="Driver's name" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Driver Phone</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Driver Phone</label>
                   <input className="input-field" value={form.driver_phone} onChange={f('driver_phone')} placeholder="Driver's mobile" />
                 </div>
               </div>
 
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mt-2">Bank & Payment Details</p>
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Bank Account Number</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Bank Account Number</label>
                   <input className="input-field" value={form.bank_account} onChange={f('bank_account')} placeholder="Account number" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">IFSC Code</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">IFSC Code</label>
                   <input className="input-field" value={form.ifsc_code} onChange={f('ifsc_code')} placeholder="e.g. SBIN0001234" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Beneficiary Name</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Beneficiary Name</label>
                   <input className="input-field" value={form.beneficiary_name} onChange={f('beneficiary_name')} placeholder="Name as per bank" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">PAN Number</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">PAN Number</label>
                   <input className="input-field" value={form.pan_number} onChange={f('pan_number')} placeholder="ABCDE1234F" />
                 </div>
               </div>
@@ -334,7 +334,7 @@ export default function TruckOwners() {
                 <button
                   type="button"
                   onClick={() => setModalOpen(false)}
-                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors"
                 >
                   Cancel
                 </button>

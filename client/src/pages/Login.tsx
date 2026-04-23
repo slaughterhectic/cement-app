@@ -83,7 +83,7 @@ export default function Login() {
             </h1>
           </div>
 
-          <div className="rounded-2xl bg-white/5 p-8 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
+          <div className="rounded-2xl bg-card/5 p-8 shadow-2xl ring-1 ring-white/10 backdrop-blur-sm">
             <div className="mb-6">
               <h2 className="text-xl font-semibold text-white">Welcome back</h2>
               <p className="mt-1 text-sm text-slate-400">Sign in to your account</p>
@@ -103,7 +103,7 @@ export default function Login() {
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   placeholder="Enter your username"
-                  className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                  className="w-full rounded-lg border border-white/10 bg-card/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                 />
               </div>
 
@@ -120,7 +120,7 @@ export default function Login() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     placeholder="Enter your password"
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 pr-11 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-white/10 bg-card/5 px-4 py-2.5 pr-11 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   />
                   <button
                     type="button"
@@ -180,7 +180,7 @@ export default function Login() {
               <button
                 type="button"
                 onClick={() => { setForgotOpen(false); setForgotSent(false); setForgotEmail(''); setForgotError(''); }}
-                className="rounded-lg p-1 text-slate-400 hover:bg-white/10 hover:text-white transition"
+                className="rounded-lg p-1 text-slate-400 hover:bg-card/10 hover:text-white transition"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -209,7 +209,7 @@ export default function Login() {
                     placeholder="your@email.com"
                     value={forgotEmail}
                     onChange={(e) => { setForgotEmail(e.target.value); setForgotError(''); }}
-                    className="w-full rounded-lg border border-white/10 bg-white/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
+                    className="w-full rounded-lg border border-white/10 bg-card/5 px-4 py-2.5 text-sm text-white placeholder-slate-500 outline-none transition focus:border-brand-500 focus:ring-2 focus:ring-brand-500/20"
                   />
                   {forgotError && <p className="text-sm text-red-400">{forgotError}</p>}
                 </div>

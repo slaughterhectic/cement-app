@@ -248,13 +248,13 @@ export default function Import() {
                       ? 'border-emerald-200 bg-emerald-50 text-emerald-800'
                       : active
                         ? 'border-brand-400 bg-brand-50 text-brand-800'
-                        : 'border-gray-200 bg-white text-gray-500',
+                        : 'border-card-border bg-card text-heading/60',
                   ].join(' ')}
                 >
                   {done ? (
                     <Check className="h-4 w-4 shrink-0 text-emerald-600" />
                   ) : (
-                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-white text-xs font-bold text-current">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-card text-xs font-bold text-current">
                       {s.n}
                     </span>
                   )}
@@ -271,11 +271,11 @@ export default function Import() {
       {step === 1 && (
         <section className="space-y-6">
           <div>
-            <label className="text-sm font-medium text-gray-700">File type</label>
+            <label className="text-sm font-medium text-heading/80">File type</label>
             <select
               value={fileType}
               onChange={(e) => setFileType(e.target.value as FileTypeOption)}
-              className="mt-1 block w-full max-w-md rounded-md border border-gray-200 bg-white px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
+              className="mt-1 block w-full max-w-md rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
             >
               {FILE_TYPE_OPTIONS.map((o) => (
                 <option key={o.value} value={o.value}>
@@ -306,11 +306,11 @@ export default function Import() {
             onDragOver={onDragOver}
             onDrop={onDrop}
             onClick={() => fileInputRef.current?.click()}
-            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-gray-50/80 px-6 py-16 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/30"
+            className="flex cursor-pointer flex-col items-center justify-center rounded-xl border-2 border-dashed border-gray-300 bg-surface/80 px-6 py-16 text-center transition-colors hover:border-brand-400 hover:bg-brand-50/30"
           >
-            <Upload className="mb-3 h-10 w-10 text-gray-400" />
-            <p className="text-sm font-medium text-gray-700">Drop your Excel file here or click to browse</p>
-            <p className="mt-1 text-xs text-gray-500">.xlsx or .xls</p>
+            <Upload className="mb-3 h-10 w-10 text-heading/50" />
+            <p className="text-sm font-medium text-heading/80">Drop your Excel file here or click to browse</p>
+            <p className="mt-1 text-xs text-heading/60">.xlsx or .xls</p>
           </div>
 
           {parseError && (
@@ -321,8 +321,8 @@ export default function Import() {
           )}
 
           {file && (
-            <p className="text-sm text-gray-600">
-              Selected: <span className="font-medium text-gray-900">{file.name}</span>
+            <p className="text-sm text-heading/70">
+              Selected: <span className="font-medium text-heading">{file.name}</span>
             </p>
           )}
         </section>
@@ -331,29 +331,29 @@ export default function Import() {
       {step === 2 && parseResult && (
         <section className="space-y-6">
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-card-border bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium uppercase text-gray-500">Detected type</p>
-              <p className="mt-1 font-semibold capitalize text-gray-900">
+            <div className="rounded-lg border border-card-border bg-card p-4 shadow-sm">
+              <p className="text-xs font-medium uppercase text-heading/60">Detected type</p>
+              <p className="mt-1 font-semibold capitalize text-heading">
                 {parseResult.type.replace(/_/g, ' ')}
               </p>
             </div>
-            <div className="rounded-lg border border-card-border bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium uppercase text-gray-500">Sheets</p>
-              <p className="mt-1 font-semibold text-gray-900">{parseResult.totalSheets}</p>
+            <div className="rounded-lg border border-card-border bg-card p-4 shadow-sm">
+              <p className="text-xs font-medium uppercase text-heading/60">Sheets</p>
+              <p className="mt-1 font-semibold text-heading">{parseResult.totalSheets}</p>
             </div>
-            <div className="rounded-lg border border-card-border bg-white p-4 shadow-sm">
-              <p className="text-xs font-medium uppercase text-gray-500">Total rows (approx.)</p>
-              <p className="mt-1 font-semibold text-gray-900">{totalRowsAllSheets}</p>
+            <div className="rounded-lg border border-card-border bg-card p-4 shadow-sm">
+              <p className="text-xs font-medium uppercase text-heading/60">Total rows (approx.)</p>
+              <p className="mt-1 font-semibold text-heading">{totalRowsAllSheets}</p>
             </div>
           </div>
 
           {parseResult.sheets.length > 1 && (
             <div>
-              <label className="text-sm font-medium text-gray-700">Preview sheet</label>
+              <label className="text-sm font-medium text-heading/80">Preview sheet</label>
               <select
                 value={selectedSheetIdx}
                 onChange={(e) => setSelectedSheetIdx(Number(e.target.value))}
-                className="mt-1 block w-full max-w-md rounded-md border border-gray-200 bg-white px-3 py-2 text-sm"
+                className="mt-1 block w-full max-w-md rounded-md border border-card-border bg-card px-3 py-2 text-sm"
               >
                 {parseResult.sheets.map((s, i) => (
                   <option key={s.name} value={i}>
@@ -364,7 +364,7 @@ export default function Import() {
             </div>
           )}
 
-          <div className="overflow-hidden rounded-lg border border-card-border bg-white shadow-sm">
+          <div className="overflow-hidden rounded-lg border border-card-border bg-card shadow-sm">
             <div className="border-b border-card-border px-4 py-3">
               <h2 className="flex items-center gap-2 text-sm font-semibold text-heading">
                 <FileSpreadsheet className="h-4 w-4" />
@@ -374,9 +374,9 @@ export default function Import() {
             <div className="overflow-x-auto">
               <table className="min-w-full border-collapse text-sm">
                 <thead>
-                  <tr className="bg-gray-50">
+                  <tr className="bg-surface">
                     {(previewHeaderRow ?? headerCells).map((cell, i) => (
-                      <th key={i} className="whitespace-nowrap border-b border-gray-200 px-3 py-2 text-left font-medium text-gray-600">
+                      <th key={i} className="whitespace-nowrap border-b border-card-border px-3 py-2 text-left font-medium text-heading/70">
                         {String(cell ?? `Col ${i + 1}`)}
                       </th>
                     ))}
@@ -385,15 +385,15 @@ export default function Import() {
                 <tbody>
                   {previewBody.length === 0 ? (
                     <tr>
-                      <td colSpan={Math.max(1, (previewHeaderRow ?? headerCells).length)} className="px-3 py-8 text-center text-gray-500">
+                      <td colSpan={Math.max(1, (previewHeaderRow ?? headerCells).length)} className="px-3 py-8 text-center text-heading/60">
                         No preview rows.
                       </td>
                     </tr>
                   ) : (
                     previewBody.map((row, ri) => (
-                      <tr key={ri} className={ri % 2 === 0 ? 'bg-white' : 'bg-gray-50/50'}>
+                      <tr key={ri} className={ri % 2 === 0 ? 'bg-card' : 'bg-surface/50'}>
                         {(row as unknown[]).map((cell, ci) => (
-                          <td key={ci} className="border-b border-gray-100 px-3 py-2 text-gray-800">
+                          <td key={ci} className="border-b border-card-border px-3 py-2 text-gray-800">
                             {cell === '' || cell == null ? '—' : String(cell)}
                           </td>
                         ))}
@@ -411,7 +411,7 @@ export default function Import() {
               onClick={() => {
                 resetFlow();
               }}
-              className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
             >
               <ArrowLeft className="h-4 w-4" />
               Start over
@@ -448,18 +448,18 @@ export default function Import() {
       {step === 3 && parseResult && (
         <section className="space-y-6">
           {parseResult.type === 'godown' ? (
-            <p className="text-sm text-gray-600">
+            <p className="text-sm text-heading/70">
               Godown stock files do not require column mapping on this screen. You can continue to import when supported.
             </p>
           ) : (
-            <div className="rounded-lg border border-card-border bg-white shadow-sm">
+            <div className="rounded-lg border border-card-border bg-card shadow-sm">
               <div className="border-b border-card-border px-4 py-3">
                 <h2 className="text-sm font-semibold text-heading">Map columns</h2>
-                <p className="mt-1 text-xs text-gray-500">
+                <p className="mt-1 text-xs text-heading/60">
                   Match each database field to a column from your sheet (auto-filled when names match).
                 </p>
               </div>
-              <ul className="divide-y divide-gray-100">
+              <ul className="divide-y divide-card-border">
                 {targets.map((t) => (
                   <li key={t.key} className="flex flex-col gap-2 px-4 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <span className="text-sm font-medium text-gray-800">{t.label}</span>
@@ -471,7 +471,7 @@ export default function Import() {
                           [t.key]: e.target.value,
                         }))
                       }
-                      className="w-full rounded-md border border-gray-200 bg-white px-3 py-2 text-sm sm:max-w-xs"
+                      className="w-full rounded-md border border-card-border bg-card px-3 py-2 text-sm sm:max-w-xs"
                     >
                       <option value="">— Not mapped —</option>
                       {headerCells.map((h) => (
@@ -490,7 +490,7 @@ export default function Import() {
             <button
               type="button"
               onClick={() => setStep(2)}
-              className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-2 rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
             >
               <ArrowLeft className="h-4 w-4" />
               Back
@@ -509,14 +509,14 @@ export default function Import() {
 
       {step === 4 && parseResult && (
         <section className="space-y-6">
-          <div className="rounded-lg border border-card-border bg-white p-6 shadow-sm">
+          <div className="rounded-lg border border-card-border bg-card p-6 shadow-sm">
             <h2 className="text-sm font-semibold text-heading">Run import</h2>
-            <p className="mt-2 text-sm text-gray-600">
-              Type: <span className="font-medium text-gray-900">{parseResult.type.replace(/_/g, ' ')}</span>
+            <p className="mt-2 text-sm text-heading/70">
+              Type: <span className="font-medium text-heading">{parseResult.type.replace(/_/g, ' ')}</span>
               {file && (
                 <>
                   {' '}
-                  · File: <span className="font-medium text-gray-900">{file.name}</span>
+                  · File: <span className="font-medium text-heading">{file.name}</span>
                 </>
               )}
             </p>
@@ -529,7 +529,7 @@ export default function Import() {
                     style={{ width: `${importProgress}%` }}
                   />
                 </div>
-                <p className="mt-2 text-xs text-gray-500">Importing…</p>
+                <p className="mt-2 text-xs text-heading/60">Importing…</p>
               </div>
             )}
 
@@ -555,7 +555,7 @@ export default function Import() {
                 type="button"
                 onClick={() => setStep(3)}
                 disabled={importing}
-                className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+                className="inline-flex items-center gap-2 rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface disabled:opacity-50"
               >
                 <ArrowLeft className="h-4 w-4" />
                 Back
@@ -572,7 +572,7 @@ export default function Import() {
                 <button
                   type="button"
                   onClick={resetFlow}
-                  className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+                  className="inline-flex items-center gap-2 rounded-md border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
                 >
                   New file
                 </button>

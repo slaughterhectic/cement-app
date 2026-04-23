@@ -131,9 +131,9 @@ function ImprestSection() {
     <div className="space-y-4">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <div className="flex items-center gap-2">
-          <label className="text-sm font-medium text-gray-700">Handler:</label>
+          <label className="text-sm font-medium text-heading/80">Handler:</label>
           <select
-            className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm"
+            className="rounded-md border border-card-border bg-card px-3 py-1.5 text-sm"
             value={selectedHandler}
             onChange={(e) => setSelectedHandler(e.target.value)}
           >
@@ -144,7 +144,7 @@ function ImprestSection() {
           <button
             type="button"
             onClick={() => setShowAddHandler(true)}
-            className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2.5 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50"
+            className="inline-flex items-center gap-1 rounded-md border border-card-border bg-card px-2.5 py-1.5 text-xs font-medium text-heading/80 hover:bg-surface"
           >
             <Plus className="h-3.5 w-3.5" /> Add Handler
           </button>
@@ -161,11 +161,11 @@ function ImprestSection() {
       {handlerData && (
         <>
           {/* Opening balance editor */}
-          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-card-border bg-white p-3">
-            <span className="text-sm text-gray-600">Opening balance for <strong>{handlerData.handler_name}</strong>:</span>
+          <div className="flex flex-wrap items-center gap-3 rounded-lg border border-card-border bg-card p-3">
+            <span className="text-sm text-heading/70">Opening balance for <strong>{handlerData.handler_name}</strong>:</span>
             <input
               type="number"
-              className="w-32 rounded border border-gray-200 px-2 py-1 text-sm"
+              className="w-32 rounded border border-card-border px-2 py-1 text-sm"
               placeholder={String(handlerData.opening_balance)}
               value={openingEdit[handlerData.handler_name] ?? ''}
               onChange={(e) => setOpeningEdit((p) => ({ ...p, [handlerData.handler_name]: e.target.value }))}
@@ -173,7 +173,7 @@ function ImprestSection() {
             <button
               type="button"
               onClick={() => handleOpeningUpdate(handlerData.handler_name)}
-              className="rounded-md border border-gray-200 px-3 py-1 text-xs font-medium hover:bg-gray-50"
+              className="rounded-md border border-card-border px-3 py-1 text-xs font-medium hover:bg-surface"
             >
               Update
             </button>
@@ -207,9 +207,9 @@ function ImprestSection() {
                 {Object.entries(categoryTotals)
                   .sort((a, b) => b[1] - a[1])
                   .map(([cat, amt]) => (
-                    <div key={cat} className="rounded-lg border border-gray-100 bg-gray-50 px-3 py-2">
-                      <p className="text-xs text-gray-600">{cat}</p>
-                      <p className="text-sm font-semibold text-gray-900">{formatINR(amt)}</p>
+                    <div key={cat} className="rounded-lg border border-card-border bg-surface px-3 py-2">
+                      <p className="text-xs text-heading/70">{cat}</p>
+                      <p className="text-sm font-semibold text-heading">{formatINR(amt)}</p>
                     </div>
                   ))}
               </div>
@@ -222,15 +222,15 @@ function ImprestSection() {
               Transactions — {handlerData.handler_name}
             </h4>
             {loading ? (
-              <p className="px-4 py-6 text-sm text-gray-500">Loading…</p>
+              <p className="px-4 py-6 text-sm text-heading/60">Loading…</p>
             ) : handlerData.transactions.length === 0 ? (
-              <p className="px-4 py-6 text-center text-sm text-gray-500">No transactions yet.</p>
+              <p className="px-4 py-6 text-center text-sm text-heading/60">No transactions yet.</p>
             ) : (
               <>
               <div className="overflow-x-auto">
                 <table className="min-w-full text-sm">
                   <thead>
-                    <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+                    <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                       <th className="px-4 py-3">Date</th>
                       <th className="px-4 py-3">Category</th>
                       <th className="px-4 py-3">Narration</th>
@@ -241,21 +241,21 @@ function ImprestSection() {
                       <th className="px-4 py-3">Actions</th>
                     </tr>
                   </thead>
-                  <tbody className="divide-y divide-gray-100">
+                  <tbody className="divide-y divide-card-border">
                     <tr className="bg-blue-50/60">
                       <td colSpan={5} className="px-4 py-2 text-xs font-medium text-blue-700">Opening Balance</td>
                       <td className="px-4 py-2 text-right tabular-nums font-semibold text-blue-800">{formatINR(handlerData.opening_balance)}</td>
                       <td colSpan={2} />
                     </tr>
                     {txPg.pageData.map((t: any) => (
-                      <tr key={t.id} className={t.credit > 0 ? 'bg-green-50/30 hover:bg-green-50' : 'hover:bg-gray-50'}>
+                      <tr key={t.id} className={t.credit > 0 ? 'bg-green-50/30 hover:bg-green-50' : 'hover:bg-surface'}>
                         <td className="px-4 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
                         <td className="px-4 py-2 max-w-[140px] truncate">{t.particulars || '—'}</td>
-                        <td className="px-4 py-2 max-w-[200px] truncate text-gray-600">{t.narration || '—'}</td>
+                        <td className="px-4 py-2 max-w-[200px] truncate text-heading/70">{t.narration || '—'}</td>
                         <td className="px-4 py-2 text-right tabular-nums text-red-700">{t.debit > 0 ? formatINR(t.debit) : '—'}</td>
                         <td className="px-4 py-2 text-right tabular-nums text-green-700">{t.credit > 0 ? formatINR(t.credit) : '—'}</td>
                         <td className="px-4 py-2 text-right tabular-nums font-medium">{formatINR(t.running_balance)}</td>
-                        <td className="px-4 py-2 text-gray-600">{t.remark || '—'}</td>
+                        <td className="px-4 py-2 text-heading/70">{t.remark || '—'}</td>
                         <td className="px-4 py-2">
                           <div className="flex items-center gap-1">
                             <button type="button" onClick={() => { setEditRow(t); setForm({ date: t.date, particulars: t.particulars || '', narration: t.narration || '', debit: t.debit > 0 ? String(t.debit) : '', credit: t.credit > 0 ? String(t.credit) : '', remark: t.remark || '' }); setShowForm(true); }} className="rounded p-1 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
@@ -279,37 +279,37 @@ function ImprestSection() {
       {/* Add/Edit form modal */}
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-lg rounded-xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-xl">
             <h3 className="mb-4 text-base font-semibold text-heading">{editRow ? 'Edit Entry' : 'Add Cash Entry'}</h3>
             <div className="grid gap-3 sm:grid-cols-2">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Date *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
                 <input type="date" className="input-field w-full" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Category (Particulars)</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Category (Particulars)</label>
                 <input list="imp-cats" type="text" className="input-field w-full" value={form.particulars} onChange={(e) => setForm((p) => ({ ...p, particulars: e.target.value }))} />
                 <datalist id="imp-cats">{expenseCategories.map((c) => <option key={c} value={c} />)}</datalist>
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">Narration / Description</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Narration / Description</label>
                 <input type="text" className="input-field w-full" value={form.narration} onChange={(e) => setForm((p) => ({ ...p, narration: e.target.value }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Debit (Expense) ₹</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Debit (Expense) ₹</label>
                 <input type="number" min={0} step={0.01} className="input-field w-full" value={form.debit} onChange={(e) => setForm((p) => ({ ...p, debit: e.target.value, credit: '' }))} />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Credit (Received) ₹</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Credit (Received) ₹</label>
                 <input type="number" min={0} step={0.01} className="input-field w-full" value={form.credit} onChange={(e) => setForm((p) => ({ ...p, credit: e.target.value, debit: '' }))} />
               </div>
               <div className="sm:col-span-2">
-                <label className="mb-1 block text-xs font-medium text-gray-600">Remark</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remark</label>
                 <input type="text" className="input-field w-full" value={form.remark} onChange={(e) => setForm((p) => ({ ...p, remark: e.target.value }))} />
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => { setShowForm(false); setEditRow(null); }} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={() => { setShowForm(false); setEditRow(null); }} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
               <button type="button" onClick={handleSave} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Save</button>
             </div>
           </div>
@@ -318,11 +318,11 @@ function ImprestSection() {
 
       {showAddHandler && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-          <div className="w-full max-w-sm rounded-xl bg-white p-6 shadow-xl">
+          <div className="w-full max-w-sm rounded-xl bg-card p-6 shadow-xl">
             <h3 className="mb-4 text-base font-semibold text-heading">Add Cash Handler</h3>
             <div className="space-y-3">
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Handler Name *</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Handler Name *</label>
                 <input
                   type="text"
                   className="input-field w-full"
@@ -332,7 +332,7 @@ function ImprestSection() {
                 />
               </div>
               <div>
-                <label className="mb-1 block text-xs font-medium text-gray-600">Opening Balance (₹)</label>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Opening Balance (₹)</label>
                 <input
                   type="number"
                   step="0.01"
@@ -344,7 +344,7 @@ function ImprestSection() {
               </div>
             </div>
             <div className="mt-4 flex justify-end gap-2">
-              <button type="button" onClick={() => { setShowAddHandler(false); setNewHandlerName(''); setNewHandlerBalance(''); }} className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+              <button type="button" onClick={() => { setShowAddHandler(false); setNewHandlerName(''); setNewHandlerBalance(''); }} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
               <button
                 type="button"
                 disabled={!newHandlerName.trim()}
@@ -378,20 +378,20 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
     <div className="space-y-3">
       <div>
         <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
-        <p className="text-xs text-gray-500 mt-0.5">
+        <p className="text-xs text-heading/60 mt-0.5">
           Manage bank accounts in <strong>Settings → Banks</strong>. Running balance = Opening + received payments − paid-out payments − expenses.
         </p>
       </div>
 
       {summary.banks.length === 0 ? (
-        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
+        <div className="rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-heading/60">
           No banks configured yet. Go to <strong>Settings → Banks</strong> to add your bank accounts.
         </div>
       ) : (
         <div className="card overflow-hidden p-0">
           <table className="min-w-full text-sm">
             <thead>
-              <tr className="bg-gray-50 text-left text-xs font-medium uppercase tracking-wide text-gray-500">
+              <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                 <th className="px-4 py-3">Bank</th>
                 <th className="px-4 py-3 text-right">Opening (₹)</th>
                 <th className="px-4 py-3 text-right">+ Received (₹)</th>
@@ -399,11 +399,11 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                 <th className="px-4 py-3 text-right font-semibold text-blue-700">Balance (₹)</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-gray-100">
+            <tbody className="divide-y divide-card-border">
               {summary.banks.map((b) => (
-                <tr key={b.bank_name} className="hover:bg-gray-50">
+                <tr key={b.bank_name} className="hover:bg-surface">
                   <td className="px-4 py-3 font-semibold text-heading">{b.bank_name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-gray-600">{formatINR(b.opening)}</td>
+                  <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.opening)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(b.total_received)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(b.total_paid)}</td>
                   <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700">{formatINR(b.balance)}</td>
@@ -411,7 +411,7 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
               ))}
               <tr className="border-t-2 border-gray-300 bg-blue-50/60 font-semibold">
                 <td className="px-4 py-3 text-blue-800">Total</td>
-                <td className="px-4 py-3 text-right tabular-nums text-gray-600">{formatINR(summary.banks.reduce((s, b) => s + b.opening, 0))}</td>
+                <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(summary.banks.reduce((s, b) => s + b.opening, 0))}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-green-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_received, 0))}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-red-700">{formatINR(summary.banks.reduce((s, b) => s + b.total_paid, 0))}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-800">{formatINR(summary.totalBank)}</td>
@@ -451,7 +451,7 @@ export default function Capital() {
           <h1 className="text-2xl font-bold tracking-tight text-heading">Revenue &amp; Capital</h1>
           <p className="mt-1 text-sm text-heading/60">Cash, bank balances, and capital overview.</p>
         </div>
-        <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">
+        <button type="button" onClick={load} className="inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-3 py-2 text-sm font-medium text-heading/80 hover:bg-surface">
           <RefreshCw className="h-4 w-4" /> Refresh
         </button>
       </header>
@@ -459,11 +459,11 @@ export default function Capital() {
       {loading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
           {Array.from({ length: 4 }).map((_, i) => (
-            <div key={i} className="h-28 animate-pulse rounded-xl border border-card-border bg-gray-100" />
+            <div key={i} className="h-28 animate-pulse rounded-xl border border-card-border bg-surface" />
           ))}
         </div>
       ) : !summary ? (
-        <p className="text-sm text-gray-500">Could not load capital data.</p>
+        <p className="text-sm text-heading/60">Could not load capital data.</p>
       ) : (
         <>
           {/* Top KPI cards */}
@@ -520,13 +520,13 @@ export default function Capital() {
               <p className="mt-2 text-xl font-bold tabular-nums text-orange-700">{formatINR(summary.totalPayable ?? 0)}</p>
               <p className="text-xs text-orange-500 mt-1">We owe suppliers</p>
             </div>
-            <div className="rounded-lg border border-card-border bg-white p-4">
+            <div className="rounded-lg border border-card-border bg-card p-4">
               <div className="flex items-center gap-2 text-orange-600">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Loan Outstanding</span>
               </div>
               <p className="mt-2 text-xl font-bold tabular-nums text-orange-700">{formatINR(summary.totalLoans)}</p>
-              <p className="text-xs text-gray-500 mt-1">Principal debt outstanding</p>
+              <p className="text-xs text-heading/60 mt-1">Principal debt outstanding</p>
             </div>
           </div>
 

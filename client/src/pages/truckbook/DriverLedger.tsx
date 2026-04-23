@@ -185,7 +185,7 @@ export default function DriverLedger() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Driver Ledger</h1>
-          <p className="text-sm text-gray-500 mt-1">Track driver earnings and payments</p>
+          <p className="text-sm text-heading/60 mt-1">Track driver earnings and payments</p>
         </div>
         <button
           type="button"
@@ -208,28 +208,28 @@ export default function DriverLedger() {
           </div>
           <div className="divide-y divide-card-border">
             {loadingDrivers ? (
-              <div className="px-4 py-8 text-center text-gray-400 text-sm">Loading...</div>
+              <div className="px-4 py-8 text-center text-heading/50 text-sm">Loading...</div>
             ) : drivers.length === 0 ? (
-              <div className="px-4 py-8 text-center text-gray-400 text-sm">No drivers yet</div>
+              <div className="px-4 py-8 text-center text-heading/50 text-sm">No drivers yet</div>
             ) : (
               drivers.map((d) => (
                 <div
                   key={d.id}
                   onClick={() => setSelectedId(d.id === selectedId ? null : d.id)}
                   className={`cursor-pointer px-4 py-3 transition-colors ${
-                    selectedId === d.id ? 'bg-orange-50 border-l-4 border-l-orange-500' : 'hover:bg-gray-50 border-l-4 border-l-transparent'
+                    selectedId === d.id ? 'bg-orange-50 border-l-4 border-l-orange-500' : 'hover:bg-surface border-l-4 border-l-transparent'
                   }`}
                 >
                   <div className="flex items-start justify-between gap-2">
                     <div className="min-w-0">
                       <p className="font-medium text-sm text-heading truncate">{d.name}</p>
-                      {d.phone && <p className="text-xs text-gray-400">{d.phone}</p>}
+                      {d.phone && <p className="text-xs text-heading/50">{d.phone}</p>}
                     </div>
                     <div className="text-right shrink-0">
                       <p className={`text-xs font-semibold ${Number(d.outstanding) > 0 ? 'text-red-600' : 'text-green-600'}`}>
                         {formatINR(Number(d.outstanding))}
                       </p>
-                      <p className="text-xs text-gray-400">{d.trip_count} trips</p>
+                      <p className="text-xs text-heading/50">{d.trip_count} trips</p>
                     </div>
                   </div>
                   {isAdmin() && (
@@ -252,7 +252,7 @@ export default function DriverLedger() {
           {!selectedId ? (
             <div className="card flex flex-col items-center justify-center py-20 text-center">
               <Users className="h-12 w-12 text-orange-200 mb-3" />
-              <p className="text-gray-400">Select a driver to view their ledger</p>
+              <p className="text-heading/50">Select a driver to view their ledger</p>
             </div>
           ) : loadingLedger ? (
             <div className="card flex items-center justify-center py-20">
@@ -291,19 +291,19 @@ export default function DriverLedger() {
                 </div>
                 {addPayOpen && (
                   <form onSubmit={handleAddPayment} className="mt-3 pt-3 border-t border-card-border">
-                    <div className="grid grid-cols-2 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Date</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Date</label>
                         <input type="date" className="input-field" value={payForm.date}
                           onChange={(e) => setPayForm((p) => ({ ...p, date: e.target.value }))} required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Amount (₹) *</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Amount (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={payForm.amount}
                           onChange={(e) => setPayForm((p) => ({ ...p, amount: e.target.value }))} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Mode</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Mode</label>
                         <select className="input-field" value={payForm.mode}
                           onChange={(e) => setPayForm((p) => ({ ...p, mode: e.target.value as 'cash' | 'bank', bank_name: '', cash_handler: '' }))}>
                           <option value="cash">Cash</option>
@@ -312,7 +312,7 @@ export default function DriverLedger() {
                       </div>
                       {payForm.mode === 'bank' && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Bank Name *</label>
+                          <label className="block text-xs font-medium text-heading/70 mb-1">Bank Name *</label>
                           <select className="input-field" value={payForm.bank_name}
                             onChange={(e) => setPayForm((p) => ({ ...p, bank_name: e.target.value }))}>
                             <option value="">Select bank</option>
@@ -322,7 +322,7 @@ export default function DriverLedger() {
                       )}
                       {payForm.mode === 'cash' && (
                         <div>
-                          <label className="block text-xs font-medium text-gray-600 mb-1">Cash Handler *</label>
+                          <label className="block text-xs font-medium text-heading/70 mb-1">Cash Handler *</label>
                           <select className="input-field" value={payForm.cash_handler}
                             onChange={(e) => setPayForm((p) => ({ ...p, cash_handler: e.target.value }))}>
                             <option value="">Select handler</option>
@@ -334,13 +334,13 @@ export default function DriverLedger() {
                         </div>
                       )}
                       <div className="col-span-2">
-                        <label className="block text-xs font-medium text-gray-600 mb-1">Remarks</label>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
                         <input className="input-field" value={payForm.remarks}
                           onChange={(e) => setPayForm((p) => ({ ...p, remarks: e.target.value }))} placeholder="Optional" />
                       </div>
                     </div>
                     <div className="flex justify-end gap-2 mt-3">
-                      <button type="button" onClick={() => setAddPayOpen(false)} className="text-sm text-gray-500 hover:text-gray-700">Cancel</button>
+                      <button type="button" onClick={() => setAddPayOpen(false)} className="text-sm text-heading/60 hover:text-heading/80">Cancel</button>
                       <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 transition-colors">
                         {saving ? 'Saving…' : 'Record Payment'}
                       </button>
@@ -357,19 +357,19 @@ export default function DriverLedger() {
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
                     <thead>
-                      <tr className="border-b border-card-border bg-gray-50 text-left">
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Date</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Type</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Details</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Earned</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Paid</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600 text-right">Balance</th>
-                        <th className="px-4 py-2.5 font-medium text-gray-600">Action</th>
+                      <tr className="border-b border-card-border bg-surface text-left">
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Date</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Type</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Details</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70 text-right">Earned</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70 text-right">Paid</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70 text-right">Balance</th>
+                        <th className="px-4 py-2.5 font-medium text-heading/70">Action</th>
                       </tr>
                     </thead>
                     <tbody>
                       {ledger.ledger.length === 0 ? (
-                        <tr><td colSpan={7} className="px-4 py-8 text-center text-gray-400">No entries yet</td></tr>
+                        <tr><td colSpan={7} className="px-4 py-8 text-center text-heading/50">No entries yet</td></tr>
                       ) : (
                         ledger.ledger.map((entry, idx) => (
                           <tr key={`${entry.entry_type}-${entry.id}-${idx}`}
@@ -387,7 +387,7 @@ export default function DriverLedger() {
                                 </span>
                               )}
                             </td>
-                            <td className="px-4 py-2.5 text-gray-500 text-xs max-w-[180px]">
+                            <td className="px-4 py-2.5 text-heading/60 text-xs max-w-[180px]">
                               {entry.entry_type === 'trip' ? (
                                 <span>
                                   {entry.truck_number}
@@ -439,34 +439,34 @@ export default function DriverLedger() {
       {/* Add Driver Modal */}
       {driverModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-sm rounded-xl bg-white shadow-2xl">
+          <div className="w-full max-w-sm rounded-xl bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
               <h2 className="font-semibold text-heading">Add Driver</h2>
-              <button type="button" onClick={() => setDriverModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100">
-                <X className="h-5 w-5 text-gray-500" />
+              <button type="button" onClick={() => setDriverModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                <X className="h-5 w-5 text-heading/60" />
               </button>
             </div>
             <form onSubmit={handleAddDriver} className="p-5 flex flex-col gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Name *</label>
+                <label className="block text-sm font-medium text-heading/80 mb-1">Name *</label>
                 <input className="input-field" value={driverForm.name}
                   onChange={(e) => setDriverForm((p) => ({ ...p, name: e.target.value }))}
                   placeholder="Driver name" required />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+                <label className="block text-sm font-medium text-heading/80 mb-1">Phone</label>
                 <input className="input-field" value={driverForm.phone}
                   onChange={(e) => setDriverForm((p) => ({ ...p, phone: e.target.value }))}
                   placeholder="Phone number" />
               </div>
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-1">License Number</label>
+                <label className="block text-sm font-medium text-heading/80 mb-1">License Number</label>
                 <input className="input-field" value={driverForm.license_number}
                   onChange={(e) => setDriverForm((p) => ({ ...p, license_number: e.target.value }))}
                   placeholder="DL number" />
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setDriverModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50">Cancel</button>
+                <button type="button" onClick={() => setDriverModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
                 <button type="submit" disabled={driverSaving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 transition-colors">
                   {driverSaving ? 'Saving…' : 'Add Driver'}
                 </button>

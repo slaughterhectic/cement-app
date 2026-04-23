@@ -40,13 +40,13 @@ export function usePagination<T>(data: T[], defaultPageSize = 20): PaginationCon
 export function PaginationBar({ pg }: { pg: PaginationControls<unknown> }) {
   if (pg.total <= 20) return null;
   return (
-    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-gray-100 bg-gray-50/80 px-4 py-2.5">
-      <span className="text-xs text-gray-500">
+    <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border bg-surface/80 px-4 py-2.5">
+      <span className="text-xs text-heading/60">
         Showing {pg.from}–{pg.to} of {pg.total}
       </span>
       <div className="flex items-center gap-2">
         <select
-          className="rounded border border-gray-200 bg-white px-2 py-1 text-xs"
+          className="rounded border border-card-border bg-card px-2 py-1 text-xs"
           value={pg.pageSize}
           onChange={(e) => pg.setPageSize(Number(e.target.value))}
         >
@@ -56,18 +56,18 @@ export function PaginationBar({ pg }: { pg: PaginationControls<unknown> }) {
         </select>
         <button
           type="button"
-          className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          className="rounded-md border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-heading/80 hover:bg-surface disabled:opacity-40"
           onClick={() => pg.setPage(pg.page - 1)}
           disabled={pg.page === 0}
         >
           Previous
         </button>
-        <span className="text-xs text-gray-600">
+        <span className="text-xs text-heading/70">
           Page {pg.page + 1} of {pg.pageCount}
         </span>
         <button
           type="button"
-          className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-xs font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+          className="rounded-md border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-heading/80 hover:bg-surface disabled:opacity-40"
           onClick={() => pg.setPage(pg.page + 1)}
           disabled={pg.page >= pg.pageCount - 1}
         >

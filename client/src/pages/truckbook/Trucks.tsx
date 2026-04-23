@@ -128,7 +128,7 @@ export default function Trucks() {
       <div className="flex flex-wrap items-start justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold text-heading">Trucks</h1>
-          <p className="text-sm text-gray-500 mt-1">{rows.length} truck{rows.length !== 1 ? 's' : ''} registered</p>
+          <p className="text-sm text-heading/60 mt-1">{rows.length} truck{rows.length !== 1 ? 's' : ''} registered</p>
         </div>
         <button
           type="button"
@@ -158,11 +158,11 @@ export default function Trucks() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-gray-400">Loading...</td></tr>
+                <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
-                    <p className="text-gray-400 mb-3">No trucks added yet</p>
+                    <p className="text-heading/50 mb-3">No trucks added yet</p>
                     <button type="button" onClick={openAdd} className="text-orange-600 hover:underline text-sm font-medium">Add your first truck</button>
                   </td>
                 </tr>
@@ -170,7 +170,7 @@ export default function Trucks() {
                 rows.map((row) => (
                   <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 transition-colors">
                     <td className="px-4 py-3 font-semibold text-orange-600">{row.truck_number}</td>
-                    <td className="px-4 py-3 text-gray-600">{row.purchase_date ? formatDate(row.purchase_date) : '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.purchase_date ? formatDate(row.purchase_date) : '—'}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(row.total_value))}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(row.down_payment))}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(row.financed_amount))}</td>
@@ -182,10 +182,10 @@ export default function Trucks() {
                         {row.trip_count}
                       </span>
                     </td>
-                    <td className="px-4 py-3 text-gray-600">{row.lender_name || '—'}</td>
+                    <td className="px-4 py-3 text-heading/70">{row.lender_name || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-gray-500 hover:bg-orange-100 hover:text-orange-600 transition-colors" title="Edit">
+                        <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 hover:text-orange-600 transition-colors" title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
                         {isAdmin() && (
@@ -206,54 +206,54 @@ export default function Trucks() {
       {/* Modal */}
       {modalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-lg rounded-xl bg-white shadow-2xl">
+          <div className="w-full max-w-lg rounded-xl bg-card shadow-2xl">
             <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
               <h2 className="font-semibold text-heading">{editing ? 'Edit Truck' : 'Add Truck'}</h2>
-              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
-                <X className="h-5 w-5 text-gray-500" />
+              <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                <X className="h-5 w-5 text-heading/60" />
               </button>
             </div>
             <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Truck Number *</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Truck Number *</label>
                   <input className="input-field" value={form.truck_number} onChange={f('truck_number')} placeholder="e.g. MH12AB1234" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Purchase Date</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Purchase Date</label>
                   <input type="date" className="input-field" value={form.purchase_date} onChange={f('purchase_date')} />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Total Value (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Total Value (₹)</label>
                   <input type="number" min="0" className="input-field" value={form.total_value} onChange={f('total_value')} placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Down Payment (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Down Payment (₹)</label>
                   <input type="number" min="0" className="input-field" value={form.down_payment} onChange={f('down_payment')} placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Financed Amount (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Financed Amount (₹)</label>
                   <input type="number" min="0" className="input-field" value={form.financed_amount} onChange={f('financed_amount')} placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">EMI Amount (₹)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">EMI Amount (₹)</label>
                   <input type="number" min="0" className="input-field" value={form.emi_amount} onChange={f('emi_amount')} placeholder="0" />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">EMI Tenure (months)</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">EMI Tenure (months)</label>
                   <input type="number" min="0" className="input-field" value={form.emi_tenure} onChange={f('emi_tenure')} placeholder="0" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Lender Name</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Lender Name</label>
                   <input className="input-field" value={form.lender_name} onChange={f('lender_name')} placeholder="Bank / NBFC name" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Remarks</label>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Remarks</label>
                   <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
                 </div>
               </div>
               <div className="flex justify-end gap-3 pt-2">
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors">
+                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
                   Cancel
                 </button>
                 <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 transition-colors">

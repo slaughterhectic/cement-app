@@ -200,10 +200,10 @@ export function DataTable<T>({
   const skeletonRows = 8;
 
   return (
-    <div className="rounded-lg border border-card-border bg-white">
+    <div className="rounded-lg border border-card-border bg-card">
       <div className="flex flex-wrap items-center gap-3 border-b border-card-border px-4 py-3">
         <div className="relative min-w-[200px] flex-1 max-w-sm">
-          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-gray-400" />
+          <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-heading/50" />
           <input
             type="search"
             value={globalFilter}
@@ -212,7 +212,7 @@ export function DataTable<T>({
               table.setPageIndex(0);
             }}
             placeholder="Search…"
-            className="w-full rounded-md border border-gray-200 bg-white py-2 pl-9 pr-3 text-sm outline-none ring-brand-500 placeholder:text-gray-400 focus:border-brand-400 focus:ring-2"
+            className="w-full rounded-md border border-card-border bg-card py-2 pl-9 pr-3 text-sm outline-none ring-brand-500 placeholder:text-heading/50 focus:border-brand-400 focus:ring-2"
             aria-label="Search table"
           />
         </div>
@@ -224,17 +224,17 @@ export function DataTable<T>({
               e.stopPropagation();
               setColumnsMenuOpen((o) => !o);
             }}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm font-medium text-heading/80 shadow-sm hover:bg-surface"
           >
             <Eye className="h-4 w-4" />
             Columns
           </button>
           {columnsMenuOpen && (
-            <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border border-card-border bg-white py-1 shadow-lg">
+            <div className="absolute right-0 z-20 mt-1 w-52 rounded-md border border-card-border bg-card py-1 shadow-lg">
               {toggleableColumns.map((column) => (
                 <label
                   key={column.id}
-                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-gray-50"
+                  className="flex cursor-pointer items-center gap-2 px-3 py-2 text-sm hover:bg-surface"
                 >
                   <input
                     type="checkbox"
@@ -257,7 +257,7 @@ export function DataTable<T>({
           <button
             type="button"
             onClick={handleExportExcel}
-            className="inline-flex items-center gap-2 rounded-md border border-gray-200 bg-white px-3 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50"
+            className="inline-flex items-center gap-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm font-medium text-heading/80 shadow-sm hover:bg-surface"
           >
             <Download className="h-4 w-4" />
             Export Excel
@@ -269,7 +269,7 @@ export function DataTable<T>({
             type="button"
             onClick={handleDeleteSelected}
             disabled={selectedIds.length === 0 || !onDeleteSelected}
-            className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-white px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:pointer-events-none disabled:opacity-40"
+            className="inline-flex items-center gap-2 rounded-md border border-red-200 bg-card px-3 py-2 text-sm font-medium text-red-700 shadow-sm hover:bg-red-50 disabled:pointer-events-none disabled:opacity-40"
           >
             <Trash2 className="h-4 w-4" />
             Delete selected
@@ -277,18 +277,18 @@ export function DataTable<T>({
           </button>
         )}
 
-        <span className="ml-auto text-sm text-gray-600">
-          <span className="font-medium text-gray-900">{filteredCount}</span>
+        <span className="ml-auto text-sm text-heading/70">
+          <span className="font-medium text-heading">{filteredCount}</span>
           {filteredCount === 1 ? ' row' : ' rows'}
           {data.length !== filteredCount && (
-            <span className="text-gray-400"> (filtered from {data.length})</span>
+            <span className="text-heading/50"> (filtered from {data.length})</span>
           )}
         </span>
       </div>
 
       <div className="overflow-x-auto">
         {isLoading ? (
-          <div className="min-w-[640px] divide-y divide-gray-100 px-4 py-3" role="status" aria-label="Loading">
+          <div className="min-w-[640px] divide-y divide-card-border px-4 py-3" role="status" aria-label="Loading">
             {Array.from({ length: skeletonRows }, (_, i) => (
               <div
                 key={i}
@@ -303,7 +303,7 @@ export function DataTable<T>({
           </div>
         ) : showEmpty ? (
           <div className="flex min-h-[200px] flex-col items-center justify-center gap-4 px-4 py-12 text-center">
-            <p className="text-sm text-gray-600">{emptyMessage}</p>
+            <p className="text-sm text-heading/70">{emptyMessage}</p>
             {emptyAction && (
               <button
                 type="button"
@@ -326,8 +326,8 @@ export function DataTable<T>({
                       <th
                         key={header.id}
                         colSpan={header.colSpan}
-                        className={`sticky top-0 z-10 whitespace-nowrap bg-gray-50 px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-gray-500 ${
-                          canSort ? 'cursor-pointer select-none hover:bg-gray-100' : ''
+                        className={`sticky top-0 z-10 whitespace-nowrap bg-surface px-4 py-3 text-left text-xs font-medium uppercase tracking-wide text-heading/60 ${
+                          canSort ? 'cursor-pointer select-none hover:bg-card-border/50' : ''
                         }`}
                         onClick={canSort ? header.column.getToggleSortingHandler() : undefined}
                         onKeyDown={
@@ -357,7 +357,7 @@ export function DataTable<T>({
                             ? null
                             : flexRender(header.column.columnDef.header, header.getContext())}
                           {canSort && (
-                            <span className="text-gray-400">
+                            <span className="text-heading/50">
                               {sorted === 'asc' ? (
                                 <ChevronUp className="h-4 w-4" />
                               ) : sorted === 'desc' ? (
@@ -377,14 +377,14 @@ export function DataTable<T>({
             <tbody>
               {table.getRowModel().rows.map((row, index) => {
                 const customCls = getRowClassName ? getRowClassName(row.original) : undefined;
-                const bgCls = customCls ?? (index % 2 === 0 ? 'bg-white' : 'bg-gray-50/50');
+                const bgCls = customCls ?? (index % 2 === 0 ? 'bg-card' : 'bg-surface/50');
                 return (
                 <tr
                   key={row.id}
-                  className={`border-b border-gray-100 transition-colors ${bgCls} hover:brightness-95`}
+                  className={`border-b border-card-border transition-colors ${bgCls} hover:brightness-95`}
                 >
                   {row.getVisibleCells().map((cell) => (
-                    <td key={cell.id} className="px-4 py-3 text-sm text-gray-900">
+                    <td key={cell.id} className="px-4 py-3 text-sm text-heading">
                       {flexRender(cell.column.columnDef.cell, cell.getContext())}
                     </td>
                   ))}
@@ -398,19 +398,19 @@ export function DataTable<T>({
 
       {!isLoading && !showEmpty && (
         <div className="flex flex-wrap items-center justify-between gap-3 border-t border-card-border px-4 py-3">
-          <p className="text-sm text-gray-600">
+          <p className="text-sm text-heading/70">
             Showing{' '}
-            <span className="font-medium text-gray-900">
+            <span className="font-medium text-heading">
               {start}-{end}
             </span>{' '}
-            of <span className="font-medium text-gray-900">{filteredCount}</span>
+            of <span className="font-medium text-heading">{filteredCount}</span>
           </p>
 
           <div className="flex flex-wrap items-center gap-3">
-            <label className="flex items-center gap-2 text-sm text-gray-600">
+            <label className="flex items-center gap-2 text-sm text-heading/70">
               Rows per page
               <select
-                className="rounded-md border border-gray-200 bg-white px-2 py-1.5 text-sm text-gray-900"
+                className="rounded-md border border-card-border bg-card px-2 py-1.5 text-sm text-heading"
                 value={pageSize}
                 onChange={(e) => {
                   const next = Number(e.target.value);
@@ -427,18 +427,18 @@ export function DataTable<T>({
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                className="rounded-md border border-card-border bg-card px-3 py-1.5 text-sm font-medium text-heading/80 hover:bg-surface disabled:opacity-40"
                 onClick={() => table.previousPage()}
                 disabled={!table.getCanPreviousPage()}
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600">
+              <span className="text-sm text-heading/70">
                 Page {pageIndex + 1} of {table.getPageCount() || 1}
               </span>
               <button
                 type="button"
-                className="rounded-md border border-gray-200 bg-white px-3 py-1.5 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-40"
+                className="rounded-md border border-card-border bg-card px-3 py-1.5 text-sm font-medium text-heading/80 hover:bg-surface disabled:opacity-40"
                 onClick={() => table.nextPage()}
                 disabled={!table.getCanNextPage()}
               >

@@ -31,7 +31,7 @@ function typeBadgeClass(type: StockType): string {
 export function StockCard({ name, type, stock, value, lastPurchase, rateBreakdown }: StockCardProps) {
   return (
     <div
-      className={`rounded-xl border-2 bg-white p-5 shadow-sm transition-shadow hover:shadow-md ${borderClass(
+      className={`rounded-xl border-2 bg-card p-5 shadow-sm transition-shadow hover:shadow-md ${borderClass(
         stock
       )}`}
     >
@@ -65,7 +65,7 @@ export function StockCard({ name, type, stock, value, lastPurchase, rateBreakdow
           <ul className="flex flex-col gap-1">
             {rateBreakdown.map((r, i) => (
               <li key={i} className="flex items-center justify-between text-xs">
-                <span className="text-gray-500">₹{Number(r.landed_rate).toFixed(0)}/bag</span>
+                <span className="text-heading/60">₹{Number(r.landed_rate).toFixed(0)}/bag</span>
                 <span className="font-semibold tabular-nums text-heading">
                   {Number(r.available_bags)} bags
                 </span>

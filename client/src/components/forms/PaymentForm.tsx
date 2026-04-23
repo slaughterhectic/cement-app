@@ -239,7 +239,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               className={`rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-colors text-left ${
                 !isPay
                   ? 'border-outstanding bg-red-50 text-outstanding'
-                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                  : 'border-card-border bg-card text-heading/60 hover:bg-surface'
               }`}
             >
               <p className="font-semibold">Receive</p>
@@ -253,7 +253,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               className={`rounded-lg border-2 px-3 py-2.5 text-sm font-medium transition-colors text-left ${
                 isPay
                   ? 'border-orange-500 bg-orange-50 text-orange-700'
-                  : 'border-gray-200 bg-white text-gray-500 hover:bg-gray-50'
+                  : 'border-card-border bg-card text-heading/60 hover:bg-surface'
               }`}
             >
               <p className="font-semibold">Pay</p>
@@ -287,7 +287,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
           />
           {errors.party_id && <p className="mt-1 text-xs text-red-600">{errors.party_id.message}</p>}
           {partyMenuOpen && filteredParties.length > 0 && (
-            <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-md border border-card-border bg-white py-1 shadow-lg">
+            <ul className="absolute z-20 mt-1 max-h-52 w-full overflow-auto rounded-md border border-card-border bg-card py-1 shadow-lg">
               {filteredParties.map((p) => (
                 <li key={p.id}>
                   <button
@@ -308,7 +308,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
                     <div className="flex items-center gap-2 min-w-0">
                       <span className="font-medium truncate">{p.name}</span>
                       <span className={`shrink-0 rounded-full px-1.5 py-0.5 text-[10px] font-medium capitalize ${
-                        p.type === 'supplier' ? 'bg-indigo-100 text-indigo-700' : 'bg-gray-100 text-gray-600'
+                        p.type === 'supplier' ? 'bg-indigo-100 text-indigo-700' : 'bg-surface text-heading/70'
                       }`}>{p.type ?? 'other'}</span>
                     </div>
                     {p.outstanding > 0 && (
@@ -322,7 +322,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             </ul>
           )}
           {partyMenuOpen && !loadingParties && filteredParties.length === 0 && (
-            <div className="absolute z-20 mt-1 w-full rounded-md border border-card-border bg-white py-3 px-3 text-sm text-gray-500 shadow-lg">
+            <div className="absolute z-20 mt-1 w-full rounded-md border border-card-border bg-card py-3 px-3 text-sm text-heading/60 shadow-lg">
               No parties found.
             </div>
           )}
@@ -355,7 +355,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 mode === 'bank'
                   ? 'border-brand-500 bg-brand-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  : 'border-card-border bg-card text-heading/80 hover:bg-surface'
               }`}
             >
               Bank
@@ -366,7 +366,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
                 mode === 'cash'
                   ? 'border-brand-500 bg-brand-500 text-white'
-                  : 'border-gray-200 bg-white text-gray-700 hover:bg-gray-50'
+                  : 'border-card-border bg-card text-heading/80 hover:bg-surface'
               }`}
             >
               Cash
@@ -402,7 +402,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             {cashHandlers.length === 0 && (
               <p className="mt-1 text-xs text-amber-600">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
             )}
-            <p className="mt-1 text-xs text-gray-500">This cash movement will be recorded against the handler's cash book automatically.</p>
+            <p className="mt-1 text-xs text-heading/60">This cash movement will be recorded against the handler's cash book automatically.</p>
           </div>
         )}
 

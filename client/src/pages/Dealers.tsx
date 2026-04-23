@@ -180,7 +180,7 @@ export default function Dealers() {
         header: 'Total Sales',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
-          if (n === 0) return <span className="text-gray-400">—</span>;
+          if (n === 0) return <span className="text-heading/50">—</span>;
           return <span className="text-emerald-700 font-medium">{formatINR(n)}</span>;
         },
       },
@@ -189,7 +189,7 @@ export default function Dealers() {
         header: 'Total Paid',
         cell: ({ getValue }) => {
           const n = Number(getValue()) || 0;
-          if (n === 0) return <span className="text-gray-400">—</span>;
+          if (n === 0) return <span className="text-heading/50">—</span>;
           return <span>{formatINR(n)}</span>;
         },
       },
@@ -211,7 +211,7 @@ export default function Dealers() {
             <button
               type="button"
               onClick={() => openEdit(row.original)}
-              className="inline-flex items-center gap-1 rounded-md border border-gray-200 bg-white px-2 py-1 text-xs font-medium text-gray-700 hover:bg-gray-50"
+              className="inline-flex items-center gap-1 rounded-md border border-card-border bg-card px-2 py-1 text-xs font-medium text-heading/80 hover:bg-surface"
               aria-label={`Edit ${row.original.name}`}
             >
               <Pencil className="h-3.5 w-3.5" />
@@ -220,7 +220,7 @@ export default function Dealers() {
             <button
               type="button"
               onClick={() => handleDelete(row.original)}
-              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-white px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
+              className="inline-flex items-center gap-1 rounded-md border border-red-200 bg-card px-2 py-1 text-xs font-medium text-red-600 hover:bg-red-50"
               aria-label={`Delete ${row.original.name}`}
             >
               <Trash2 className="h-3.5 w-3.5" />
@@ -256,20 +256,20 @@ export default function Dealers() {
         <label className="mb-1 block text-sm font-medium text-heading">Opening balance</label>
         <div className="flex gap-2">
           <input className="input-field flex-1" type="number" min={0} step="1" {...register('opening_balance')} />
-          <div className="flex rounded-lg border border-gray-200 overflow-hidden text-sm font-medium">
+          <div className="flex rounded-lg border border-card-border overflow-hidden text-sm font-medium">
             <button type="button"
               onClick={() => setValue('opening_balance_type', 'dr')}
-              className={`px-3 py-2 ${obType === 'dr' ? 'bg-red-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              className={`px-3 py-2 ${obType === 'dr' ? 'bg-red-600 text-white' : 'bg-card text-heading/70 hover:bg-surface'}`}>
               Dr
             </button>
             <button type="button"
               onClick={() => setValue('opening_balance_type', 'cr')}
-              className={`px-3 py-2 ${obType === 'cr' ? 'bg-green-600 text-white' : 'bg-white text-gray-600 hover:bg-gray-50'}`}>
+              className={`px-3 py-2 ${obType === 'cr' ? 'bg-green-600 text-white' : 'bg-card text-heading/70 hover:bg-surface'}`}>
               Cr
             </button>
           </div>
         </div>
-        <p className="mt-1 text-xs text-gray-500">
+        <p className="mt-1 text-xs text-heading/60">
           {obType === 'dr' ? 'Dr — They owe us (debit)' : 'Cr — We owe them (credit)'}
         </p>
         {errors.opening_balance && (
@@ -310,7 +310,7 @@ export default function Dealers() {
             <button
               type="button"
               onClick={() => setCreateOpen(false)}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
             >
               Cancel
             </button>
@@ -333,7 +333,7 @@ export default function Dealers() {
             <button
               type="button"
               onClick={() => { setEditOpen(false); setEditing(null); }}
-              className="rounded-lg border border-gray-200 px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
             >
               Cancel
             </button>
