@@ -353,7 +353,7 @@ export default function TransportTrips() {
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30 transition-colors">
                     <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-3 py-2.5 text-heading/70 text-xs">{row.builty_number || '—'}</td>
                     <td className="px-3 py-2.5 font-medium text-indigo-600 dark:text-indigo-400">{row.truck_number}</td>

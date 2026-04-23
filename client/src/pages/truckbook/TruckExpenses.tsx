@@ -228,7 +228,7 @@ export default function TruckExpenses() {
                 </tr>
               ) : (
                 filteredRows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50 dark:hover:bg-orange-900/30/40 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 dark:hover:bg-orange-900/30 transition-colors">
                     <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-4 py-3 font-medium text-orange-600 dark:text-orange-400">{row.truck_number || '—'}</td>
                     <td className="px-4 py-3">

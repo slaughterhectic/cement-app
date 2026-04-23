@@ -402,7 +402,7 @@ export default function Transporters() {
                           const isPaid = isPayment && (row.payment_type ?? 'paid') === 'paid';
                           const isReceived = isPayment && row.payment_type === 'received';
                           return (
-                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? (isReceived ? 'hover:bg-green-50 dark:hover:bg-green-900/30/40' : 'hover:bg-red-50 dark:hover:bg-red-900/30/40') : 'hover:bg-blue-50 dark:hover:bg-blue-900/30/40'} transition-colors`}>
+                            <tr key={i} className={`border-b border-card-border last:border-0 ${isPayment ? (isReceived ? 'hover:bg-green-50/40 dark:hover:bg-green-900/30' : 'hover:bg-red-50/40 dark:hover:bg-red-900/30') : 'hover:bg-blue-50/40 dark:hover:bg-blue-900/30'} transition-colors`}>
                               <td className="px-4 py-3 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                               <td className="px-4 py-3">
                                 {isPayment ? (

@@ -220,7 +220,7 @@ export default function TransportInvoices() {
                 rows.map((row) => {
                   const pending = Math.max(0, Number(row.invoice_amount) - Number(row.received_amount));
                   return (
-                    <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors">
+                    <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30 transition-colors">
                       <td className="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400">{row.invoice_number}</td>
                       <td className="px-4 py-3 text-heading/70">{row.invoice_date ? formatDate(row.invoice_date) : '—'}</td>
                       <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.invoice_amount))}</td>

@@ -181,19 +181,19 @@ function ImprestSection() {
 
           {/* Summary cards */}
           <div className="grid gap-3 sm:grid-cols-4">
-            <div className="rounded-lg border border-blue-100 bg-blue-50 dark:bg-blue-900/30/80 p-3">
+            <div className="rounded-lg border border-blue-100 bg-blue-50/80 dark:bg-blue-900/30 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-blue-700 dark:text-blue-300">Opening</p>
               <p className="mt-1 text-lg font-bold tabular-nums text-blue-900 dark:text-blue-100">{formatINR(handlerData.opening_balance)}</p>
             </div>
-            <div className="rounded-lg border border-green-100 bg-green-50 dark:bg-green-900/30/80 p-3">
+            <div className="rounded-lg border border-green-100 bg-green-50/80 dark:bg-green-900/30 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-green-700 dark:text-green-300">Total Received</p>
               <p className="mt-1 text-lg font-bold tabular-nums text-green-900 dark:text-green-100">{formatINR(handlerData.transactions.reduce((s: number, t: any) => s + Number(t.credit), 0))}</p>
             </div>
-            <div className="rounded-lg border border-red-100 bg-red-50 dark:bg-red-900/30/80 p-3">
+            <div className="rounded-lg border border-red-100 bg-red-50/80 dark:bg-red-900/30 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-red-700 dark:text-red-300">Total Spent</p>
               <p className="mt-1 text-lg font-bold tabular-nums text-red-900 dark:text-red-100">{formatINR(handlerData.transactions.reduce((s: number, t: any) => s + Number(t.debit), 0))}</p>
             </div>
-            <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/90 p-3">
+            <div className="rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50/90 dark:bg-emerald-900/30 p-3">
               <p className="text-xs font-medium uppercase tracking-wide text-emerald-700 dark:text-emerald-300">Current Balance</p>
               <p className="mt-1 text-lg font-bold tabular-nums text-emerald-900 dark:text-emerald-100">{formatINR(handlerData.current_balance)}</p>
             </div>
@@ -242,13 +242,13 @@ function ImprestSection() {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-card-border">
-                    <tr className="bg-blue-50 dark:bg-blue-900/30/60">
+                    <tr className="bg-blue-50/60 dark:bg-blue-900/30">
                       <td colSpan={5} className="px-4 py-2 text-xs font-medium text-blue-700 dark:text-blue-300">Opening Balance</td>
                       <td className="px-4 py-2 text-right tabular-nums font-semibold text-blue-800 dark:text-blue-200">{formatINR(handlerData.opening_balance)}</td>
                       <td colSpan={2} />
                     </tr>
                     {txPg.pageData.map((t: any) => (
-                      <tr key={t.id} className={t.credit > 0 ? 'bg-green-50 dark:bg-green-900/30/30 hover:bg-green-50 dark:hover:bg-green-900/30' : 'hover:bg-surface'}>
+                      <tr key={t.id} className={t.credit > 0 ? 'bg-green-50/30 dark:bg-green-900/30 hover:bg-green-50 dark:hover:bg-green-900/30' : 'hover:bg-surface'}>
                         <td className="px-4 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
                         <td className="px-4 py-2 max-w-[140px] truncate">{t.particulars || '—'}</td>
                         <td className="px-4 py-2 max-w-[200px] truncate text-heading/70">{t.narration || '—'}</td>
@@ -409,7 +409,7 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
                   <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700 dark:text-blue-300">{formatINR(b.balance)}</td>
                 </tr>
               ))}
-              <tr className="border-t-2 border-card-border bg-blue-50 dark:bg-blue-900/30/60 font-semibold">
+              <tr className="border-t-2 border-card-border bg-blue-50/60 dark:bg-blue-900/30 font-semibold">
                 <td className="px-4 py-3 text-blue-800 dark:text-blue-200">Total</td>
                 <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(summary.banks.reduce((s, b) => s + b.opening, 0))}</td>
                 <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(summary.banks.reduce((s, b) => s + b.total_received, 0))}</td>
@@ -468,7 +468,7 @@ export default function Capital() {
         <>
           {/* Top KPI cards */}
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/90 p-5">
+            <div className="rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/90 dark:bg-emerald-900/30 p-5">
               <div className="flex items-center gap-2 text-emerald-700 dark:text-emerald-300">
                 <Wallet className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Total Capital</span>
@@ -476,7 +476,7 @@ export default function Capital() {
               <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-800 dark:text-emerald-200">{formatINR(summary.totalCapital)}</p>
               <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Cash + all banks</p>
             </div>
-            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30/90 p-5">
+            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-900/30 p-5">
               <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
                 <Wallet className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Cash in Hand</span>
@@ -484,7 +484,7 @@ export default function Capital() {
               <p className="mt-2 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(summary.totalCash)}</p>
               <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{summary.cash.map((c) => c.handler).join(', ')}</p>
             </div>
-            <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30/90 p-5">
+            <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-900/30 p-5">
               <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                 <Building2 className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Total Bank</span>
@@ -492,7 +492,7 @@ export default function Capital() {
               <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(summary.totalBank)}</p>
               <p className="mt-1 text-xs text-blue-700 dark:text-blue-300">{summary.banks.length} bank account{summary.banks.length !== 1 ? 's' : ''}</p>
             </div>
-            <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50 dark:bg-purple-900/30/90 p-5">
+            <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/90 dark:bg-purple-900/30 p-5">
               <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
                 <TrendingUp className="h-5 w-5" />
                 <span className="text-xs font-semibold uppercase tracking-wide">Stock Value</span>
@@ -504,7 +504,7 @@ export default function Capital() {
 
           {/* Secondary info */}
           <div className="grid gap-4 sm:grid-cols-3">
-            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/80 p-4">
+            <div className="rounded-lg border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/30 p-4">
               <div className="flex items-center gap-2 text-red-600 dark:text-red-400">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Outstanding Receivables</span>
@@ -512,7 +512,7 @@ export default function Capital() {
               <p className="mt-2 text-xl font-bold tabular-nums text-red-700 dark:text-red-300">{formatINR(summary.totalOutstanding)}</p>
               <p className="text-xs text-red-500 mt-1">Customers owe us</p>
             </div>
-            <div className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30/80 p-4">
+            <div className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50/80 dark:bg-orange-900/30 p-4">
               <div className="flex items-center gap-2 text-orange-600 dark:text-orange-400">
                 <AlertCircle className="h-4 w-4" />
                 <span className="text-sm font-semibold">Outstanding Payables</span>

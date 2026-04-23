@@ -285,7 +285,7 @@ function OutstandingBreakdownModal({
                 {negative.length > 0 && (
                   <>
                     <tr>
-                      <td colSpan={5} className="px-4 py-2 bg-red-50 dark:bg-red-900/30/70 text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">
+                      <td colSpan={5} className="px-4 py-2 bg-red-50/70 dark:bg-red-900/30 text-xs font-semibold text-red-600 dark:text-red-400 uppercase tracking-wider">
                         ⚠ Overpaid / Advance ({negative.length} {negative.length === 1 ? 'party' : 'parties'})
                       </td>
                     </tr>

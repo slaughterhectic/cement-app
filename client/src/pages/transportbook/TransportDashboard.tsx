@@ -142,7 +142,7 @@ export default function TransportDashboard() {
                 </tr>
               ) : (
                 stats.partnerSummary.map((p, i) => (
-                  <tr key={i} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/40 transition-colors">
+                  <tr key={i} className="border-b border-card-border last:border-0 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-indigo-600 dark:text-indigo-400">{p.name}</td>
                     <td className={`px-4 py-3 text-right font-semibold ${p.balance >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(p.balance)}

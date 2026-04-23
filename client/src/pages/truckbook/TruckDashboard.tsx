@@ -129,7 +129,7 @@ export default function TruckDashboard() {
                 </tr>
               ) : (
                 data.perTruck.map((t) => (
-                  <tr key={t.id} className="border-b border-card-border last:border-0 hover:bg-orange-50 dark:hover:bg-orange-900/30/40 transition-colors">
+                  <tr key={t.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 dark:hover:bg-orange-900/30 transition-colors">
                     <td className="px-4 py-3 font-medium text-orange-600 dark:text-orange-400">{t.truck_number}</td>
                     <td className="px-4 py-3 text-right">{t.trip_count}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(t.total_freight))}</td>

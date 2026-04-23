@@ -204,7 +204,7 @@ export default function TruckOwners() {
                 </tr>
               ) : (
                 rows.map((row) => (
-                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/40 transition-colors">
+                  <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/40 dark:hover:bg-indigo-900/30 transition-colors">
                     <td className="px-4 py-3">
                       <button
                         type="button"

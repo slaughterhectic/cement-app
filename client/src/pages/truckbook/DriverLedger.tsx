@@ -373,7 +373,7 @@ export default function DriverLedger() {
                       ) : (
                         ledger.ledger.map((entry, idx) => (
                           <tr key={`${entry.entry_type}-${entry.id}-${idx}`}
-                            className={`border-b border-card-border last:border-0 ${entry.entry_type === 'trip' ? 'hover:bg-blue-50 dark:hover:bg-blue-900/30/40' : 'hover:bg-green-50 dark:hover:bg-green-900/30/40'} transition-colors`}
+                            className={`border-b border-card-border last:border-0 ${entry.entry_type === 'trip' ? 'hover:bg-blue-50/40 dark:hover:bg-blue-900/30' : 'hover:bg-green-50/40 dark:hover:bg-green-900/30'} transition-colors`}
                           >
                             <td className="px-4 py-2.5 whitespace-nowrap">{formatDate(entry.date)}</td>
                             <td className="px-4 py-2.5">

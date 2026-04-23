@@ -65,7 +65,7 @@ function EMICalculator() {
             <p className="text-xs font-medium uppercase tracking-wide text-brand-700">Monthly EMI</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-brand-800">{formatINR(emi)}</p>
           </div>
-          <div className="rounded-lg border border-amber-100 bg-amber-50 dark:bg-amber-900/30/80 p-4">
+          <div className="rounded-lg border border-amber-100 bg-amber-50/80 dark:bg-amber-900/30 p-4">
             <p className="text-xs font-medium uppercase tracking-wide text-amber-700 dark:text-amber-300">Total Interest</p>
             <p className="mt-1 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(totalInterest ?? 0)}</p>
           </div>
@@ -193,19 +193,19 @@ function PartyLoansSection() {
 
       {/* Summary */}
       <div className="grid gap-3 sm:grid-cols-3">
-        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30/80 p-4">
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/30 p-4">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-amber-700 dark:text-amber-300">
             <ArrowUpRight className="h-4 w-4" /> Total Disbursed
           </div>
           <p className="mt-1 text-xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(totalDisbursed)}</p>
         </div>
-        <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50 dark:bg-green-900/30/80 p-4">
+        <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/30 p-4">
           <div className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
             <ArrowDownLeft className="h-4 w-4" /> Total Repaid
           </div>
           <p className="mt-1 text-xl font-bold tabular-nums text-green-800 dark:text-green-200">{formatINR(totalRepaid)}</p>
         </div>
-        <div className={`rounded-xl border p-4 ${netOutstanding > 0 ? 'border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/80' : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30/80'}`}>
+        <div className={`rounded-xl border p-4 ${netOutstanding > 0 ? 'border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/30' : 'border-emerald-200 dark:border-emerald-800 bg-emerald-50/80 dark:bg-emerald-900/30'}`}>
           <p className={`text-xs font-semibold uppercase tracking-wide ${netOutstanding > 0 ? 'text-red-700 dark:text-red-300' : 'text-emerald-700 dark:text-emerald-300'}`}>Net Outstanding</p>
           <p className={`mt-1 text-xl font-bold tabular-nums ${netOutstanding > 0 ? 'text-red-800 dark:text-red-200' : 'text-emerald-800 dark:text-emerald-200'}`}>{formatINR(netOutstanding)}</p>
         </div>
@@ -479,17 +479,17 @@ export default function Finance() {
 
       {/* Summary cards */}
       <div className="grid gap-4 sm:grid-cols-3">
-        <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30/80 p-5">
+        <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/30 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Total Loan Principal</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-red-800 dark:text-red-200">{formatINR(totalPrincipal)}</p>
           <p className="mt-1 text-xs text-red-600 dark:text-red-400">{loans.length} loan{loans.length !== 1 ? 's' : ''}</p>
         </div>
-        <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30/80 p-5">
+        <div className="rounded-xl border border-orange-200 dark:border-orange-800 bg-orange-50/80 dark:bg-orange-900/30 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-orange-700 dark:text-orange-300">Outstanding Principal</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-orange-800 dark:text-orange-200">{formatINR(totalOutstanding)}</p>
           <p className="mt-1 text-xs text-orange-600 dark:text-orange-400">Remaining to be repaid</p>
         </div>
-        <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50 dark:bg-blue-900/30/80 p-5">
+        <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/80 dark:bg-blue-900/30 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Monthly EMI Obligation</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(totalMonthlyEMI)}</p>
           <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Sum of all EMIs</p>

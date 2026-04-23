@@ -231,7 +231,7 @@ export default function TruckOwnerLedger() {
                 ledger.map((row) => {
                   if (row.kind === 'gps_rent') {
                     return (
-                      <tr key={String(row.id)} className="border-b border-card-border last:border-0 bg-slate-50 dark:bg-slate-900/30/70">
+                      <tr key={String(row.id)} className="border-b border-card-border last:border-0 bg-slate-50/70 dark:bg-slate-900/30">
                         <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                         <td className="px-3 py-2.5 text-heading/50" colSpan={5}>
                           <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">GPS Rent</span>
@@ -244,7 +244,7 @@ export default function TruckOwnerLedger() {
                     );
                   }
                   return (
-                    <tr key={String(row.id)} className="border-b border-card-border last:border-0 hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors">
+                    <tr key={String(row.id)} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30 transition-colors">
                       <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.builty_number || '—'}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.do_number || '—'}</td>

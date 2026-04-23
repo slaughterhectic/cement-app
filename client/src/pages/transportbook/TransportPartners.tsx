@@ -282,7 +282,7 @@ export default function TransportPartners() {
                 partners.map((partner) => (
                   <Fragment key={partner.id}>
                     <tr
-                      className="border-b border-card-border hover:bg-indigo-50 dark:hover:bg-indigo-900/30/30 transition-colors cursor-pointer"
+                      className="border-b border-card-border hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30 transition-colors cursor-pointer"
                       onClick={() => toggleExpand(partner.id)}
                     >
                       <td className="px-4 py-3">
