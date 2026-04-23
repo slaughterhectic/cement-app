@@ -6,12 +6,13 @@ import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
 import { openTransportLedgerPdf } from '../../lib/transportLedgerPdf';
 
-interface TripEntry {
+interface Entry {
   id: number | string;
   kind?: 'trip' | 'gps_rent';
   date: string;
   builty_number?: string | null;
   do_number?: string | null;
+  truck_number?: string;
   party_name?: string;
   location?: string | null;
   dch_type?: string | null;
@@ -27,82 +28,84 @@ interface TripEntry {
   handling_charge?: number;
   final_payment?: number;
   running_total: number;
-  remarks?: string | null;
-  // gps_rent-only fields
   period?: string;
   amount?: number;
+  remarks?: string | null;
+}
+
+interface TruckInfo {
+  id: number;
+  truck_number: string;
+  driver_name: string | null;
+  driver_phone: string | null;
+  is_active: number;
 }
 
 interface LedgerData {
   owner: {
-    id: number;
-    truck_number: string;
-    owner_name: string;
+    name: string;
     owner_phone: string | null;
-    driver_name: string | null;
-    driver_phone: string | null;
     bank_account: string | null;
     ifsc_code: string | null;
     beneficiary_name: string | null;
     pan_number: string | null;
+    trucks: TruckInfo[];
   };
-  ledger: TripEntry[];
+  ledger: Entry[];
   summary: {
     totalTrips: number;
+    totalQty: number;
     totalAccAmount: number;
     totalCommission: number;
     totalBuiltyCharge: number;
-    totalHandlingCharge?: number;
+    totalHandlingCharge: number;
     totalDieselAdvance: number;
     totalCashAdvance: number;
     totalFinalPayment: number;
-    totalGpsRent?: number;
-    netOwed?: number;
+    totalGpsRent: number;
+    netOwed: number;
   };
 }
 
-export default function TruckOwnerLedger() {
-  const { id } = useParams<{ id: string }>();
+export default function OwnerLedger() {
+  const { name } = useParams<{ name: string }>();
+  const ownerName = decodeURIComponent(name || '');
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<LedgerData | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
-    if (!id) return;
+    if (!ownerName) return;
     setLoading(true);
     try {
-      const d = await api.rlTruckOwners.ledger(Number(id));
+      const d = await api.rlOwners.ledger(ownerName);
       setData(d);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load ledger', 'error');
     } finally {
       setLoading(false);
     }
-  }, [id, addToast]);
+  }, [ownerName, addToast]);
 
   useEffect(() => { load(); }, [load]);
 
   const handleDownloadPdf = () => {
     if (!data) return;
-    const { owner, ledger, summary } = data;
-    const totalQty = ledger
-      .filter((r) => r.kind !== 'gps_rent')
-      .reduce((s, r) => s + Number(r.qty || 0), 0);
     const ok = openTransportLedgerPdf({
-      ownerName: `${owner.owner_name} (${owner.truck_number})`,
-      phone: owner.owner_phone,
-      bankAccount: owner.bank_account,
-      ifsc: owner.ifsc_code,
-      beneficiary: owner.beneficiary_name,
-      pan: owner.pan_number,
-      trucks: [{ truck_number: owner.truck_number, driver_name: owner.driver_name }],
-      rows: ledger.map((r) => ({
+      ownerName: data.owner.name,
+      phone: data.owner.owner_phone,
+      bankAccount: data.owner.bank_account,
+      ifsc: data.owner.ifsc_code,
+      beneficiary: data.owner.beneficiary_name,
+      pan: data.owner.pan_number,
+      trucks: data.owner.trucks.map((t) => ({ truck_number: t.truck_number, driver_name: t.driver_name })),
+      rows: data.ledger.map((r) => ({
         kind: (r.kind || 'trip') as 'trip' | 'gps_rent',
         date: r.date,
         builty_number: r.builty_number,
         do_number: r.do_number,
-        truck_number: owner.truck_number,
+        truck_number: r.truck_number,
         party_name: r.party_name,
         location: r.location,
         dch_type: r.dch_type,
@@ -119,18 +122,7 @@ export default function TruckOwnerLedger() {
         period: r.period,
         amount: r.amount,
       })),
-      summary: {
-        totalTrips: summary.totalTrips,
-        totalQty,
-        totalAccAmount: summary.totalAccAmount,
-        totalCommission: summary.totalCommission,
-        totalBuiltyCharge: summary.totalBuiltyCharge,
-        totalDieselAdvance: summary.totalDieselAdvance,
-        totalCashAdvance: summary.totalCashAdvance,
-        totalFinalPayment: summary.totalFinalPayment,
-        totalGpsRent: summary.totalGpsRent ?? 0,
-        netOwed: summary.netOwed ?? summary.totalFinalPayment,
-      },
+      summary: data.summary,
     });
     if (!ok) addToast('Please allow popups to download the ledger PDF', 'error');
   };
@@ -153,14 +145,16 @@ export default function TruckOwnerLedger() {
       <div className="flex items-start gap-4">
         <button
           type="button"
-          onClick={() => navigate('/transportbook/trucks')}
+          onClick={() => navigate('/transportbook/owners')}
           className="mt-1 rounded-lg border border-card-border p-2 hover:bg-surface transition-colors"
         >
           <ArrowLeft className="h-4 w-4 text-heading/60" />
         </button>
         <div className="flex-1">
-          <h1 className="text-2xl font-bold text-heading">{owner.truck_number}</h1>
-          <p className="text-sm text-heading/60 mt-0.5">{owner.owner_name} — Truck Ledger</p>
+          <h1 className="text-2xl font-bold text-heading">{owner.name}</h1>
+          <p className="text-sm text-heading/60 mt-0.5">
+            Owner Ledger — {owner.trucks.length} truck{owner.trucks.length !== 1 ? 's' : ''}
+          </p>
         </div>
         <button
           type="button"
@@ -177,19 +171,26 @@ export default function TruckOwnerLedger() {
         <h2 className="text-sm font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider mb-4">Owner Details</h2>
         <div className="grid grid-cols-2 gap-x-8 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-4">
           <div>
-            <p className="text-heading/60">Owner Name</p>
-            <p className="font-medium text-heading">{owner.owner_name}</p>
+            <p className="text-heading/60">Trucks</p>
+            <div className="flex flex-wrap gap-1 mt-0.5">
+              {owner.trucks.map((t) => (
+                <span
+                  key={t.id}
+                  className={`inline-flex rounded-full px-2 py-0.5 text-xs font-medium ${
+                    t.is_active
+                      ? 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'
+                      : 'bg-surface text-heading/50 line-through'
+                  }`}
+                >
+                  {t.truck_number}
+                </span>
+              ))}
+            </div>
           </div>
           {owner.owner_phone && (
             <div>
-              <p className="text-heading/60">Owner Phone</p>
+              <p className="text-heading/60">Phone</p>
               <p className="font-medium text-heading">{owner.owner_phone}</p>
-            </div>
-          )}
-          {owner.driver_name && (
-            <div>
-              <p className="text-heading/60">Driver</p>
-              <p className="font-medium text-heading">{owner.driver_name} {owner.driver_phone ? `(${owner.driver_phone})` : ''}</p>
             </div>
           )}
           {owner.bank_account && (
@@ -224,21 +225,22 @@ export default function TruckOwnerLedger() {
         <div className="card p-4 bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800">
           <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium uppercase tracking-wider">Total Trips</p>
           <p className="text-2xl font-bold text-heading">{summary.totalTrips}</p>
+          <p className="text-xs text-heading/60 mt-0.5">{summary.totalQty.toFixed(2)} tons</p>
         </div>
         <div className="card p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
           <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider">ACC Freight Earned</p>
           <p className="text-xl font-bold text-heading">{formatINR(summary.totalAccAmount)}</p>
         </div>
         <div className="card p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
-          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wider">Commission (Rudra)</p>
-          <p className="text-xl font-bold text-heading">{formatINR(summary.totalCommission)}</p>
-          <p className="text-xs text-amber-500 mt-0.5">+ Builty {formatINR(summary.totalBuiltyCharge)}</p>
+          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wider">Commission + Bilty</p>
+          <p className="text-xl font-bold text-heading">{formatINR(summary.totalCommission + summary.totalBuiltyCharge)}</p>
+          <p className="text-xs text-amber-500 mt-0.5">Comm {formatINR(summary.totalCommission)} · Bilty {formatINR(summary.totalBuiltyCharge)}</p>
         </div>
         <div className="card p-4 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800">
-          <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Total Payable to Truck</p>
-          <p className="text-xl font-bold text-heading">{formatINR(summary.netOwed ?? summary.totalFinalPayment)}</p>
+          <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Net Payable to Owner</p>
+          <p className="text-xl font-bold text-heading">{formatINR(summary.netOwed)}</p>
           <p className="text-xs text-heading/60 mt-0.5">
-            {summary.totalGpsRent ? `Less GPS rent ${formatINR(summary.totalGpsRent)}` : 'After deductions'}
+            {summary.totalGpsRent ? `Less GPS rent ${formatINR(summary.totalGpsRent)}` : 'After all deductions'}
           </p>
         </div>
       </div>
@@ -258,7 +260,7 @@ export default function TruckOwnerLedger() {
       {/* Trip Table */}
       <div className="card overflow-hidden p-0">
         <div className="border-b border-card-border px-5 py-4">
-          <h2 className="font-semibold text-heading">Trip Details</h2>
+          <h2 className="font-semibold text-heading">Ledger Entries</h2>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
@@ -267,26 +269,24 @@ export default function TruckOwnerLedger() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 whitespace-nowrap">Date</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Builty#</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">DO#</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Truck</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Party</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Location</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">DCH</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Material</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Qty (T)</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Rate</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">ACC Amt</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Comm %</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Comm Amt</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Builty</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Diesel Adv</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Cash Adv</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final Pay</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Comm</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Bilty</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Diesel</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Cash</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Running</th>
               </tr>
             </thead>
             <tbody>
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="px-4 py-8 text-center text-heading/50">No entries found for this truck owner</td>
+                  <td colSpan={15} className="px-4 py-8 text-center text-heading/50">No entries found for this owner</td>
                 </tr>
               ) : (
                 ledger.map((row) => {
@@ -294,11 +294,12 @@ export default function TruckOwnerLedger() {
                     return (
                       <tr key={String(row.id)} className="border-b border-card-border last:border-0 bg-slate-50/70 dark:bg-slate-900/30">
                         <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
-                        <td className="px-3 py-2.5 text-heading/50" colSpan={5}>
-                          <span className="rounded-full bg-slate-200 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">GPS Rent</span>
+                        <td className="px-3 py-2.5 text-heading/60" colSpan={4}>
+                          <span className="rounded-full bg-slate-200 dark:bg-slate-700 px-2 py-0.5 text-xs font-medium text-slate-700 dark:text-slate-300">GPS Rent</span>
                           <span className="ml-2 text-xs text-heading/60">{row.period}</span>
+                          {row.truck_number && <span className="ml-2 text-xs text-heading/50">({row.truck_number})</span>}
                         </td>
-                        <td className="px-3 py-2.5 text-heading/50" colSpan={9} />
+                        <td className="px-3 py-2.5" colSpan={8} />
                         <td className="px-3 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">−{formatINR(Number(row.amount || 0))}</td>
                         <td className="px-3 py-2.5 text-right font-semibold text-indigo-600 dark:text-indigo-400">{formatINR(row.running_total)}</td>
                       </tr>
@@ -309,22 +310,19 @@ export default function TruckOwnerLedger() {
                       <td className="px-3 py-2.5 whitespace-nowrap text-heading/70">{formatDate(row.date)}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.builty_number || '—'}</td>
                       <td className="px-3 py-2.5 text-heading/70">{row.do_number || '—'}</td>
-                      <td className="px-3 py-2.5 font-medium text-heading/90">{row.party_name}</td>
-                      <td className="px-3 py-2.5 text-heading/70">{row.location || '—'}</td>
+                      <td className="px-3 py-2.5 font-medium text-indigo-600 dark:text-indigo-400">{row.truck_number}</td>
+                      <td className="px-3 py-2.5 text-heading/90">
+                        <div>{row.party_name}</div>
+                        {row.location && <div className="text-xs text-heading/50">{row.location}</div>}
+                      </td>
                       <td className="px-3 py-2.5">
                         {row.dch_type ? (
                           <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{row.dch_type}</span>
                         ) : '—'}
                       </td>
-                      <td className="px-3 py-2.5">
-                        {row.material_type ? (
-                          <span className="rounded-full bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">{row.material_type}</span>
-                        ) : '—'}
-                      </td>
                       <td className="px-3 py-2.5 text-right">{Number(row.qty || 0).toFixed(2)}</td>
                       <td className="px-3 py-2.5 text-right">{formatINR(Number(row.acc_freight_rate || 0))}</td>
                       <td className="px-3 py-2.5 text-right font-medium">{formatINR(Number(row.acc_amount || 0))}</td>
-                      <td className="px-3 py-2.5 text-right text-heading/70">{row.commission_pct}%</td>
                       <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.commission_amount || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.builty_charge || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.diesel_advance || 0))}</td>
@@ -339,13 +337,10 @@ export default function TruckOwnerLedger() {
             {ledger.length > 0 && (
               <tfoot>
                 <tr className="bg-indigo-50 dark:bg-indigo-900/30 font-semibold border-t-2 border-indigo-200 dark:border-indigo-800">
-                  <td className="px-3 py-3 text-indigo-700 dark:text-indigo-300" colSpan={7}>Total</td>
-                  <td className="px-3 py-3 text-right">
-                    {ledger.filter((r) => r.kind !== 'gps_rent').reduce((s, r) => s + Number(r.qty || 0), 0).toFixed(2)}
-                  </td>
+                  <td className="px-3 py-3 text-indigo-700 dark:text-indigo-300" colSpan={6}>Total</td>
+                  <td className="px-3 py-3 text-right">{summary.totalQty.toFixed(2)}</td>
                   <td className="px-3 py-3 text-right">—</td>
                   <td className="px-3 py-3 text-right">{formatINR(summary.totalAccAmount)}</td>
-                  <td className="px-3 py-3 text-right">—</td>
                   <td className="px-3 py-3 text-right text-amber-600 dark:text-amber-400">{formatINR(summary.totalCommission)}</td>
                   <td className="px-3 py-3 text-right text-amber-600 dark:text-amber-400">{formatINR(summary.totalBuiltyCharge)}</td>
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalDieselAdvance)}</td>
@@ -355,11 +350,11 @@ export default function TruckOwnerLedger() {
                 </tr>
                 {summary.totalGpsRent ? (
                   <tr className="bg-slate-50 dark:bg-slate-900/30 font-medium border-t border-slate-200 dark:border-slate-800 text-sm">
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={15}>
-                      GPS Rent (auto-debited monthly)
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={13}>
+                      GPS Rent (auto-debited monthly, across all trucks)
                     </td>
                     <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">−{formatINR(summary.totalGpsRent)}</td>
-                    <td className="px-3 py-2 text-right text-indigo-700 dark:text-indigo-300">{formatINR(summary.netOwed ?? summary.totalFinalPayment)}</td>
+                    <td className="px-3 py-2 text-right text-indigo-700 dark:text-indigo-300">{formatINR(summary.netOwed)}</td>
                   </tr>
                 ) : null}
               </tfoot>

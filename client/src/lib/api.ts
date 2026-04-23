@@ -284,6 +284,10 @@ export const api = {
     delete: (id: number) => request<any>(`/rl/truck-owners/${id}`, { method: 'DELETE' }),
     ledger: (id: number) => request<any>(`/rl/truck-owners/${id}/ledger`),
   },
+  rlOwners: {
+    list: () => request<any[]>('/rl/owners'),
+    ledger: (name: string) => request<any>(`/rl/owners/by-name/${encodeURIComponent(name)}/ledger`),
+  },
   rlTrips: {
     list: (params?: Record<string, string>) => {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';

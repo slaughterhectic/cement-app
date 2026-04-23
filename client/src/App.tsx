@@ -32,6 +32,8 @@ import PendingApprovals from './pages/PendingApprovals';
 import TransportDashboard from './pages/transportbook/TransportDashboard';
 import TruckOwners from './pages/transportbook/TruckOwners';
 import TruckOwnerLedger from './pages/transportbook/TruckOwnerLedger';
+import TransportOwners from './pages/transportbook/TransportOwners';
+import OwnerLedger from './pages/transportbook/OwnerLedger';
 import TransportTrips from './pages/transportbook/TransportTrips';
 import TransportInvoices from './pages/transportbook/TransportInvoices';
 import TransportPartners from './pages/transportbook/TransportPartners';
@@ -136,6 +138,8 @@ export default function App() {
           <Route path="/transportbook" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportDashboard /></BookGuard>} />
           <Route path="/transportbook/trucks" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TruckOwners /></BookGuard>} />
           <Route path="/transportbook/trucks/:id" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TruckOwnerLedger /></BookGuard>} />
+          <Route path="/transportbook/owners" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportOwners /></BookGuard>} />
+          <Route path="/transportbook/owners/:name" element={<BookGuard permission="access_transportbook" fallback="/no-access"><OwnerLedger /></BookGuard>} />
           <Route path="/transportbook/trips" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportTrips /></BookGuard>} />
           <Route path="/transportbook/invoices" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportInvoices /></BookGuard>} />
           <Route path="/transportbook/partners" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportPartners /></BookGuard>} />

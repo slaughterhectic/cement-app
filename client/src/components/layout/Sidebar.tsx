@@ -80,7 +80,8 @@ const truckNavItems = [
 
 const transportNavItems = [
   { to: '/transportbook', label: 'Dashboard', icon: LayoutDashboard },
-  { to: '/transportbook/trucks', label: 'Truck Owners', icon: Truck },
+  { to: '/transportbook/owners', label: 'Owners', icon: Users },
+  { to: '/transportbook/trucks', label: 'Trucks', icon: Truck },
   { to: '/transportbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/transportbook/invoices', label: 'ACC Billing', icon: Receipt },
   { to: '/transportbook/partners', label: 'Partners', icon: Users },
