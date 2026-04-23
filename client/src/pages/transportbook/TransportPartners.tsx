@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Plus, Trash2, X, ChevronDown, ChevronRight } from 'lucide-react';
+import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Plus, Trash2, X, ChevronDown, ChevronRight, Pencil, UserPlus } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -43,6 +43,11 @@ const emptyTxnForm = {
   remarks: '',
 };
 
+const emptyPartnerForm = {
+  name: '',
+  opening_capital: '',
+};
+
 export default function TransportPartners() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
@@ -54,6 +59,10 @@ export default function TransportPartners() {
   const [expandedPartner, setExpandedPartner] = useState<number | null>(null);
   const [transactions, setTransactions] = useState<Record<number, Transaction[]>>({});
   const [loadingTxns, setLoadingTxns] = useState<Record<number, boolean>>({});
+  const [partnerModalOpen, setPartnerModalOpen] = useState(false);
+  const [partnerForm, setPartnerForm] = useState(emptyPartnerForm);
+  const [editingPartner, setEditingPartner] = useState<PartnerRow | null>(null);
+  const [savingPartner, setSavingPartner] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -131,6 +140,57 @@ export default function TransportPartners() {
     }
   };
 
+  const openAddPartner = () => {
+    setEditingPartner(null);
+    setPartnerForm(emptyPartnerForm);
+    setPartnerModalOpen(true);
+  };
+
+  const openEditPartner = (partner: PartnerRow) => {
+    setEditingPartner(partner);
+    setPartnerForm({
+      name: partner.name,
+      opening_capital: String(partner.opening_capital || ''),
+    });
+    setPartnerModalOpen(true);
+  };
+
+  const handlePartnerSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!partnerForm.name.trim()) { addToast('Partner name is required', 'error'); return; }
+    setSavingPartner(true);
+    try {
+      const payload = {
+        name: partnerForm.name.trim(),
+        opening_capital: Number(partnerForm.opening_capital) || 0,
+      };
+      if (editingPartner) {
+        await api.rlPartners.update(editingPartner.id, payload);
+        addToast('Partner updated', 'success');
+      } else {
+        await api.rlPartners.create(payload);
+        addToast('Partner added', 'success');
+      }
+      setPartnerModalOpen(false);
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally {
+      setSavingPartner(false);
+    }
+  };
+
+  const handleDeletePartner = async (partner: PartnerRow) => {
+    if (!window.confirm(`Delete partner "${partner.name}"? This cannot be undone.`)) return;
+    try {
+      await api.rlPartners.delete(partner.id);
+      addToast('Partner deleted', 'success');
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+  };
+
   const handleDeleteTxn = async (partnerId: number, txId: number) => {
     if (!window.confirm('Delete this transaction?')) return;
     try {
@@ -155,14 +215,24 @@ export default function TransportPartners() {
           <h1 className="text-2xl font-bold text-heading">Partners</h1>
           <p className="text-sm text-gray-500 mt-1">Capital tracking for Rudra Logistics partners</p>
         </div>
-        <button
-          type="button"
-          onClick={() => openAddTxn()}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Transaction
-        </button>
+        <div className="flex flex-wrap items-center gap-2">
+          <button
+            type="button"
+            onClick={openAddPartner}
+            className="inline-flex items-center gap-2 rounded-lg border border-indigo-300 bg-white px-4 py-2.5 text-sm font-medium text-indigo-700 shadow-sm hover:bg-indigo-50 transition-colors"
+          >
+            <UserPlus className="h-4 w-4" />
+            Add Partner
+          </button>
+          <button
+            type="button"
+            onClick={() => openAddTxn()}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Transaction
+          </button>
+        </div>
       </div>
 
       {/* Summary Cards */}
@@ -210,9 +280,8 @@ export default function TransportPartners() {
                 <tr><td colSpan={8} className="px-4 py-8 text-center text-gray-400">No partners found</td></tr>
               ) : (
                 partners.map((partner) => (
-                  <>
+                  <Fragment key={partner.id}>
                     <tr
-                      key={partner.id}
                       className="border-b border-card-border hover:bg-indigo-50/30 transition-colors cursor-pointer"
                       onClick={() => toggleExpand(partner.id)}
                     >
@@ -231,18 +300,39 @@ export default function TransportPartners() {
                         {formatINR(partner.balance)}
                       </td>
                       <td className="px-4 py-3" onClick={(e) => e.stopPropagation()}>
-                        <button
-                          type="button"
-                          onClick={() => openAddTxn(partner.id)}
-                          className="inline-flex items-center gap-1 rounded-lg bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-200 transition-colors"
-                        >
-                          <Plus className="h-3 w-3" />
-                          Txn
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openAddTxn(partner.id)}
+                            className="inline-flex items-center gap-1 rounded-lg bg-indigo-100 px-2.5 py-1 text-xs font-medium text-indigo-700 hover:bg-indigo-200 transition-colors"
+                            title="Add transaction"
+                          >
+                            <Plus className="h-3 w-3" />
+                            Txn
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => openEditPartner(partner)}
+                            className="rounded p-1.5 text-gray-500 hover:bg-indigo-100 hover:text-indigo-600 transition-colors"
+                            title="Edit partner"
+                          >
+                            <Pencil className="h-4 w-4" />
+                          </button>
+                          {isAdmin() && (
+                            <button
+                              type="button"
+                              onClick={() => handleDeletePartner(partner)}
+                              className="rounded p-1.5 text-red-500 hover:bg-red-50 transition-colors"
+                              title="Delete partner"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          )}
+                        </div>
                       </td>
                     </tr>
                     {expandedPartner === partner.id && (
-                      <tr key={`txn-${partner.id}`} className="border-b border-card-border bg-gray-50">
+                      <tr className="border-b border-card-border bg-gray-50">
                         <td colSpan={8} className="px-6 py-4">
                           {loadingTxns[partner.id] ? (
                             <p className="text-sm text-gray-400 text-center py-4">Loading transactions...</p>
@@ -290,7 +380,7 @@ export default function TransportPartners() {
                         </td>
                       </tr>
                     )}
-                  </>
+                  </Fragment>
                 ))
               )}
             </tbody>
@@ -396,6 +486,64 @@ export default function TransportPartners() {
                   className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-60 transition-colors"
                 >
                   {saving ? 'Saving…' : 'Add Transaction'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Add / Edit Partner Modal */}
+      {partnerModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-white shadow-2xl">
+            <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+              <h2 className="font-semibold text-heading">{editingPartner ? 'Edit Partner' : 'Add Partner'}</h2>
+              <button type="button" onClick={() => setPartnerModalOpen(false)} className="rounded-lg p-1.5 hover:bg-gray-100 transition-colors">
+                <X className="h-5 w-5 text-gray-500" />
+              </button>
+            </div>
+            <form onSubmit={handlePartnerSubmit} className="p-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Partner Name *</label>
+                <input
+                  className="input-field"
+                  value={partnerForm.name}
+                  onChange={(e) => setPartnerForm((prev) => ({ ...prev, name: e.target.value }))}
+                  placeholder="e.g. Shubham"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">Opening Capital (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="input-field"
+                  value={partnerForm.opening_capital}
+                  onChange={(e) => setPartnerForm((prev) => ({ ...prev, opening_capital: e.target.value }))}
+                  placeholder="0"
+                />
+                <p className="mt-1 text-xs text-gray-500">
+                  Capital contributed before tracking started. Later contributions should be added as "Capital Deposit" transactions.
+                </p>
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setPartnerModalOpen(false)}
+                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingPartner}
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-60 transition-colors"
+                >
+                  {savingPartner ? 'Saving…' : editingPartner ? 'Update Partner' : 'Add Partner'}
                 </button>
               </div>
             </form>
