@@ -1,4 +1,4 @@
-import type { Request, Response, NextFunction } from 'express';
+import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
 import { getOne } from '../db/database';
 
@@ -26,16 +26,16 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   }
 }
 
-export function requirePermission(permissionName: string) {
+export function requirePermission(permissionName: string): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
-    if (!req.user) return res.status(401).json({ error: 'Unauthorized' });
-    if (req.user.role === 'admin') return next();
+    if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
+    if (req.user.role === 'admin') { next(); return; }
     const row = await getOne(
       'SELECT 1 FROM user_permissions WHERE user_id = $1 AND permission_name = $2',
       [req.user.id, permissionName]
     );
-    if (row) return next();
-    return res.status(403).json({ error: 'Permission denied' });
+    if (row) { next(); return; }
+    res.status(403).json({ error: 'Permission denied' });
   };
 }
 

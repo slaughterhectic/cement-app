@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { requirePermission } from '../middleware/auth';
 
 const router = Router();
 
@@ -19,9 +20,9 @@ router.get('/', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-router.put('/:key', async (req, res) => {
+router.put('/:key', requirePermission('manage_transport_rates'), async (req, res) => {
   try {
-    const { key } = req.params;
+    const key = String(req.params.key);
     if (!EDITABLE_KEYS.has(key)) return res.status(400).json({ error: 'Unknown setting' });
     const { value } = req.body;
     if (value === undefined || value === null || value === '') {

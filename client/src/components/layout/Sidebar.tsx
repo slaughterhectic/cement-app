@@ -85,6 +85,7 @@ const transportNavItems = [
   { to: '/transportbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/transportbook/invoices', label: 'ACC Billing', icon: Receipt },
   { to: '/transportbook/partners', label: 'Partners', icon: Users },
+  { to: '/transportbook/rates', label: 'Rates', icon: Settings, permission: 'manage_transport_rates' },
 ];
 
 const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string; hoverClass: string; defaultRoute: string }> = {
@@ -243,7 +244,10 @@ export function Sidebar() {
     : book === 'settings'
     ? settingsNavItems
     : book === 'transport'
-    ? transportNavItems
+    ? transportNavItems.filter((item) => {
+        if ((item as any).permission) return isAdmin() || hasPermission((item as any).permission);
+        return true;
+      })
     : truckNavItems.filter((item) => {
         if ((item as any).permission) return isAdmin() || hasPermission((item as any).permission);
         return true;
