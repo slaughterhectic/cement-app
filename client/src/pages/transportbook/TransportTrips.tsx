@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { Check, ChevronDown, Plus, Pencil, Search, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -108,6 +108,166 @@ function handlingRate(materialType: string, rates: RateSettings): number {
   if (materialType === 'Non-Trade') return rates.handling_non_trade;
   if (materialType === 'SOW') return rates.handling_sow;
   return 0;
+}
+
+interface SearchableOwnerSelectProps {
+  value: string;
+  onChange: (id: string) => void;
+  options: OwnerOption[];
+  placeholder: string;
+  allowClear?: boolean;
+  clearLabel?: string;
+  className?: string;
+  required?: boolean;
+}
+
+function SearchableOwnerSelect({
+  value,
+  onChange,
+  options,
+  placeholder,
+  allowClear = false,
+  clearLabel = 'All Trucks',
+  className = '',
+  required = false,
+}: SearchableOwnerSelectProps) {
+  const [open, setOpen] = useState(false);
+  const [query, setQuery] = useState('');
+  const wrapperRef = useRef<HTMLDivElement>(null);
+  const inputRef = useRef<HTMLInputElement>(null);
+
+  const selected = options.find((o) => String(o.id) === value);
+
+  const filtered = useMemo(() => {
+    const q = query.trim().toLowerCase();
+    if (!q) return options;
+    return options.filter(
+      (o) =>
+        o.truck_number.toLowerCase().includes(q) ||
+        o.owner_name.toLowerCase().includes(q),
+    );
+  }, [options, query]);
+
+  useEffect(() => {
+    if (!open) return;
+    const handle = (e: MouseEvent) => {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
+        setOpen(false);
+        setQuery('');
+      }
+    };
+    document.addEventListener('mousedown', handle);
+    return () => document.removeEventListener('mousedown', handle);
+  }, [open]);
+
+  useEffect(() => {
+    if (open) {
+      const t = setTimeout(() => inputRef.current?.focus(), 0);
+      return () => clearTimeout(t);
+    }
+    return;
+  }, [open]);
+
+  const pick = (id: string) => {
+    onChange(id);
+    setOpen(false);
+    setQuery('');
+  };
+
+  return (
+    <div ref={wrapperRef} className={`relative ${className}`}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        className={`input-field flex items-center justify-between gap-2 text-left w-full ${
+          selected ? 'text-heading' : 'text-heading/50'
+        }`}
+        aria-haspopup="listbox"
+        aria-expanded={open}
+      >
+        <span className="truncate">
+          {selected ? `${selected.truck_number} — ${selected.owner_name}` : placeholder}
+        </span>
+        <ChevronDown className={`h-4 w-4 text-heading/50 shrink-0 transition-transform ${open ? 'rotate-180' : ''}`} />
+      </button>
+      {/* Hidden input to satisfy native required validation when used in a form */}
+      {required && (
+        <input
+          tabIndex={-1}
+          aria-hidden="true"
+          required
+          value={value}
+          onChange={() => {}}
+          className="sr-only absolute inset-0 opacity-0 pointer-events-none"
+        />
+      )}
+      {open && (
+        <div className="absolute left-0 right-0 z-30 mt-1 rounded-lg border border-card-border bg-card shadow-xl overflow-hidden">
+          <div className="flex items-center gap-2 border-b border-card-border px-3 py-2">
+            <Search className="h-4 w-4 text-heading/50 shrink-0" />
+            <input
+              ref={inputRef}
+              type="text"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Escape') {
+                  e.preventDefault();
+                  setOpen(false);
+                  setQuery('');
+                } else if (e.key === 'Enter' && filtered.length > 0) {
+                  e.preventDefault();
+                  pick(String(filtered[0].id));
+                }
+              }}
+              placeholder="Search truck or owner…"
+              className="w-full bg-transparent text-sm text-heading placeholder:text-heading/40 focus:outline-none"
+            />
+          </div>
+          <ul className="max-h-64 overflow-y-auto py-1" role="listbox">
+            {allowClear && (
+              <li>
+                <button
+                  type="button"
+                  onClick={() => pick('')}
+                  className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 ${
+                    value === '' ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-heading/80'
+                  }`}
+                >
+                  <span>{clearLabel}</span>
+                  {value === '' && <Check className="h-4 w-4" />}
+                </button>
+              </li>
+            )}
+            {filtered.length === 0 ? (
+              <li className="px-3 py-3 text-center text-sm text-heading/50">No matches</li>
+            ) : (
+              filtered.map((o) => {
+                const isSelected = String(o.id) === value;
+                return (
+                  <li key={o.id}>
+                    <button
+                      type="button"
+                      onClick={() => pick(String(o.id))}
+                      className={`flex w-full items-center justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-indigo-50 dark:hover:bg-indigo-900/30 ${
+                        isSelected ? 'text-indigo-600 dark:text-indigo-400 font-medium' : 'text-heading/80'
+                      }`}
+                    >
+                      <span className="truncate">
+                        <span className="font-medium">{o.truck_number}</span>
+                        <span className="text-heading/60"> — {o.owner_name}</span>
+                      </span>
+                      {isSelected && <Check className="h-4 w-4 shrink-0" />}
+                    </button>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function computeLive(form: typeof emptyForm, rates: RateSettings) {
@@ -303,16 +463,15 @@ export default function TransportTrips() {
       <div className="card flex flex-wrap gap-4 p-4">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Truck:</label>
-          <select
-            className="input-field py-1.5 text-sm min-w-[160px]"
+          <SearchableOwnerSelect
             value={filterOwner}
-            onChange={(e) => setFilterOwner(e.target.value)}
-          >
-            <option value="">All Trucks</option>
-            {owners.map((o) => (
-              <option key={o.id} value={String(o.id)}>{o.truck_number} — {o.owner_name}</option>
-            ))}
-          </select>
+            onChange={setFilterOwner}
+            options={owners}
+            placeholder="All Trucks"
+            allowClear
+            clearLabel="All Trucks"
+            className="min-w-[220px]"
+          />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
@@ -384,7 +543,6 @@ export default function TransportTrips() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Truck</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Party</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">DCH</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Material</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Qty (T)</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">ACC Amt</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Handling</th>
@@ -398,10 +556,10 @@ export default function TransportTrips() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={15} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
+                <tr><td colSpan={14} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={15} className="px-4 py-12 text-center">
+                  <td colSpan={14} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">{rows.length === 0 ? 'No trips found' : 'No trips match current filters'}</p>
                     {rows.length === 0 && (
                       <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Log first trip</button>
@@ -420,11 +578,6 @@ export default function TransportTrips() {
                     <td className="px-3 py-2.5">
                       {row.dch_type ? (
                         <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{row.dch_type}</span>
-                      ) : '—'}
-                    </td>
-                    <td className="px-3 py-2.5">
-                      {row.material_type ? (
-                        <span className="rounded-full bg-purple-100 dark:bg-purple-900/40 px-2 py-0.5 text-xs font-medium text-purple-700 dark:text-purple-300">{row.material_type}</span>
                       ) : '—'}
                     </td>
                     <td className="px-3 py-2.5 text-right">{Number(row.qty).toFixed(2)}</td>
@@ -505,12 +658,13 @@ export default function TransportTrips() {
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Truck Owner *</label>
-                        <select className="input-field" value={form.truck_owner_id} onChange={f('truck_owner_id')} required>
-                          <option value="">Select truck owner</option>
-                          {owners.map((o) => (
-                            <option key={o.id} value={String(o.id)}>{o.truck_number} — {o.owner_name}</option>
-                          ))}
-                        </select>
+                        <SearchableOwnerSelect
+                          value={form.truck_owner_id}
+                          onChange={(id) => setForm((prev) => ({ ...prev, truck_owner_id: id }))}
+                          options={owners}
+                          placeholder="Select truck owner"
+                          required
+                        />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Builty Number</label>
