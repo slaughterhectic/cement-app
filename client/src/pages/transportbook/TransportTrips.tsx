@@ -435,11 +435,12 @@ export default function TransportTrips() {
       qty: acc.qty + Number(r.qty),
       acc_amount: acc.acc_amount + Number(r.acc_amount),
       commission_amount: acc.commission_amount + Number(r.commission_amount),
+      builty_charge: acc.builty_charge + Number(r.builty_charge || 0),
       diesel_advance: acc.diesel_advance + Number(r.diesel_advance),
       cash_advance: acc.cash_advance + Number(r.cash_advance),
       final_payment: acc.final_payment + Number(r.final_payment),
     }),
-    { qty: 0, acc_amount: 0, commission_amount: 0, diesel_advance: 0, cash_advance: 0, final_payment: 0 }
+    { qty: 0, acc_amount: 0, commission_amount: 0, builty_charge: 0, diesel_advance: 0, cash_advance: 0, final_payment: 0 }
   );
 
   return (
@@ -504,7 +505,7 @@ export default function TransportTrips() {
 
       {/* Summary Strip */}
       {visibleRows.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 lg:grid-cols-6">
+        <div className="grid grid-cols-3 gap-4 lg:grid-cols-7">
           <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Total Qty</p>
             <p className="text-lg font-bold text-heading">{totals.qty.toFixed(2)} T</p>
@@ -516,6 +517,10 @@ export default function TransportTrips() {
           <div className="card p-3 text-center border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30">
             <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Commission</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.commission_amount)}</p>
+          </div>
+          <div className="card p-3 text-center border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30">
+            <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Bilty</p>
+            <p className="text-lg font-bold text-heading">{formatINR(totals.builty_charge)}</p>
           </div>
           <div className="card p-3 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
             <p className="text-xs text-red-600 dark:text-red-400 font-medium">Diesel Adv</p>
