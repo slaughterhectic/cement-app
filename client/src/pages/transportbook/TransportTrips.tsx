@@ -42,7 +42,12 @@ interface TripRow {
   eway_hours_left: number | null;
 }
 
-interface OwnerOption { id: number; truck_number: string; owner_name: string; }
+interface OwnerOption {
+  id: number;
+  truck_number: string;
+  owner_name: string;
+  commission_pct?: number | null;
+}
 
 const emptyForm = {
   date: new Date().toISOString().split('T')[0],
@@ -665,7 +670,17 @@ export default function TransportTrips() {
                         <label className="block text-xs font-medium text-heading/70 mb-1">Truck Owner *</label>
                         <SearchableOwnerSelect
                           value={form.truck_owner_id}
-                          onChange={(id) => setForm((prev) => ({ ...prev, truck_owner_id: id }))}
+                          onChange={(id) => {
+                            const picked = owners.find((o) => String(o.id) === id);
+                            setForm((prev) => ({
+                              ...prev,
+                              truck_owner_id: id,
+                              commission_pct:
+                                picked && picked.commission_pct != null
+                                  ? String(picked.commission_pct)
+                                  : prev.commission_pct,
+                            }));
+                          }}
                           options={owners}
                           placeholder="Select truck owner"
                           required
@@ -716,9 +731,16 @@ export default function TransportTrips() {
                         <label className="block text-xs font-medium text-heading/70 mb-1">ACC Freight Rate (₹/T) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.acc_freight_rate} onChange={f('acc_freight_rate')} placeholder="0" required />
                       </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Commission % *</label>
-                        <input type="number" min="0" max="100" step="0.01" className="input-field" value={form.commission_pct} onChange={f('commission_pct')} placeholder="6.29" required />
+                      <div className="flex items-end">
+                        <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs w-full">
+                          <p className="text-heading/60">Commission</p>
+                          <p className="font-bold text-indigo-700 dark:text-indigo-300 text-sm">
+                            {Number(form.commission_pct || 0).toFixed(2)}%
+                            <span className="ml-2 text-[10px] font-normal text-heading/60">
+                              from truck master
+                            </span>
+                          </p>
+                        </div>
                       </div>
                       <div className="flex items-end">
                         <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs w-full">

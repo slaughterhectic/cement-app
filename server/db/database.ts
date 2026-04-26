@@ -589,6 +589,12 @@ export async function initializeDatabase() {
     await client.query(`
       ALTER TABLE rl_truck_owners ADD COLUMN IF NOT EXISTS active_since TEXT
     `);
+
+    // Per-owner default commission % — auto-populated into new trips so we
+    // don't have to remember each owner's rate when entering trips.
+    await client.query(`
+      ALTER TABLE rl_truck_owners ADD COLUMN IF NOT EXISTS commission_pct REAL DEFAULT 6.29
+    `);
     await client.query(`
       UPDATE rl_truck_owners SET active_since = to_char(COALESCE(created_at, NOW()), 'YYYY-MM-DD')
       WHERE is_active = 1 AND active_since IS NULL

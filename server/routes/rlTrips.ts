@@ -154,6 +154,17 @@ router.post('/', async (req, res) => {
     if (!truck_owner_id) return res.status(400).json({ error: 'Truck owner is required' });
     if (!party_name?.trim()) return res.status(400).json({ error: 'Party name is required' });
 
+    // Fall back to the owner's default commission % when the trip body omits it
+    let resolvedCommissionPct = Number(commission_pct);
+    if (!Number.isFinite(resolvedCommissionPct)) {
+      const owner = await getOne(
+        `SELECT commission_pct FROM rl_truck_owners WHERE id=$1`,
+        [Number(truck_owner_id)]
+      );
+      resolvedCommissionPct = Number(owner?.commission_pct);
+      if (!Number.isFinite(resolvedCommissionPct)) resolvedCommissionPct = 6.29;
+    }
+
     const row = await getOne(
       `INSERT INTO rl_trips
         (date, builty_number, do_number, truck_owner_id, party_name, location, dch_type, material_type,
@@ -174,7 +185,7 @@ router.post('/', async (req, res) => {
         normalizeMaterialType(material_type),
         Number(qty) || 0,
         Number(acc_freight_rate) || 0,
-        Number(commission_pct) ?? 6.29,
+        resolvedCommissionPct,
         Number(diesel_advance) || 0,
         Number(cash_advance) || 0,
         petrol_slip_number?.trim() || null,

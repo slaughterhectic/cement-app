@@ -141,12 +141,18 @@ router.get('/:id/ledger', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+function normalizeCommissionPct(v: any, fallback = 6.29): number {
+  const n = Number(v);
+  if (!Number.isFinite(n) || n < 0 || n > 100) return fallback;
+  return n;
+}
+
 // POST /rl/truck-owners
 router.post('/', async (req, res) => {
   try {
     const {
       truck_number, owner_name, owner_phone, driver_name, driver_phone,
-      bank_account, ifsc_code, beneficiary_name, pan_number,
+      bank_account, ifsc_code, beneficiary_name, pan_number, commission_pct,
     } = req.body;
     if (!truck_number?.trim()) return res.status(400).json({ error: 'Truck number is required' });
     if (!owner_name?.trim()) return res.status(400).json({ error: 'Owner name is required' });
@@ -154,8 +160,8 @@ router.post('/', async (req, res) => {
     const today = new Date().toISOString().slice(0, 10);
     const row = await getOne(
       `INSERT INTO rl_truck_owners
-        (truck_number, owner_name, owner_phone, driver_name, driver_phone, bank_account, ifsc_code, beneficiary_name, pan_number, active_since)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10)
+        (truck_number, owner_name, owner_phone, driver_name, driver_phone, bank_account, ifsc_code, beneficiary_name, pan_number, active_since, commission_pct)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11)
        RETURNING *`,
       [
         truck_number.trim().toUpperCase(),
@@ -168,6 +174,7 @@ router.post('/', async (req, res) => {
         beneficiary_name?.trim() || null,
         pan_number?.trim() || null,
         today,
+        normalizeCommissionPct(commission_pct),
       ]
     );
     res.json(row);
@@ -179,27 +186,28 @@ router.put('/:id', async (req, res) => {
   try {
     const {
       truck_number, owner_name, owner_phone, driver_name, driver_phone,
-      bank_account, ifsc_code, beneficiary_name, pan_number, is_active,
+      bank_account, ifsc_code, beneficiary_name, pan_number, is_active, commission_pct,
     } = req.body;
     if (!truck_number?.trim()) return res.status(400).json({ error: 'Truck number is required' });
     if (!owner_name?.trim()) return res.status(400).json({ error: 'Owner name is required' });
 
     // Handle is_active transition: when going 0→1, set active_since = today so GPS
     // rent starts from this month (without touching it on other edits).
-    const prev = await getOne('SELECT is_active FROM rl_truck_owners WHERE id=$1', [req.params.id]);
+    const prev = await getOne('SELECT is_active, commission_pct FROM rl_truck_owners WHERE id=$1', [req.params.id]);
     if (!prev) return res.status(404).json({ error: 'Truck owner not found' });
     const nextActive = is_active !== undefined ? Number(is_active) : 1;
     const wasActive = Number(prev.is_active);
     const today = new Date().toISOString().slice(0, 10);
     const shouldResetActiveSince = wasActive === 0 && nextActive === 1;
+    const nextCommissionPct = normalizeCommissionPct(commission_pct, Number(prev.commission_pct ?? 6.29));
 
     const row = shouldResetActiveSince
       ? await getOne(
           `UPDATE rl_truck_owners SET
             truck_number=$1, owner_name=$2, owner_phone=$3, driver_name=$4, driver_phone=$5,
             bank_account=$6, ifsc_code=$7, beneficiary_name=$8, pan_number=$9, is_active=$10,
-            active_since=$11
-           WHERE id=$12 RETURNING *`,
+            active_since=$11, commission_pct=$12
+           WHERE id=$13 RETURNING *`,
           [
             truck_number.trim().toUpperCase(),
             owner_name.trim(),
@@ -212,14 +220,16 @@ router.put('/:id', async (req, res) => {
             pan_number?.trim() || null,
             nextActive,
             today,
+            nextCommissionPct,
             req.params.id,
           ]
         )
       : await getOne(
           `UPDATE rl_truck_owners SET
             truck_number=$1, owner_name=$2, owner_phone=$3, driver_name=$4, driver_phone=$5,
-            bank_account=$6, ifsc_code=$7, beneficiary_name=$8, pan_number=$9, is_active=$10
-           WHERE id=$11 RETURNING *`,
+            bank_account=$6, ifsc_code=$7, beneficiary_name=$8, pan_number=$9, is_active=$10,
+            commission_pct=$11
+           WHERE id=$12 RETURNING *`,
           [
             truck_number.trim().toUpperCase(),
             owner_name.trim(),
@@ -231,6 +241,7 @@ router.put('/:id', async (req, res) => {
             beneficiary_name?.trim() || null,
             pan_number?.trim() || null,
             nextActive,
+            nextCommissionPct,
             req.params.id,
           ]
         );

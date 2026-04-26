@@ -17,6 +17,7 @@ interface OwnerRow {
   pan_number: string | null;
   is_active: number;
   trip_count: number;
+  commission_pct: number | null;
 }
 
 const emptyForm = {
@@ -29,6 +30,7 @@ const emptyForm = {
   ifsc_code: '',
   beneficiary_name: '',
   pan_number: '',
+  commission_pct: '6.29',
 };
 
 function maskAccount(account: string | null): string {
@@ -80,6 +82,7 @@ export default function TruckOwners() {
       ifsc_code: row.ifsc_code || '',
       beneficiary_name: row.beneficiary_name || '',
       pan_number: row.pan_number || '',
+      commission_pct: row.commission_pct != null ? String(row.commission_pct) : '6.29',
     });
     setModalOpen(true);
   };
@@ -88,6 +91,11 @@ export default function TruckOwners() {
     e.preventDefault();
     if (!form.truck_number.trim()) { addToast('Truck number is required', 'error'); return; }
     if (!form.owner_name.trim()) { addToast('Owner name is required', 'error'); return; }
+    const commissionPct = Number(form.commission_pct);
+    if (!Number.isFinite(commissionPct) || commissionPct < 0 || commissionPct > 100) {
+      addToast('Commission % must be between 0 and 100', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -100,6 +108,7 @@ export default function TruckOwners() {
         ifsc_code: form.ifsc_code || null,
         beneficiary_name: form.beneficiary_name || null,
         pan_number: form.pan_number || null,
+        commission_pct: commissionPct,
       };
       if (editing) {
         await api.rlTruckOwners.update(editing.id, payload);
@@ -147,6 +156,7 @@ export default function TruckOwners() {
         beneficiary_name: row.beneficiary_name,
         pan_number: row.pan_number,
         is_active: nextActive,
+        commission_pct: row.commission_pct ?? 6.29,
       });
       addToast(`Truck ${verb}d`, 'success');
       load();
@@ -187,6 +197,7 @@ export default function TruckOwners() {
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Driver</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Bank Account</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">PAN</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Comm %</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Trips</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Status</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
@@ -194,10 +205,10 @@ export default function TruckOwners() {
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center">
+                  <td colSpan={10} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No truck owners added yet</p>
                     <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Add your first truck owner</button>
                   </td>
@@ -219,6 +230,9 @@ export default function TruckOwners() {
                     <td className="px-4 py-3 text-heading/70">{row.driver_name || '—'}</td>
                     <td className="px-4 py-3 text-heading/70 font-mono text-xs">{maskAccount(row.bank_account)}</td>
                     <td className="px-4 py-3 text-heading/70">{row.pan_number || '—'}</td>
+                    <td className="px-4 py-3 text-right text-heading/80 font-medium">
+                      {row.commission_pct != null ? `${Number(row.commission_pct).toFixed(2)}%` : '—'}
+                    </td>
                     <td className="px-4 py-3 text-right">
                       <span className="inline-flex items-center justify-center rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2.5 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">
                         {row.trip_count}
@@ -307,6 +321,21 @@ export default function TruckOwners() {
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Driver Phone</label>
                   <input className="input-field" value={form.driver_phone} onChange={f('driver_phone')} placeholder="Driver's mobile" />
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Commission % *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="0.01"
+                    className="input-field"
+                    value={form.commission_pct}
+                    onChange={f('commission_pct')}
+                    placeholder="6.29"
+                    required
+                  />
+                  <p className="mt-1 text-xs text-heading/60">Default rate auto-applied to new trips for this truck.</p>
                 </div>
               </div>
 
