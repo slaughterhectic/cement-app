@@ -285,7 +285,7 @@ export default function TripLog() {
             <p className="text-xl font-bold text-heading">{totalRow.quantity.toFixed(1)} T</p>
           </div>
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Net Freight</p>
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Freight</p>
             <p className="text-xl font-bold text-heading">{formatINR(totalRow.net_freight)}</p>
           </div>
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
@@ -317,7 +317,7 @@ export default function TripLog() {
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Material</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Qty (T)</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Route</th>
-                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Freight</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Total Freight</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Profit</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Actions</th>
               </tr>
