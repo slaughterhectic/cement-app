@@ -219,11 +219,11 @@ export default function TripLog() {
 
   const totalRow = rows.reduce((acc, r) => ({
     quantity: acc.quantity + Number(r.quantity),
-    net_freight: acc.net_freight + Number(r.net_freight),
+    total_freight: acc.total_freight + Number(r.total_freight),
     net_profit: acc.net_profit + Number(r.net_profit),
     total_fuel: acc.total_fuel + Number(r.diesel_amount),
     total_toll: acc.total_toll + Number(r.toll_expense),
-  }), { quantity: 0, net_freight: 0, net_profit: 0, total_fuel: 0, total_toll: 0 });
+  }), { quantity: 0, total_freight: 0, net_profit: 0, total_fuel: 0, total_toll: 0 });
 
   return (
     <div className="flex flex-col gap-6">
@@ -286,7 +286,7 @@ export default function TripLog() {
           </div>
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Freight</p>
-            <p className="text-xl font-bold text-heading">{formatINR(totalRow.net_freight)}</p>
+            <p className="text-xl font-bold text-heading">{formatINR(totalRow.total_freight)}</p>
           </div>
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Fuel</p>
@@ -343,7 +343,7 @@ export default function TripLog() {
                     <td className="px-4 py-3 text-heading/70 text-xs max-w-[140px] truncate">
                       {row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination || '—'}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.net_freight))}</td>
+                    <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.total_freight))}</td>
                     <td className={`px-4 py-3 text-right font-semibold ${Number(row.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(Number(row.net_profit))}
                     </td>
