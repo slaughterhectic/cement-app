@@ -401,7 +401,7 @@ app.get('*', (_req, res) => {
 async function start() {
   try {
     await initializeDatabase();
-    try { await backfillGpsRent(); }
+    try { await backfillGpsRent(true); }
     catch (e) { console.error('GPS rent backfill failed:', e); }
     app.listen(PORT, () => {
       console.log(`CementBook API running on http://localhost:${PORT}`);
