@@ -288,6 +288,16 @@ export const api = {
     list: () => request<any[]>('/rl/owners'),
     ledger: (name: string) => request<any>(`/rl/owners/by-name/${encodeURIComponent(name)}/ledger`),
   },
+  rlOwnerAdvances: {
+    list: (ownerName: string) =>
+      request<{ id: number; date: string; amount: number; remarks: string | null }[]>(
+        `/rl/owner-advances?owner_name=${encodeURIComponent(ownerName)}`
+      ),
+    create: (data: { owner_name: string; date: string; amount: number; remarks?: string }) =>
+      request<any>('/rl/owner-advances', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) =>
+      request<any>(`/rl/owner-advances/${id}`, { method: 'DELETE' }),
+  },
   rlTrips: {
     list: (params?: Record<string, string>) => {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';

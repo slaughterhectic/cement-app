@@ -601,6 +601,25 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS delivery_status TEXT DEFAULT 'pending'`);
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS delivered_at TEXT`);
 
+    // Owner-level advance payments — lump sums paid to a truck owner that are
+    // adjusted against the owner's net payable in the aggregated owner ledger.
+    // Stored at owner_name level (not truck_owner_id) because advances are
+    // typically given to the owner regardless of which truck earned the trips.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_owner_advances (
+        id SERIAL PRIMARY KEY,
+        owner_name TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE INDEX IF NOT EXISTS idx_rl_owner_advances_owner_name
+        ON rl_owner_advances (owner_name)
+    `);
+
     // Compliance tracking on invoices — GSTR / ITC status
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gstr1_status TEXT DEFAULT 'pending'`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gstr1_period TEXT`);

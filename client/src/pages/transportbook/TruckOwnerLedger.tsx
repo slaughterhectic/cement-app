@@ -26,7 +26,6 @@ interface TripEntry {
   builty_charge?: number;
   handling_charge?: number;
   final_payment?: number;
-  running_total: number;
   remarks?: string | null;
   // gps_rent-only fields
   period?: string;
@@ -115,7 +114,6 @@ export default function TruckOwnerLedger() {
         diesel_advance: r.diesel_advance,
         cash_advance: r.cash_advance,
         final_payment: r.final_payment,
-        running_total: r.running_total,
         period: r.period,
         amount: r.amount,
       })),
@@ -129,6 +127,7 @@ export default function TruckOwnerLedger() {
         totalCashAdvance: summary.totalCashAdvance,
         totalFinalPayment: summary.totalFinalPayment,
         totalGpsRent: summary.totalGpsRent ?? 0,
+        totalAdvancePaid: 0,
         netOwed: summary.netOwed ?? summary.totalFinalPayment,
       },
     });
@@ -280,13 +279,12 @@ export default function TruckOwnerLedger() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Diesel Adv</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Cash Adv</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final Pay</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Running</th>
               </tr>
             </thead>
             <tbody>
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={17} className="px-4 py-8 text-center text-heading/50">No entries found for this truck owner</td>
+                  <td colSpan={16} className="px-4 py-8 text-center text-heading/50">No entries found for this truck owner</td>
                 </tr>
               ) : (
                 ledger.map((row) => {
@@ -300,7 +298,6 @@ export default function TruckOwnerLedger() {
                         </td>
                         <td className="px-3 py-2.5 text-heading/50" colSpan={9} />
                         <td className="px-3 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">−{formatINR(Number(row.amount || 0))}</td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-indigo-600 dark:text-indigo-400">{formatINR(row.running_total)}</td>
                       </tr>
                     );
                   }
@@ -330,7 +327,6 @@ export default function TruckOwnerLedger() {
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.diesel_advance || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.cash_advance || 0))}</td>
                       <td className="px-3 py-2.5 text-right font-semibold text-green-600 dark:text-green-400">{formatINR(Number(row.final_payment || 0))}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-indigo-600 dark:text-indigo-400">{formatINR(row.running_total)}</td>
                     </tr>
                   );
                 })
@@ -351,17 +347,19 @@ export default function TruckOwnerLedger() {
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalDieselAdvance)}</td>
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalCashAdvance)}</td>
                   <td className="px-3 py-3 text-right text-green-600 dark:text-green-400">{formatINR(summary.totalFinalPayment)}</td>
-                  <td className="px-3 py-3 text-right text-indigo-600 dark:text-indigo-400">—</td>
                 </tr>
                 {summary.totalGpsRent ? (
                   <tr className="bg-slate-50 dark:bg-slate-900/30 font-medium border-t border-slate-200 dark:border-slate-800 text-sm">
                     <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={15}>
-                      GPS Rent (auto-debited monthly)
+                      Less: GPS Rent (auto-debited monthly)
                     </td>
                     <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">−{formatINR(summary.totalGpsRent)}</td>
-                    <td className="px-3 py-2 text-right text-indigo-700 dark:text-indigo-300">{formatINR(summary.netOwed ?? summary.totalFinalPayment)}</td>
                   </tr>
                 ) : null}
+                <tr className="bg-green-50 dark:bg-green-900/30 font-bold border-t-2 border-green-200 dark:border-green-800">
+                  <td className="px-3 py-3 text-green-700 dark:text-green-300" colSpan={15}>Final Payment</td>
+                  <td className="px-3 py-3 text-right text-green-700 dark:text-green-300">{formatINR(summary.netOwed ?? summary.totalFinalPayment)}</td>
+                </tr>
               </tfoot>
             )}
           </table>

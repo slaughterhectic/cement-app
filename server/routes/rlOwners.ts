@@ -92,6 +92,12 @@ router.get('/by-name/:name/ledger', async (req, res) => {
       [truckIds]
     );
 
+    const advances = await getAll(
+      `SELECT id, date, amount, remarks FROM rl_owner_advances
+       WHERE owner_name = $1 ORDER BY date ASC, id ASC`,
+      [ownerName]
+    );
+
     type Entry = { kind: 'trip' | 'gps_rent'; sortKey: string; payload: any; final_payment: number };
     const entries: Entry[] = [];
 
@@ -151,11 +157,7 @@ router.get('/by-name/:name/ledger', async (req, res) => {
 
     entries.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
 
-    let runningTotal = 0;
-    const ledger = entries.map((e) => {
-      runningTotal += e.final_payment;
-      return { ...e.payload, kind: e.kind, running_total: runningTotal };
-    });
+    const ledger = entries.map((e) => ({ ...e.payload, kind: e.kind }));
 
     const tripLedger = ledger.filter((r: any) => r.kind !== 'gps_rent');
     const totalTrips = tripLedger.length;
@@ -170,6 +172,10 @@ router.get('/by-name/:name/ledger', async (req, res) => {
     const totalGpsRent = ledger
       .filter((r: any) => r.kind === 'gps_rent')
       .reduce((s: number, r: any) => s + Number(r.amount || 0), 0);
+    const totalAdvancePaid = advances.reduce(
+      (s: number, a: any) => s + Number(a.amount || 0),
+      0
+    );
 
     const primary = trucks[0];
     res.json({
@@ -189,6 +195,12 @@ router.get('/by-name/:name/ledger', async (req, res) => {
         })),
       },
       ledger,
+      advances: advances.map((a: any) => ({
+        id: a.id,
+        date: a.date,
+        amount: Number(a.amount),
+        remarks: a.remarks,
+      })),
       summary: {
         totalTrips,
         totalQty,
@@ -200,7 +212,8 @@ router.get('/by-name/:name/ledger', async (req, res) => {
         totalCashAdvance,
         totalFinalPayment,
         totalGpsRent,
-        netOwed: totalFinalPayment - totalGpsRent,
+        totalAdvancePaid,
+        netOwed: totalFinalPayment - totalGpsRent - totalAdvancePaid,
       },
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }

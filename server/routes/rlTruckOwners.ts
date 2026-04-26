@@ -107,11 +107,7 @@ router.get('/:id/ledger', async (req, res) => {
 
     entries.sort((a, b) => (a.sortKey < b.sortKey ? -1 : a.sortKey > b.sortKey ? 1 : 0));
 
-    let runningTotal = 0;
-    const ledger = entries.map((e) => {
-      runningTotal += e.final_payment;
-      return { ...e.payload, kind: e.kind, running_total: runningTotal };
-    });
+    const ledger = entries.map((e) => ({ ...e.payload, kind: e.kind }));
 
     const tripLedger = ledger.filter((r: any) => r.kind !== 'gps_rent');
     const totalTrips = tripLedger.length;

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { ArrowLeft, FileDown } from 'lucide-react';
+import { ArrowLeft, FileDown, Plus, Trash2, X } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
@@ -27,10 +27,16 @@ interface Entry {
   builty_charge?: number;
   handling_charge?: number;
   final_payment?: number;
-  running_total: number;
   period?: string;
   amount?: number;
   remarks?: string | null;
+}
+
+interface AdvanceEntry {
+  id: number;
+  date: string;
+  amount: number;
+  remarks: string | null;
 }
 
 interface TruckInfo {
@@ -52,6 +58,7 @@ interface LedgerData {
     trucks: TruckInfo[];
   };
   ledger: Entry[];
+  advances: AdvanceEntry[];
   summary: {
     totalTrips: number;
     totalQty: number;
@@ -63,9 +70,12 @@ interface LedgerData {
     totalCashAdvance: number;
     totalFinalPayment: number;
     totalGpsRent: number;
+    totalAdvancePaid: number;
     netOwed: number;
   };
 }
+
+const todayISO = () => new Date().toISOString().slice(0, 10);
 
 export default function OwnerLedger() {
   const { name } = useParams<{ name: string }>();
@@ -74,6 +84,11 @@ export default function OwnerLedger() {
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<LedgerData | null>(null);
   const [loading, setLoading] = useState(true);
+
+  // Advance modal state
+  const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
+  const [advanceForm, setAdvanceForm] = useState({ date: todayISO(), amount: '', remarks: '' });
+  const [advanceSaving, setAdvanceSaving] = useState(false);
 
   const load = useCallback(async () => {
     if (!ownerName) return;
@@ -118,13 +133,53 @@ export default function OwnerLedger() {
         diesel_advance: r.diesel_advance,
         cash_advance: r.cash_advance,
         final_payment: r.final_payment,
-        running_total: r.running_total,
         period: r.period,
         amount: r.amount,
       })),
       summary: data.summary,
     });
     if (!ok) addToast('Please allow popups to download the ledger PDF', 'error');
+  };
+
+  const openAdvanceModal = () => {
+    setAdvanceForm({ date: todayISO(), amount: '', remarks: '' });
+    setAdvanceModalOpen(true);
+  };
+
+  const handleAdvanceSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(advanceForm.amount);
+    if (!Number.isFinite(amt) || amt <= 0) {
+      addToast('Amount must be positive', 'error');
+      return;
+    }
+    setAdvanceSaving(true);
+    try {
+      await api.rlOwnerAdvances.create({
+        owner_name: ownerName,
+        date: advanceForm.date,
+        amount: amt,
+        remarks: advanceForm.remarks.trim() || undefined,
+      });
+      addToast('Advance recorded', 'success');
+      setAdvanceModalOpen(false);
+      await load();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to save advance', 'error');
+    } finally {
+      setAdvanceSaving(false);
+    }
+  };
+
+  const handleAdvanceDelete = async (id: number) => {
+    if (!confirm('Delete this advance entry?')) return;
+    try {
+      await api.rlOwnerAdvances.delete(id);
+      addToast('Advance deleted', 'success');
+      await load();
+    } catch (err) {
+      addToast(err instanceof Error ? err.message : 'Failed to delete advance', 'error');
+    }
   };
 
   if (loading) {
@@ -137,7 +192,7 @@ export default function OwnerLedger() {
 
   if (!data) return null;
 
-  const { owner, ledger, summary } = data;
+  const { owner, ledger, advances, summary } = data;
 
   return (
     <div className="flex flex-col gap-6">
@@ -240,13 +295,18 @@ export default function OwnerLedger() {
           <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Net Payable to Owner</p>
           <p className="text-xl font-bold text-heading">{formatINR(summary.netOwed)}</p>
           <p className="text-xs text-heading/60 mt-0.5">
-            {summary.totalGpsRent ? `Less GPS rent ${formatINR(summary.totalGpsRent)}` : 'After all deductions'}
+            {summary.totalGpsRent || summary.totalAdvancePaid
+              ? [
+                  summary.totalGpsRent ? `GPS ${formatINR(summary.totalGpsRent)}` : null,
+                  summary.totalAdvancePaid ? `Advance ${formatINR(summary.totalAdvancePaid)}` : null,
+                ].filter(Boolean).join(' · ')
+              : 'After all deductions'}
           </p>
         </div>
       </div>
 
       {/* Advance Summary */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
         <div className="card p-4">
           <p className="text-xs text-heading/60 font-medium uppercase tracking-wider">Total Diesel Advances</p>
           <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(summary.totalDieselAdvance)}</p>
@@ -255,7 +315,64 @@ export default function OwnerLedger() {
           <p className="text-xs text-heading/60 font-medium uppercase tracking-wider">Total Cash Advances</p>
           <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(summary.totalCashAdvance)}</p>
         </div>
+        <div className="card p-4">
+          <div className="flex items-start justify-between">
+            <div>
+              <p className="text-xs text-heading/60 font-medium uppercase tracking-wider">Advance Paid</p>
+              <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(summary.totalAdvancePaid)}</p>
+              <p className="text-xs text-heading/60 mt-0.5">{advances.length} entr{advances.length === 1 ? 'y' : 'ies'}</p>
+            </div>
+            <button
+              type="button"
+              onClick={openAdvanceModal}
+              className="inline-flex items-center gap-1 rounded-lg bg-indigo-500 px-3 py-1.5 text-xs font-medium text-white hover:bg-indigo-600 transition-colors"
+            >
+              <Plus className="h-3.5 w-3.5" />
+              Add
+            </button>
+          </div>
+        </div>
       </div>
+
+      {/* Advances List */}
+      {advances.length > 0 && (
+        <div className="card overflow-hidden p-0">
+          <div className="border-b border-card-border px-5 py-4">
+            <h2 className="font-semibold text-heading">Advance Payments</h2>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
+                  <th className="px-4 py-2.5 font-medium text-indigo-700 dark:text-indigo-300">Date</th>
+                  <th className="px-4 py-2.5 font-medium text-indigo-700 dark:text-indigo-300 text-right">Amount</th>
+                  <th className="px-4 py-2.5 font-medium text-indigo-700 dark:text-indigo-300">Remarks</th>
+                  <th className="px-4 py-2.5" />
+                </tr>
+              </thead>
+              <tbody>
+                {advances.map((a) => (
+                  <tr key={a.id} className="border-b border-card-border last:border-0">
+                    <td className="px-4 py-2 whitespace-nowrap text-heading/80">{formatDate(a.date)}</td>
+                    <td className="px-4 py-2 text-right font-medium text-red-600 dark:text-red-400">{formatINR(a.amount)}</td>
+                    <td className="px-4 py-2 text-heading/70">{a.remarks || '—'}</td>
+                    <td className="px-4 py-2 text-right">
+                      <button
+                        type="button"
+                        onClick={() => handleAdvanceDelete(a.id)}
+                        className="inline-flex items-center justify-center rounded-md p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors"
+                        title="Delete advance"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Trip Table */}
       <div className="card overflow-hidden p-0">
@@ -280,13 +397,12 @@ export default function OwnerLedger() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Diesel</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Cash</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Running</th>
               </tr>
             </thead>
             <tbody>
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={15} className="px-4 py-8 text-center text-heading/50">No entries found for this owner</td>
+                  <td colSpan={14} className="px-4 py-8 text-center text-heading/50">No entries found for this owner</td>
                 </tr>
               ) : (
                 ledger.map((row) => {
@@ -301,7 +417,6 @@ export default function OwnerLedger() {
                         </td>
                         <td className="px-3 py-2.5" colSpan={8} />
                         <td className="px-3 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">−{formatINR(Number(row.amount || 0))}</td>
-                        <td className="px-3 py-2.5 text-right font-semibold text-indigo-600 dark:text-indigo-400">{formatINR(row.running_total)}</td>
                       </tr>
                     );
                   }
@@ -328,7 +443,6 @@ export default function OwnerLedger() {
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.diesel_advance || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.cash_advance || 0))}</td>
                       <td className="px-3 py-2.5 text-right font-semibold text-green-600 dark:text-green-400">{formatINR(Number(row.final_payment || 0))}</td>
-                      <td className="px-3 py-2.5 text-right font-semibold text-indigo-600 dark:text-indigo-400">{formatINR(row.running_total)}</td>
                     </tr>
                   );
                 })
@@ -346,22 +460,100 @@ export default function OwnerLedger() {
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalDieselAdvance)}</td>
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalCashAdvance)}</td>
                   <td className="px-3 py-3 text-right text-green-600 dark:text-green-400">{formatINR(summary.totalFinalPayment)}</td>
-                  <td className="px-3 py-3 text-right text-indigo-600 dark:text-indigo-400">—</td>
                 </tr>
                 {summary.totalGpsRent ? (
                   <tr className="bg-slate-50 dark:bg-slate-900/30 font-medium border-t border-slate-200 dark:border-slate-800 text-sm">
                     <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={13}>
-                      GPS Rent (auto-debited monthly, across all trucks)
+                      Less: GPS Rent (auto-debited monthly, across all trucks)
                     </td>
                     <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">−{formatINR(summary.totalGpsRent)}</td>
-                    <td className="px-3 py-2 text-right text-indigo-700 dark:text-indigo-300">{formatINR(summary.netOwed)}</td>
                   </tr>
                 ) : null}
+                {summary.totalAdvancePaid ? (
+                  <tr className="bg-slate-50 dark:bg-slate-900/30 font-medium border-t border-slate-200 dark:border-slate-800 text-sm">
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={13}>
+                      Less: Advance Paid ({advances.length} entr{advances.length === 1 ? 'y' : 'ies'})
+                    </td>
+                    <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">−{formatINR(summary.totalAdvancePaid)}</td>
+                  </tr>
+                ) : null}
+                <tr className="bg-green-50 dark:bg-green-900/30 font-bold border-t-2 border-green-200 dark:border-green-800">
+                  <td className="px-3 py-3 text-green-700 dark:text-green-300" colSpan={13}>Final Payment</td>
+                  <td className="px-3 py-3 text-right text-green-700 dark:text-green-300">{formatINR(summary.netOwed)}</td>
+                </tr>
               </tfoot>
             )}
           </table>
         </div>
       </div>
+
+      {/* Add Advance Modal */}
+      {advanceModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+          <div className="w-full max-w-md rounded-xl bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+              <h2 className="font-semibold text-heading">Add Advance for {ownerName}</h2>
+              <button type="button" onClick={() => setAdvanceModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                <X className="h-5 w-5 text-heading/60" />
+              </button>
+            </div>
+            <form onSubmit={handleAdvanceSubmit} className="p-5 flex flex-col gap-4">
+              <div>
+                <label className="block text-sm font-medium text-heading/80 mb-1">Date *</label>
+                <input
+                  type="date"
+                  className="input-field"
+                  value={advanceForm.date}
+                  onChange={(e) => setAdvanceForm((prev) => ({ ...prev, date: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-heading/80 mb-1">Amount (₹) *</label>
+                <input
+                  type="number"
+                  min="0.01"
+                  step="0.01"
+                  className="input-field"
+                  value={advanceForm.amount}
+                  onChange={(e) => setAdvanceForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  placeholder="0"
+                  required
+                />
+                <p className="mt-1 text-xs text-heading/60">
+                  Will be deducted from the owner's net payable.
+                </p>
+              </div>
+              <div>
+                <label className="block text-sm font-medium text-heading/80 mb-1">Remarks</label>
+                <textarea
+                  className="input-field resize-none"
+                  rows={2}
+                  value={advanceForm.remarks}
+                  onChange={(e) => setAdvanceForm((prev) => ({ ...prev, remarks: e.target.value }))}
+                  placeholder="Optional notes (e.g. paid via UPI, against UP72AT4909 trip)"
+                />
+              </div>
+              <div className="flex justify-end gap-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setAdvanceModalOpen(false)}
+                  className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={advanceSaving}
+                  className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 disabled:opacity-60 transition-colors"
+                >
+                  {advanceSaving ? 'Saving…' : 'Save Advance'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
