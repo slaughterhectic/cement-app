@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Pencil, Plus, Trash2, Calculator, ArrowUpRight, ArrowDownLeft, IndianRupee } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Pencil, Plus, Trash2, Calculator, ArrowUpRight, ArrowDownLeft, IndianRupee, ExternalLink } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -329,7 +330,11 @@ function PartyLoansSection() {
                   const pct = p.disbursed > 0 ? (p.repaid / p.disbursed) * 100 : 0;
                   return (
                     <tr key={p.party_id} className="hover:bg-surface">
-                      <td className="px-4 py-3 font-medium text-heading">{p.party_name}</td>
+                      <td className="px-4 py-3 font-medium">
+                        <Link to={`/parties/${p.party_id}`} className="inline-flex items-center gap-1 text-brand-600 hover:underline">
+                          {p.party_name} <ExternalLink className="h-3 w-3 opacity-60" />
+                        </Link>
+                      </td>
                       <td className="px-4 py-3 text-right tabular-nums text-amber-700 dark:text-amber-300">{formatINR(p.disbursed)}</td>
                       <td className="px-4 py-3 text-right tabular-nums">
                         <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(p.repaid)}</span>
