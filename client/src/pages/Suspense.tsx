@@ -14,7 +14,7 @@ interface SuspenseParty {
   opening_balance_type: string;
 }
 
-export default function Suspense() {
+export default function SuspensePage() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin());
   const [rows, setRows] = useState<SuspenseParty[]>([]);
