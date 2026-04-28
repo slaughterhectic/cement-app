@@ -71,6 +71,14 @@ router.get('/summary', async (_req, res) => {
       GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
     `);
     const bankOpeningRows = await getAll(`SELECT bank_name, opening_balance FROM bank_balances`);
+    const bankTransferInRows = await getAll(`
+      SELECT TRIM(to_bank) as bank_name, COALESCE(SUM(amount),0) as received
+      FROM bank_transfers GROUP BY TRIM(to_bank)
+    `);
+    const bankTransferOutRows = await getAll(`
+      SELECT TRIM(from_bank) as bank_name, COALESCE(SUM(amount),0) as paid_out
+      FROM bank_transfers GROUP BY TRIM(from_bank)
+    `);
 
     // Merge all distinct bank names
     const allNames = new Set<string>([
@@ -78,17 +86,22 @@ router.get('/summary', async (_req, res) => {
       ...bankPayOutRows.map((r: any) => r.bank_name),
       ...bankExpenseRows.map((r: any) => r.bank_name),
       ...bankOpeningRows.map((r: any) => r.bank_name),
+      ...bankTransferInRows.map((r: any) => r.bank_name),
+      ...bankTransferOutRows.map((r: any) => r.bank_name),
     ]);
 
     const banks = Array.from(allNames).map((name: string) => {
       const received = Number(bankReceivedRows.find((r: any) => r.bank_name === name)?.received ?? 0);
       const paidOut = Number(bankPayOutRows.find((r: any) => r.bank_name === name)?.paid_out ?? 0);
       const expense = Number(bankExpenseRows.find((r: any) => r.bank_name === name)?.paid ?? 0);
-      const totalPaid = paidOut + expense;
+      const transferIn = Number(bankTransferInRows.find((r: any) => r.bank_name?.toLowerCase() === name.toLowerCase())?.received ?? 0);
+      const transferOut = Number(bankTransferOutRows.find((r: any) => r.bank_name?.toLowerCase() === name.toLowerCase())?.paid_out ?? 0);
+      const totalReceived = received + transferIn;
+      const totalPaid = paidOut + expense + transferOut;
       const ob = Number(bankOpeningRows.find((r: any) =>
         r.bank_name?.toLowerCase() === name.toLowerCase()
       )?.opening_balance ?? 0);
-      return { bank_name: name, opening: ob, total_received: received, total_paid: totalPaid, balance: ob + received - totalPaid };
+      return { bank_name: name, opening: ob, total_received: totalReceived, total_paid: totalPaid, balance: ob + totalReceived - totalPaid };
     }).sort((a: any, b: any) => b.balance - a.balance);
 
     const bankLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='disbursement'`))?.t ?? 0);
@@ -251,6 +264,16 @@ router.get('/banks/:name/transactions', async (req, res) => {
         FROM loan_repayments lr
         LEFT JOIN loans l ON l.id = lr.loan_id
         WHERE lr.mode='bank' AND TRIM(LOWER(COALESCE(lr.bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, 'Transfer in', 'From '||from_bank, 'bank_transfer', id, amount, 0
+        FROM bank_transfers
+        WHERE TRIM(LOWER(to_bank))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, 'Transfer out', 'To '||to_bank, 'bank_transfer', id, 0, amount
+        FROM bank_transfers
+        WHERE TRIM(LOWER(from_bank))=TRIM(LOWER($1))
       ) x
       ORDER BY date DESC, source_id DESC
       LIMIT 500

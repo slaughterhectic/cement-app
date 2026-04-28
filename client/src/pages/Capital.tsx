@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, Fragment } from 'react';
-import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
+import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle, ChevronDown, ChevronRight, ArrowLeftRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -376,31 +376,83 @@ function ImprestSection() {
 
 type BankTxn = { date: string; particulars: string; counterparty: string | null; source: string; source_id: number; inflow: number; outflow: number };
 
-function BankSection({ summary }: { summary: CapitalSummary }) {
+function BankSection({ summary, onChange }: { summary: CapitalSummary; onChange: () => void }) {
+  const addToast = useToastStore((s) => s.addToast);
   const [expanded, setExpanded] = useState<string | null>(null);
   const [txns, setTxns] = useState<Record<string, { loading: boolean; rows: BankTxn[]; error?: string }>>({});
+  const [showTransfer, setShowTransfer] = useState(false);
+  const [transferForm, setTransferForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    from_bank: '',
+    to_bank: '',
+    amount: '',
+    remarks: '',
+  });
+  const [savingTransfer, setSavingTransfer] = useState(false);
 
   const toggle = async (bank: string) => {
     if (expanded === bank) { setExpanded(null); return; }
     setExpanded(bank);
-    if (!txns[bank]) {
-      setTxns((m) => ({ ...m, [bank]: { loading: true, rows: [] } }));
-      try {
-        const rows = await api.capital.bankTransactions(bank);
-        setTxns((m) => ({ ...m, [bank]: { loading: false, rows } }));
-      } catch (e) {
-        setTxns((m) => ({ ...m, [bank]: { loading: false, rows: [], error: e instanceof Error ? e.message : 'Failed' } }));
-      }
+    setTxns((m) => ({ ...m, [bank]: { loading: true, rows: [] } }));
+    try {
+      const rows = await api.capital.bankTransactions(bank);
+      setTxns((m) => ({ ...m, [bank]: { loading: false, rows } }));
+    } catch (e) {
+      setTxns((m) => ({ ...m, [bank]: { loading: false, rows: [], error: e instanceof Error ? e.message : 'Failed' } }));
+    }
+  };
+
+  const saveTransfer = async () => {
+    if (!transferForm.date || !transferForm.from_bank || !transferForm.to_bank || !transferForm.amount) {
+      addToast('All fields are required', 'error');
+      return;
+    }
+    if (transferForm.from_bank === transferForm.to_bank) {
+      addToast('From and To bank must be different', 'error');
+      return;
+    }
+    const amt = Number(transferForm.amount);
+    if (!(amt > 0)) { addToast('Amount must be > 0', 'error'); return; }
+    setSavingTransfer(true);
+    try {
+      await api.bankTransfers.create({
+        date: transferForm.date,
+        from_bank: transferForm.from_bank,
+        to_bank: transferForm.to_bank,
+        amount: amt,
+        remarks: transferForm.remarks.trim() || null,
+      });
+      addToast('Bank transfer recorded', 'success');
+      setShowTransfer(false);
+      setTransferForm({ date: new Date().toISOString().split('T')[0], from_bank: '', to_bank: '', amount: '', remarks: '' });
+      // Drop cached drill-downs so they refetch with the new transfer rows
+      setTxns({});
+      onChange();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally {
+      setSavingTransfer(false);
     }
   };
 
   return (
     <div className="space-y-3">
-      <div>
-        <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
-        <p className="text-xs text-heading/60 mt-0.5">
-          Manage bank accounts in <strong>Settings → Banks</strong>. Running balance = Opening + received payments − paid-out payments − expenses. Click a row to see every transaction.
-        </p>
+      <div className="flex items-start justify-between gap-3">
+        <div>
+          <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
+          <p className="text-xs text-heading/60 mt-0.5">
+            Manage bank accounts in <strong>Settings → Banks</strong>. Running balance = Opening + received payments − paid-out payments − expenses. Click a row to see every transaction.
+          </p>
+        </div>
+        {summary.banks.length >= 2 && (
+          <button
+            type="button"
+            onClick={() => setShowTransfer(true)}
+            className="inline-flex shrink-0 items-center gap-2 rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-700"
+          >
+            <ArrowLeftRight className="h-4 w-4" /> Transfer Between Banks
+          </button>
+        )}
       </div>
 
       {summary.banks.length === 0 ? (
@@ -494,6 +546,51 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
               </tr>
             </tbody>
           </table>
+        </div>
+      )}
+
+      {showTransfer && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-xl">
+            <h3 className="mb-1 text-base font-semibold text-heading">Transfer Between Banks</h3>
+            <p className="mb-4 text-xs text-heading/60">Records an outflow on the source bank and a matching inflow on the destination — total bank balance is unchanged.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
+                <input type="date" className="input-field w-full" value={transferForm.date} onChange={(e) => setTransferForm((p) => ({ ...p, date: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
+                <input type="number" min={0} step={0.01} className="input-field w-full" value={transferForm.amount} onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">From Bank *</label>
+                <select className="input-field w-full" value={transferForm.from_bank} onChange={(e) => setTransferForm((p) => ({ ...p, from_bank: e.target.value }))}>
+                  <option value="">Select source bank</option>
+                  {summary.banks.map((b) => <option key={b.bank_name} value={b.bank_name}>{b.bank_name} — {formatINR(b.balance)}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">To Bank *</label>
+                <select className="input-field w-full" value={transferForm.to_bank} onChange={(e) => setTransferForm((p) => ({ ...p, to_bank: e.target.value }))}>
+                  <option value="">Select destination bank</option>
+                  {summary.banks.filter((b) => b.bank_name !== transferForm.from_bank).map((b) => (
+                    <option key={b.bank_name} value={b.bank_name}>{b.bank_name} — {formatINR(b.balance)}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
+                <input type="text" className="input-field w-full" value={transferForm.remarks} onChange={(e) => setTransferForm((p) => ({ ...p, remarks: e.target.value }))} />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
+              <button type="button" onClick={() => setShowTransfer(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
+              <button type="button" onClick={saveTransfer} disabled={savingTransfer} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50">
+                {savingTransfer ? 'Saving…' : 'Save Transfer'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>
@@ -620,7 +717,7 @@ export default function Capital() {
           {/* Bank breakdown */}
           <section className="space-y-3">
             <h2 className="text-lg font-semibold text-heading">Bank breakdown</h2>
-            <BankSection summary={summary} />
+            <BankSection summary={summary} onChange={load} />
           </section>
 
           {/* Cash/Imprest section */}

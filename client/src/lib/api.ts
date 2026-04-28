@@ -179,6 +179,11 @@ export const api = {
     create: (data: any) => request<any>('/loan-repayments', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/loan-repayments/${id}`, { method: 'DELETE' }),
   },
+  bankTransfers: {
+    list: () => request<{ id: number; date: string; from_bank: string; to_bank: string; amount: number; remarks: string | null }[]>('/bank-transfers'),
+    create: (data: { date: string; from_bank: string; to_bank: string; amount: number; remarks?: string | null }) => request<any>('/bank-transfers', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/bank-transfers/${id}`, { method: 'DELETE' }),
+  },
   dealers: {
     list: () => request<any[]>('/dealers'),
     create: (data: any) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(data) }),
