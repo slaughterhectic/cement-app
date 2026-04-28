@@ -213,22 +213,27 @@ router.get('/banks/:name/transactions', async (req, res) => {
         WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
-        SELECT date, 'Truck expense', remark, 'truck_expense', id, 0, amount
-        FROM truck_expenses
-        WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+        SELECT te.date, COALESCE('Truck expense — '||te.category,'Truck expense'),
+          COALESCE(t.truck_number, te.description),
+          'truck_expense', te.id, 0, te.amount
+        FROM truck_expenses te
+        LEFT JOIN trucks t ON t.id = te.truck_id
+        WHERE te.mode='bank' AND TRIM(LOWER(COALESCE(te.bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
-        SELECT date, 'Driver payment', NULL, 'driver_payment', id, 0, amount
-        FROM driver_payments
-        WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+        SELECT dp.date, 'Driver payment', d.name, 'driver_payment', dp.id, 0, dp.amount
+        FROM driver_payments dp
+        LEFT JOIN drivers d ON d.id = dp.driver_id
+        WHERE dp.mode='bank' AND TRIM(LOWER(COALESCE(dp.bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
         SELECT tp.date,
           CASE WHEN COALESCE(tp.payment_type,'paid')='paid' THEN 'Transporter paid' ELSE 'Transporter received' END,
-          NULL, 'transporter_payment', tp.id,
+          tr.name, 'transporter_payment', tp.id,
           CASE WHEN tp.payment_type='received' THEN tp.amount ELSE 0 END,
           CASE WHEN COALESCE(tp.payment_type,'paid')='paid' THEN tp.amount ELSE 0 END
         FROM transporter_payments tp
+        LEFT JOIN transporters tr ON tr.id = tp.transporter_id
         WHERE tp.mode='bank' AND TRIM(LOWER(COALESCE(tp.bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
