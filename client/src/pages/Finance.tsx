@@ -175,6 +175,33 @@ function PartyLoansSection() {
   const totalRepaid = partyLoans.filter((l) => l.type === 'repayment').reduce((s, l) => s + l.amount, 0);
   const netOutstanding = totalDisbursed - totalRepaid;
 
+  // Per-party rollup
+  const perParty = useMemo(() => {
+    const map = new Map<number, { party_id: number; party_name: string; disbursed: number; repaid: number; lastDate: string }>();
+    partyLoans.forEach((l) => {
+      const cur = map.get(l.party_id) ?? { party_id: l.party_id, party_name: l.party_name, disbursed: 0, repaid: 0, lastDate: l.date };
+      if (l.type === 'disbursement') cur.disbursed += l.amount; else cur.repaid += l.amount;
+      if (l.date > cur.lastDate) cur.lastDate = l.date;
+      map.set(l.party_id, cur);
+    });
+    return Array.from(map.values())
+      .map((p) => ({ ...p, outstanding: p.disbursed - p.repaid }))
+      .sort((a, b) => b.outstanding - a.outstanding);
+  }, [partyLoans]);
+
+  const openRepayFor = (party_id: number) => {
+    setForm({
+      date: new Date().toISOString().split('T')[0],
+      party_id: String(party_id),
+      amount: '',
+      mode: 'bank',
+      bank_name: '',
+      type: 'repayment',
+      remarks: '',
+    });
+    setShowForm(true);
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between">
@@ -210,6 +237,60 @@ function PartyLoansSection() {
           <p className={`mt-1 text-xl font-bold tabular-nums ${netOutstanding > 0 ? 'text-red-800 dark:text-red-200' : 'text-emerald-800 dark:text-emerald-200'}`}>{formatINR(netOutstanding)}</p>
         </div>
       </div>
+
+      {/* Per-party rollup */}
+      {perParty.length > 0 && (
+        <div className="card overflow-hidden p-0">
+          <div className="border-b border-card-border bg-surface px-4 py-2">
+            <h3 className="text-sm font-semibold text-heading">By Party</h3>
+            <p className="text-[11px] text-heading/60">Click "Record Repayment" to log a payment received from that party.</p>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
+                  <th className="px-4 py-3">Party</th>
+                  <th className="px-4 py-3 text-right">Disbursed (₹)</th>
+                  <th className="px-4 py-3 text-right">Repaid (₹)</th>
+                  <th className="px-4 py-3 text-right">Outstanding (₹)</th>
+                  <th className="px-4 py-3">Last Activity</th>
+                  <th className="px-4 py-3"></th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-card-border">
+                {perParty.map((p) => {
+                  const pct = p.disbursed > 0 ? (p.repaid / p.disbursed) * 100 : 0;
+                  return (
+                    <tr key={p.party_id} className="hover:bg-surface">
+                      <td className="px-4 py-3 font-medium text-heading">{p.party_name}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-amber-700 dark:text-amber-300">{formatINR(p.disbursed)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(p.repaid)}</span>
+                        <p className="mt-0.5 text-[10px] text-heading/60">{pct.toFixed(0)}% of disbursed</p>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums">
+                        <span className={p.outstanding > 0 ? 'font-semibold text-red-700 dark:text-red-300' : 'text-emerald-600 dark:text-emerald-400'}>
+                          {formatINR(p.outstanding)}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 whitespace-nowrap text-heading/70">{formatDate(p.lastDate)}</td>
+                      <td className="px-4 py-3">
+                        <button
+                          type="button"
+                          onClick={() => openRepayFor(p.party_id)}
+                          className="inline-flex items-center gap-1 rounded bg-green-600 px-2.5 py-1 text-xs font-medium text-white hover:bg-green-700"
+                        >
+                          <ArrowDownLeft className="h-3 w-3" /> Record Repayment
+                        </button>
+                      </td>
+                    </tr>
+                  );
+                })}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
 
       {/* Table */}
       <div className="card overflow-hidden p-0">
