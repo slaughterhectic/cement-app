@@ -38,7 +38,7 @@ type Book = 'cement' | 'truck' | 'transport' | 'finance' | 'settings';
 function detectBook(pathname: string): Book {
   if (pathname.startsWith('/truckbook')) return 'truck';
   if (pathname.startsWith('/transportbook')) return 'transport';
-  if (pathname === '/capital' || pathname === '/finance') return 'finance';
+  if (pathname === '/capital' || pathname === '/finance' || pathname === '/assets') return 'finance';
   if (pathname === '/settings' || pathname === '/users') return 'settings';
   return 'cement';
 }

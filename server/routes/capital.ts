@@ -73,8 +73,8 @@ router.get('/summary', async (_req, res) => {
       `),
       getOne(`
         SELECT
-          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND type='disbursement'),0) as cash_disbursed,
-          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND type='repayment'),0)    as cash_repaid,
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND type='disbursement' AND cash_handler IS NULL),0) as cash_disbursed,
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND type='repayment'    AND cash_handler IS NULL),0) as cash_repaid,
           COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND type='disbursement'),0) as bank_disbursed,
           COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND type='repayment'),0)    as bank_repaid
         FROM party_loans

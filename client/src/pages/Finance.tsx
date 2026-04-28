@@ -156,6 +156,7 @@ function PartyLoansSection() {
   const [partyLoans, setPartyLoans] = useState<PartyLoan[]>([]);
   const [parties, setParties] = useState<{ id: number; name: string }[]>([]);
   const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
+  const [handlers, setHandlers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState({
@@ -164,6 +165,7 @@ function PartyLoansSection() {
     amount: '',
     mode: 'bank' as 'bank' | 'cash',
     bank_name: '',
+    cash_handler: '',
     type: 'disbursement' as 'disbursement' | 'repayment',
     remarks: '',
   });
@@ -173,14 +175,16 @@ function PartyLoansSection() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [loans, pts, bks] = await Promise.all([
+      const [loans, pts, bks, hdl] = await Promise.all([
         api.partyLoans.list(),
         api.parties.list(),
         api.capital.banks(),
+        api.imprest.handlers(),
       ]);
       setPartyLoans(loans as PartyLoan[]);
       setParties((pts as any[]).filter((p) => p.type !== 'supplier'));
       setBanks(bks as any[]);
+      setHandlers((hdl as any[]).map((h: any) => h.handler_name));
     } catch {
       addToast('Failed to load party loans', 'error');
     } finally {
@@ -195,6 +199,10 @@ function PartyLoansSection() {
       addToast('Date, party and amount are required', 'error');
       return;
     }
+    if (form.mode === 'cash' && !form.cash_handler) {
+      addToast('Select a cash handler', 'error');
+      return;
+    }
     setSaving(true);
     try {
       await api.partyLoans.create({
@@ -203,12 +211,13 @@ function PartyLoansSection() {
         amount: parseFloat(form.amount),
         mode: form.mode,
         bank_name: form.mode === 'bank' ? form.bank_name || null : null,
+        cash_handler: form.mode === 'cash' ? form.cash_handler || null : null,
         type: form.type,
         remarks: form.remarks.trim() || null,
       });
       addToast(form.type === 'disbursement' ? 'Loan disbursed' : 'Repayment recorded', 'success');
       setShowForm(false);
-      setForm({ date: new Date().toISOString().split('T')[0], party_id: '', amount: '', mode: 'bank', bank_name: '', type: 'disbursement', remarks: '' });
+      setForm({ date: new Date().toISOString().split('T')[0], party_id: '', amount: '', mode: 'bank', bank_name: '', cash_handler: '', type: 'disbursement', remarks: '' });
       load();
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Save failed', 'error');
@@ -253,6 +262,7 @@ function PartyLoansSection() {
       amount: '',
       mode: 'bank',
       bank_name: '',
+      cash_handler: '',
       type: 'repayment',
       remarks: '',
     });
@@ -467,12 +477,20 @@ function PartyLoansSection() {
                   </button>
                 </div>
               </div>
-              {form.mode === 'bank' && (
+              {form.mode === 'bank' ? (
                 <div className="sm:col-span-2">
                   <label className="mb-1 block text-xs font-medium text-heading/70">Bank</label>
                   <select className="input-field w-full" value={form.bank_name} onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))}>
                     <option value="">Select bank</option>
                     {banks.map((b) => <option key={b.bank_name} value={b.bank_name}>{b.bank_name}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div className="sm:col-span-2">
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Cash Handler *</label>
+                  <select className="input-field w-full" value={form.cash_handler} onChange={(e) => setForm((p) => ({ ...p, cash_handler: e.target.value }))}>
+                    <option value="">Select handler</option>
+                    {handlers.map((h) => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
               )}
