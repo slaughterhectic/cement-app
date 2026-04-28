@@ -81,7 +81,7 @@ router.get('/parties-with-dues', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, party_id, amount, mode, bank_name, cash_handler, remarks, direction } = req.body;
+  const { date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction } = req.body;
   const dir = direction === 'pay' ? 'pay' : 'receive';
   try {
     // Non-admin users entering a past/future date need admin approval
@@ -99,14 +99,24 @@ router.post('/', async (req, res) => {
     const normalizedMode = mode || 'cash';
     const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
     const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+    // Suspense routing: only valid when mode='suspense', and the suspense party must exist + be type='suspense'
+    const susId = normalizedMode === 'suspense' ? Number(suspense_party_id) || null : null;
+    if (normalizedMode === 'suspense') {
+      if (!susId) return res.status(400).json({ error: 'Pick a suspense party for via-suspense payments' });
+      const sus = await getOne(`SELECT type FROM parties WHERE id=$1`, [susId]);
+      if (!sus || sus.type !== 'suspense') return res.status(400).json({ error: 'Selected party is not a suspense party' });
+      if (Number(susId) === Number(party_id)) return res.status(400).json({ error: 'Suspense and party must differ' });
+    }
 
     const result = await getOne(
-      `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, remarks, direction)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [date, party_id, amount, normalizedMode, bank, handler, remarks, dir]
+      `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [date, party_id, amount, normalizedMode, bank, handler, susId, remarks, dir]
     );
 
     const party = await getOne(`SELECT name FROM parties WHERE id=$1`, [party_id]);
+    // Only sync to imprest when this payment moved cash through a handler. Suspense routing
+    // and bank mode skip the cash book.
     await syncImprestForCashTxn({
       sourceTable: 'payments',
       sourceId: result.id,
@@ -114,8 +124,6 @@ router.post('/', async (req, res) => {
       cashHandler: handler,
       amount: Number(amount),
       date,
-      // direction 'pay' = we paid them (cash leaves handler → debit)
-      // direction 'receive' = they paid us (cash enters handler → credit)
       direction: dir === 'pay' ? 'debit' : 'credit',
       particulars: `${dir === 'pay' ? 'Payment to' : 'Receipt from'} ${party?.name ?? 'Party #' + party_id}`,
       narration: remarks || null,

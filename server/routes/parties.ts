@@ -11,6 +11,14 @@ router.get('/', async (_req, res) => {
         COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0) as total_purchases,
         COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id), 0) as total_paid,
         CASE
+          WHEN p.type = 'suspense' THEN
+            -- Suspense balance = direct payments + payments routed via this suspense (sign-flipped)
+            CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
+                 ELSE -COALESCE(p.opening_balance,0) END
+            + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
+            + COALESCE((SELECT SUM(amount) FROM payments WHERE suspense_party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
+            - COALESCE((SELECT SUM(amount) FROM payments WHERE suspense_party_id = p.id AND direction = 'pay'), 0)
           WHEN p.type = 'supplier' THEN
             -- Supplier outstanding = we owe them (positive). cr opening = we owe them, dr = they owe us (advance)
             CASE WHEN COALESCE(p.opening_balance_type,'cr') = 'cr' THEN COALESCE(p.opening_balance,0)
@@ -136,10 +144,42 @@ router.get('/:id/ledger', async (req, res) => {
     if (!party) return res.status(404).json({ error: 'Party not found' });
 
     const isSupplier = party.type === 'supplier';
+    const isSuspense = party.type === 'suspense';
 
     let entries: any[] = [];
 
-    if (isSupplier) {
+    if (isSuspense) {
+      // Suspense ledger = direct payments to/from this entity AND payments to other parties
+      // routed through this suspense (suspense_party_id = this party).
+      const directPayments = await getAll(`
+        SELECT p.date,
+          ('Direct payment - ' || COALESCE(p.mode,'bank')
+            || CASE WHEN p.bank_name IS NOT NULL THEN ' (' || p.bank_name || ')' ELSE '' END
+            || CASE WHEN p.direction='pay' THEN ' [Paid to suspense]' ELSE ' [Received from suspense]' END
+          ) AS particulars,
+          0 AS qty, 0 AS rate,
+          CASE WHEN p.direction='pay'    THEN p.amount ELSE 0 END AS debit,
+          CASE WHEN p.direction='receive' OR p.direction IS NULL THEN p.amount ELSE 0 END AS credit,
+          'payment' AS entry_type, p.id
+        FROM payments p WHERE p.party_id = $1
+      `, [party.id]);
+      // Payments routed through this suspense — flip debit/credit to reflect suspense's POV.
+      // direction='pay'    → we paid party X via suspense → suspense owes us less (credit on suspense side)
+      // direction='receive'→ party X paid us via suspense → suspense advanced us (debit on suspense side)
+      const viaSuspense = await getAll(`
+        SELECT p.date,
+          ('Via Suspense → ' || COALESCE(pa.name,'unknown')
+            || CASE WHEN p.direction='pay' THEN ' [Paid on our behalf]' ELSE ' [Collected on our behalf]' END
+          ) AS particulars,
+          0 AS qty, 0 AS rate,
+          CASE WHEN p.direction='receive' OR p.direction IS NULL THEN p.amount ELSE 0 END AS debit,
+          CASE WHEN p.direction='pay' THEN p.amount ELSE 0 END AS credit,
+          'payment_via_suspense' AS entry_type, p.id
+        FROM payments p LEFT JOIN parties pa ON pa.id = p.party_id
+        WHERE p.suspense_party_id = $1
+      `, [party.id]);
+      entries = [...directPayments, ...viaSuspense];
+    } else if (isSupplier) {
       // Purchases = credit (they supplied goods, we owe them)
       const purchases = await getAll(`
         SELECT pu.date, cb.name as particulars, pu.bags as qty, pu.purchase_rate as rate,

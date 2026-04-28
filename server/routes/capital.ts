@@ -44,6 +44,7 @@ router.get('/summary', async (_req, res) => {
           COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND direction='receive'),0) as bank_recv,
           COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND direction='pay'),0)     as bank_pay
         FROM payments
+        WHERE mode IN ('cash','bank')
       `),
       getOne(`
         SELECT
@@ -140,14 +141,15 @@ router.get('/summary', async (_req, res) => {
       `),
       // Outstanding receivable: rewritten as a sum of non-correlated aggregates so the planner
       // can use plain index scans instead of one correlated subquery per party row.
+      // Excludes both suppliers (they're payables) and suspense (tracked separately).
       getOne(`
         SELECT (
-          (SELECT COALESCE(SUM(CASE WHEN COALESCE(opening_balance_type,'dr')='dr' THEN COALESCE(opening_balance,0) ELSE -COALESCE(opening_balance,0) END),0) FROM parties WHERE type != 'supplier')
-          + (SELECT COALESCE(SUM(s.sale_amount),0) FROM sales s JOIN parties p ON p.id=s.party_id WHERE p.type != 'supplier')
-          + (SELECT COALESCE(SUM(pm.amount),0)    FROM payments pm JOIN parties p ON p.id=pm.party_id WHERE p.type != 'supplier' AND pm.direction='pay')
-          - (SELECT COALESCE(SUM(pm.amount),0)    FROM payments pm JOIN parties p ON p.id=pm.party_id WHERE p.type != 'supplier' AND (pm.direction='receive' OR pm.direction IS NULL))
-          + (SELECT COALESCE(SUM(pl.amount),0)    FROM party_loans pl JOIN parties p ON p.id=pl.party_id WHERE p.type != 'supplier' AND pl.type='disbursement')
-          - (SELECT COALESCE(SUM(pl.amount),0)    FROM party_loans pl JOIN parties p ON p.id=pl.party_id WHERE p.type != 'supplier' AND pl.type='repayment')
+          (SELECT COALESCE(SUM(CASE WHEN COALESCE(opening_balance_type,'dr')='dr' THEN COALESCE(opening_balance,0) ELSE -COALESCE(opening_balance,0) END),0) FROM parties WHERE type NOT IN ('supplier','suspense'))
+          + (SELECT COALESCE(SUM(s.sale_amount),0) FROM sales s JOIN parties p ON p.id=s.party_id WHERE p.type NOT IN ('supplier','suspense'))
+          + (SELECT COALESCE(SUM(pm.amount),0)    FROM payments pm JOIN parties p ON p.id=pm.party_id WHERE p.type NOT IN ('supplier','suspense') AND pm.direction='pay')
+          - (SELECT COALESCE(SUM(pm.amount),0)    FROM payments pm JOIN parties p ON p.id=pm.party_id WHERE p.type NOT IN ('supplier','suspense') AND (pm.direction='receive' OR pm.direction IS NULL))
+          + (SELECT COALESCE(SUM(pl.amount),0)    FROM party_loans pl JOIN parties p ON p.id=pl.party_id WHERE p.type NOT IN ('supplier','suspense') AND pl.type='disbursement')
+          - (SELECT COALESCE(SUM(pl.amount),0)    FROM party_loans pl JOIN parties p ON p.id=pl.party_id WHERE p.type NOT IN ('supplier','suspense') AND pl.type='repayment')
         ) as total
       `),
       getOne(`

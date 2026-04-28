@@ -479,7 +479,13 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE parties ADD COLUMN IF NOT EXISTS opening_balance_type TEXT NOT NULL DEFAULT 'dr'`);
     // Existing parties also need supplier type allowed in the check constraint
     await client.query(`ALTER TABLE parties DROP CONSTRAINT IF EXISTS parties_type_check`);
-    await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','supplier','other'))`);
+    await client.query(`ALTER TABLE parties ADD CONSTRAINT parties_type_check CHECK(type IN ('dealer','contractor','builder','institution','damage_buyer','supplier','other','suspense'))`);
+
+    // payments.mode now accepts 'suspense' for via-suspense routing
+    await client.query(`ALTER TABLE payments DROP CONSTRAINT IF EXISTS payments_mode_check`);
+    await client.query(`ALTER TABLE payments ADD CONSTRAINT payments_mode_check CHECK(mode IN ('bank','cash','suspense'))`);
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS suspense_party_id INTEGER REFERENCES parties(id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_suspense ON payments(suspense_party_id) WHERE suspense_party_id IS NOT NULL`);
 
     // --- Unified cash_handler column for every cash-capable table ---
     // Pre-existing rows stored the handler name in `bank_name`; this migrates them.

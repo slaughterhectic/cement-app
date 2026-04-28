@@ -20,9 +20,10 @@ const baseSchema = z
     date: z.string().min(1, 'Date is required'),
     party_id: z.coerce.number().int().positive('Party is required'),
     amount: amountField,
-    mode: z.enum(['bank', 'cash']),
+    mode: z.enum(['bank', 'cash', 'suspense']),
     bank_name: z.string().optional(),
     cash_handler: z.string().optional(),
+    suspense_party_id: z.coerce.number().int().optional(),
     remarks: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -34,6 +35,13 @@ const baseSchema = z
     if (data.mode === 'cash') {
       if (!data.cash_handler?.trim()) {
         ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a cash handler', path: ['cash_handler'] });
+      }
+    }
+    if (data.mode === 'suspense') {
+      if (!data.suspense_party_id || data.suspense_party_id <= 0) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Select a suspense party', path: ['suspense_party_id'] });
+      } else if (data.suspense_party_id === data.party_id) {
+        ctx.addIssue({ code: z.ZodIssueCode.custom, message: 'Suspense must differ from the party', path: ['suspense_party_id'] });
       }
     }
   });
@@ -73,6 +81,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
       mode: 'bank' as const,
       bank_name: '' as string,
       cash_handler: '' as string,
+      suspense_party_id: 0,
       remarks: '',
     }),
     []
@@ -95,8 +104,9 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   const partyId = watch('party_id');
   const mode = watch('mode');
 
-  // All parties shown regardless of direction
-  const parties = allParties;
+  // Regular parties shown in the party picker; suspense routed separately via dropdown
+  const parties = useMemo(() => allParties.filter((p) => p.type !== 'suspense'), [allParties]);
+  const suspenseParties = useMemo(() => allParties.filter((p) => p.type === 'suspense'), [allParties]);
 
   const selectedParty = useMemo(
     () => allParties.find((p) => p.id === Number(partyId)),
@@ -205,6 +215,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         mode: values.mode,
         bank_name: values.mode === 'bank' ? (values.bank_name || null) : null,
         cash_handler: values.mode === 'cash' ? (values.cash_handler || null) : null,
+        suspense_party_id: values.mode === 'suspense' ? (values.suspense_party_id || null) : null,
         remarks: values.remarks?.trim() || null,
         direction,
       });
@@ -371,6 +382,19 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             >
               Cash
             </button>
+            <button
+              type="button"
+              onClick={() => setValue('mode', 'suspense', { shouldValidate: true })}
+              className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium transition-colors ${
+                mode === 'suspense'
+                  ? 'border-purple-600 bg-purple-600 text-white'
+                  : 'border-card-border bg-card text-heading/80 hover:bg-surface'
+              }`}
+              disabled={suspenseParties.length === 0}
+              title={suspenseParties.length === 0 ? 'Add a Suspense party first' : 'Route via a Suspense entity'}
+            >
+              Suspense
+            </button>
           </div>
           <input type="hidden" {...register('mode')} />
         </div>
@@ -403,6 +427,20 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
               <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">No cash handlers configured — add one in Capital → Add Cash Handler.</p>
             )}
             <p className="mt-1 text-xs text-heading/60">This cash movement will be recorded against the handler's cash book automatically.</p>
+          </div>
+        )}
+
+        {mode === 'suspense' && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Via Suspense *</label>
+            <select className="input-field w-full" {...register('suspense_party_id')}>
+              <option value="">Select suspense party</option>
+              {suspenseParties.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            {errors.suspense_party_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.suspense_party_id.message}</p>}
+            <p className="mt-1 text-xs text-heading/60">No bank or cash will move — the entry posts to both the party's and the suspense ledger.</p>
           </div>
         )}
 
