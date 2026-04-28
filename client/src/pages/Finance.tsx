@@ -147,6 +147,7 @@ interface PartyLoan {
   amount: number;
   mode: 'bank' | 'cash';
   bank_name: string | null;
+  cash_handler: string | null;
   type: 'disbursement' | 'repayment';
   remarks: string | null;
 }
@@ -171,7 +172,29 @@ function PartyLoansSection() {
     remarks: '',
   });
   const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
   const pg = usePagination(partyLoans, 15);
+
+  const openEditEntry = (l: PartyLoan) => {
+    setEditId(l.id);
+    setForm({
+      date: l.date,
+      party_id: String(l.party_id),
+      amount: String(l.amount),
+      mode: l.mode,
+      bank_name: l.bank_name ?? '',
+      cash_handler: l.cash_handler ?? '',
+      type: l.type,
+      remarks: l.remarks ?? '',
+    });
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditId(null);
+    setForm({ date: new Date().toISOString().split('T')[0], party_id: '', amount: '', mode: 'bank', bank_name: '', cash_handler: '', type: 'disbursement', remarks: '' });
+  };
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -206,7 +229,7 @@ function PartyLoansSection() {
     }
     setSaving(true);
     try {
-      await api.partyLoans.create({
+      const payload = {
         date: form.date,
         party_id: Number(form.party_id),
         amount: parseFloat(form.amount),
@@ -215,10 +238,15 @@ function PartyLoansSection() {
         cash_handler: form.mode === 'cash' ? form.cash_handler || null : null,
         type: form.type,
         remarks: form.remarks.trim() || null,
-      });
-      addToast(form.type === 'disbursement' ? 'Loan disbursed' : 'Repayment recorded', 'success');
-      setShowForm(false);
-      setForm({ date: new Date().toISOString().split('T')[0], party_id: '', amount: '', mode: 'bank', bank_name: '', cash_handler: '', type: 'disbursement', remarks: '' });
+      };
+      if (editId != null) {
+        await api.partyLoans.update(editId, payload);
+        addToast('Updated', 'success');
+      } else {
+        await api.partyLoans.create(payload);
+        addToast(form.type === 'disbursement' ? 'Loan disbursed' : 'Repayment recorded', 'success');
+      }
+      closeForm();
       load();
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Save failed', 'error');
@@ -407,14 +435,21 @@ function PartyLoansSection() {
                       </span>
                     </td>
                     <td className="px-4 py-3 text-heading/70 capitalize">
-                      {l.mode}{l.bank_name ? ` — ${l.bank_name}` : ''}
+                      {l.mode}
+                      {l.mode === 'bank' && l.bank_name ? ` — ${l.bank_name}` : ''}
+                      {l.mode === 'cash' && l.cash_handler ? ` — ${l.cash_handler}` : ''}
                     </td>
                     <td className="px-4 py-3 text-heading/70 max-w-[150px] truncate">{l.remarks || '—'}</td>
                     {isAdmin && (
                       <td className="px-4 py-3">
-                        <button type="button" onClick={() => handleDelete(l.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => openEditEntry(l)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30" title="Edit">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button type="button" onClick={() => handleDelete(l.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -431,7 +466,7 @@ function PartyLoansSection() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-lg rounded-xl bg-card p-6 shadow-xl">
-            <h3 className="mb-4 text-base font-semibold text-heading">Add Party Loan Entry</h3>
+            <h3 className="mb-4 text-base font-semibold text-heading">{editId != null ? 'Edit Party Loan Entry' : 'Add Party Loan Entry'}</h3>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
@@ -505,7 +540,7 @@ function PartyLoansSection() {
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
-              <button type="button" onClick={() => setShowForm(false)} className="btn-secondary">Cancel</button>
+              <button type="button" onClick={closeForm} className="btn-secondary">Cancel</button>
               <button type="button" onClick={handleSave} disabled={saving} className="btn-primary disabled:opacity-50">
                 {saving ? 'Saving…' : 'Save'}
               </button>

@@ -94,7 +94,11 @@ router.get('/summary', async (_req, res) => {
       `),
       getAll(`
         SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as received
-        FROM payments WHERE mode='bank' AND direction='receive'
+        FROM (
+          SELECT bank_name, amount FROM payments WHERE mode='bank' AND direction='receive'
+          UNION ALL SELECT bank_name, amount FROM party_loans WHERE mode='bank' AND type='repayment'
+          UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND payment_type='received'
+        ) combined
         GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
       `),
       getAll(`
@@ -110,6 +114,8 @@ router.get('/summary', async (_req, res) => {
           UNION ALL SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
           UNION ALL SELECT bank_name, amount FROM assets WHERE mode='bank'
+          UNION ALL SELECT bank_name, amount FROM party_loans WHERE mode='bank' AND type='disbursement'
+          UNION ALL SELECT bank_name, amount FROM loan_repayments WHERE mode='bank'
         ) combined
         GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
       `),

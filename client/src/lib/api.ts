@@ -219,6 +219,7 @@ export const api = {
   partyLoans: {
     list: () => request<any[]>('/party-loans'),
     create: (data: any) => request<any>('/party-loans', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/party-loans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/party-loans/${id}`, { method: 'DELETE' }),
   },
   trucks: {
