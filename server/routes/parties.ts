@@ -27,6 +27,8 @@ router.get('/', async (_req, res) => {
             + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND direction = 'pay'), 0)
             - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id = p.id AND (direction = 'receive' OR direction IS NULL)), 0)
             - COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id = p.id), 0)
+            + COALESCE((SELECT SUM(amount) FROM party_loans WHERE party_id = p.id AND type='disbursement'), 0)
+            - COALESCE((SELECT SUM(amount) FROM party_loans WHERE party_id = p.id AND type='repayment'), 0)
         END as outstanding,
         (SELECT MAX(d) FROM (
           SELECT date as d FROM sales WHERE party_id = p.id
@@ -100,13 +102,22 @@ router.get('/:id/summary', async (req, res) => {
       ? await getOne(`SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND direction='receive'`, [party.id]).then((r: any) => Number(r.v))
       : await getOne(`SELECT COALESCE(SUM(amount),0) as v FROM payments WHERE party_id=$1 AND (direction='receive' OR direction IS NULL)`, [party.id]).then((r: any) => Number(r.v));
 
+    const partyLoanDisbursed = isSupplier ? 0 : await getOne(
+      `SELECT COALESCE(SUM(amount),0) as v FROM party_loans WHERE party_id=$1 AND type='disbursement'`,
+      [party.id]
+    ).then((r: any) => Number(r.v));
+    const partyLoanRepaid = isSupplier ? 0 : await getOne(
+      `SELECT COALESCE(SUM(amount),0) as v FROM party_loans WHERE party_id=$1 AND type='repayment'`,
+      [party.id]
+    ).then((r: any) => Number(r.v));
+
     const obType = party.opening_balance_type || (isSupplier ? 'cr' : 'dr');
     const effOpening = obType === (isSupplier ? 'cr' : 'dr')
       ? (party.opening_balance || 0)
       : -(party.opening_balance || 0);
     const outstanding = isSupplier
       ? effOpening + Number(totals.total_purchases) + receivedFromThem - paidToThem - Number(totals.total_sales)
-      : effOpening + Number(totals.total_sales) + paidToThem - receivedFromThem;
+      : effOpening + Number(totals.total_sales) + paidToThem - receivedFromThem + partyLoanDisbursed - partyLoanRepaid;
 
     res.json({
       ...party,

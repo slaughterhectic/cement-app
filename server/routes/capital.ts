@@ -129,7 +129,7 @@ router.get('/summary', async (_req, res) => {
       ) sub WHERE sub.stock > 0
     `);
 
-    // Outstanding receivable = NET sum of all non-supplier balances (includes overpayments)
+    // Outstanding receivable = NET sum of all non-supplier balances (includes overpayments and loans given)
     const outstandingCalc = await getOne(`
       SELECT COALESCE(SUM(
         CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
@@ -137,6 +137,8 @@ router.get('/summary', async (_req, res) => {
         + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
         + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
         - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)
+        + COALESCE((SELECT SUM(amount) FROM party_loans WHERE party_id=p.id AND type='disbursement'),0)
+        - COALESCE((SELECT SUM(amount) FROM party_loans WHERE party_id=p.id AND type='repayment'),0)
       ),0) as total FROM parties p WHERE p.type != 'supplier'
     `);
     // Outstanding payable = NET sum of all supplier balances (includes overpayments)

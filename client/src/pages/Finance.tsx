@@ -23,6 +23,63 @@ function calcEMI(principal: number, annualRate: number, months: number): number 
   return (principal * r * Math.pow(1 + r, months)) / (Math.pow(1 + r, months) - 1);
 }
 
+function RepaymentDial({ value, min, max, onChange }: { value: number; min: number; max: number; onChange: (v: number) => void }) {
+  const lo = Math.max(0, min);
+  const hi = Math.max(lo, max);
+  const safeVal = Math.max(lo, Math.min(hi, value));
+  const pct = hi > lo ? ((safeVal - lo) / (hi - lo)) * 100 : 0;
+  const filledPct = hi > 0 ? (safeVal / hi) * 100 : 0;
+  // SVG donut geometry
+  const size = 140;
+  const stroke = 14;
+  const r = (size - stroke) / 2;
+  const c = 2 * Math.PI * r;
+  const dash = (filledPct / 100) * c;
+  return (
+    <div className="flex flex-col items-center gap-3">
+      <svg width={size} height={size} className="-rotate-90">
+        <circle cx={size / 2} cy={size / 2} r={r} fill="none" stroke="currentColor" strokeWidth={stroke} className="text-card-border/60" />
+        <circle
+          cx={size / 2}
+          cy={size / 2}
+          r={r}
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={stroke}
+          strokeLinecap="round"
+          strokeDasharray={`${dash} ${c}`}
+          className="text-green-500 transition-[stroke-dasharray] duration-150"
+        />
+        <text
+          x="50%"
+          y="50%"
+          dominantBaseline="middle"
+          textAnchor="middle"
+          transform={`rotate(90 ${size / 2} ${size / 2})`}
+          className="fill-heading text-sm font-semibold"
+        >
+          {filledPct.toFixed(0)}%
+        </text>
+      </svg>
+      <input
+        type="range"
+        min={lo}
+        max={hi}
+        step={Math.max(1, Math.round((hi - lo) / 200) || 1)}
+        value={safeVal}
+        onChange={(e) => onChange(Number(e.target.value))}
+        className="w-full accent-green-500"
+        disabled={hi <= lo}
+      />
+      <div className="flex w-full items-center justify-between text-[11px] text-heading/60">
+        <span>EMI {formatINR(lo)}</span>
+        <span>{pct.toFixed(0)}% of range</span>
+        <span>Total {formatINR(hi)}</span>
+      </div>
+    </div>
+  );
+}
+
 function EMICalculator() {
   const [p, setP] = useState('');
   const [r, setR] = useState('');
@@ -841,6 +898,23 @@ export default function Finance() {
             <p className="mb-4 text-xs text-heading/60">
               {repayLoan.lender_name} • Outstanding {formatINR(repayLoan.outstanding_principal ?? repayLoan.principal)}
             </p>
+            {(() => {
+              const outstandingAmt = Number(repayLoan.outstanding_principal ?? repayLoan.principal) || 0;
+              const minAmt = Math.min(Number(repayLoan.emi_amount) || 0, outstandingAmt);
+              const maxAmt = outstandingAmt;
+              const currentAmt = Number(repayForm.amount) || 0;
+              return (
+                <div className="mb-5 rounded-lg border border-card-border bg-surface/50 p-4">
+                  <p className="mb-3 text-xs font-medium text-heading/70">Drag the dial — min one EMI ({formatINR(minAmt)}), max full outstanding ({formatINR(maxAmt)}).</p>
+                  <RepaymentDial
+                    value={currentAmt}
+                    min={minAmt}
+                    max={maxAmt}
+                    onChange={(v) => setRepayForm((p) => ({ ...p, amount: String(v) }))}
+                  />
+                </div>
+              );
+            })()}
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
