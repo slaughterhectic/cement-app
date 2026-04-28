@@ -66,6 +66,7 @@ const settingsNavItems = [
 const financeNavItems = [
   { to: '/capital', label: 'Capital', icon: Wallet, permission: 'view_capital' },
   { to: '/finance', label: 'Finance', icon: Landmark, permission: 'view_finance' },
+  { to: '/assets', label: 'Assets', icon: Package, permission: 'view_finance' },
 ];
 
 const truckNavItems = [

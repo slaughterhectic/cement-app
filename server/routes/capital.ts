@@ -18,6 +18,7 @@ router.get('/summary', async (_req, res) => {
       transporterPayAggs,
       partyLoansAggs,
       loanRepayAggs,
+      assetsAggs,
       bankReceivedRows,
       bankPayOutRows,
       bankExpenseRows,
@@ -84,6 +85,13 @@ router.get('/summary', async (_req, res) => {
           COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank
         FROM loan_repayments
       `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank,
+          COALESCE(SUM(amount),0) as total
+        FROM assets
+      `),
       getAll(`
         SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as received
         FROM payments WHERE mode='bank' AND direction='receive'
@@ -101,6 +109,7 @@ router.get('/summary', async (_req, res) => {
           UNION ALL SELECT bank_name, amount FROM truck_expenses WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
+          UNION ALL SELECT bank_name, amount FROM assets WHERE mode='bank'
         ) combined
         GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
       `),
@@ -168,7 +177,8 @@ router.get('/summary', async (_req, res) => {
       - num(partyLoansAggs.cash_disbursed) + num(partyLoansAggs.cash_repaid)
       - num(truckExpAggs.cash_orphan) - num(driverPayAggs.cash_orphan)
       - num(transporterPayAggs.cash_orphan_paid) + num(transporterPayAggs.cash_orphan_recv)
-      - num(loanRepayAggs.cash_orphan);
+      - num(loanRepayAggs.cash_orphan)
+      - num(assetsAggs.cash_orphan);
 
     // Bank assembly — per-bank rollup
     const allNames = new Set<string>([
@@ -199,7 +209,8 @@ router.get('/summary', async (_req, res) => {
       - num(expAggs.bank) - num(truckExpAggs.bank) - num(driverPayAggs.bank)
       - num(transporterPayAggs.bank_paid) + num(transporterPayAggs.bank_recv)
       - num(partyLoansAggs.bank_disbursed) + num(partyLoansAggs.bank_repaid)
-      - num(loanRepayAggs.bank);
+      - num(loanRepayAggs.bank)
+      - num(assetsAggs.bank);
 
     res.json({
       cash,
@@ -211,6 +222,7 @@ router.get('/summary', async (_req, res) => {
       totalPayable: num(payableCalc?.total),
       totalLoans: num(loansCalc?.total),
       totalLoansGiven: num(loansGivenCalc?.total),
+      totalAssets: num(assetsAggs?.total),
       totalCapital: totalCash + totalBank,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
@@ -286,6 +298,11 @@ router.get('/banks/:name/transactions', async (req, res) => {
         FROM loan_repayments lr
         LEFT JOIN loans l ON l.id = lr.loan_id
         WHERE lr.mode='bank' AND TRIM(LOWER(COALESCE(lr.bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, COALESCE('Asset — '||name,'Asset purchase'), type, 'asset', id, 0, amount
+        FROM assets
+        WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
         SELECT date, 'Transfer in', 'From '||from_bank, 'bank_transfer', id, amount, 0

@@ -15,6 +15,7 @@ interface CapitalSummary {
   totalPayable: number;
   totalLoans: number;
   totalLoansGiven?: number;
+  totalAssets?: number;
   totalCapital: number;
 }
 

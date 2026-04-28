@@ -184,6 +184,11 @@ export const api = {
     create: (data: { date: string; from_bank: string; to_bank: string; amount: number; remarks?: string | null }) => request<any>('/bank-transfers', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/bank-transfers/${id}`, { method: 'DELETE' }),
   },
+  assets: {
+    list: () => request<{ id: number; date: string; name: string; type: string | null; amount: number; mode: 'bank' | 'cash'; bank_name: string | null; cash_handler: string | null; remarks: string | null }[]>('/assets'),
+    create: (data: { date: string; name: string; type?: string | null; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>('/assets', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/assets/${id}`, { method: 'DELETE' }),
+  },
   dealers: {
     list: () => request<any[]>('/dealers'),
     create: (data: any) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(data) }),

@@ -16,6 +16,7 @@ import Expenses from './pages/Expenses';
 import Reports from './pages/Reports';
 import Capital from './pages/Capital';
 import Finance from './pages/Finance';
+import Assets from './pages/Assets';
 import ImportPage from './pages/Import';
 import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
@@ -128,6 +129,7 @@ export default function App() {
           <Route path="/reports" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Reports /></BookGuard>} />
           <Route path="/capital" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_capital"><Capital /></HasAccess></BookGuard>} />
           <Route path="/finance" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_finance"><Finance /></HasAccess></BookGuard>} />
+          <Route path="/assets" element={<BookGuard permission="access_cementbook" fallback="/no-access"><HasAccess permission="view_finance"><Assets /></HasAccess></BookGuard>} />
           <Route path="/import" element={<BookGuard permission="access_cementbook" fallback="/no-access"><ImportPage /></BookGuard>} />
           {/* TruckBook routes — require access_truckbook */}
           <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><BookGuard permission="view_truckbook_dashboard" fallback="/truckbook/trucks"><TruckDashboard /></BookGuard></BookGuard>} />

@@ -1,0 +1,294 @@
+import { useEffect, useState, useCallback, useMemo } from 'react';
+import { Plus, Trash2, Package, TrendingUp } from 'lucide-react';
+import { api } from '../lib/api';
+import { formatINR, formatDate } from '../lib/format';
+import { useAuthStore, useToastStore } from '../lib/store';
+import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
+
+interface Asset {
+  id: number;
+  date: string;
+  name: string;
+  type: string | null;
+  amount: number;
+  mode: 'bank' | 'cash';
+  bank_name: string | null;
+  cash_handler: string | null;
+  remarks: string | null;
+}
+
+const ASSET_TYPES = ['Property', 'Vehicle', 'Equipment', 'Furniture', 'Electronics', 'Financial', 'Other'];
+
+export default function Assets() {
+  const addToast = useToastStore((s) => s.addToast);
+  const isAdmin = useAuthStore((s) => s.isAdmin());
+  const [assets, setAssets] = useState<Asset[]>([]);
+  const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
+  const [handlers, setHandlers] = useState<string[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [showForm, setShowForm] = useState(false);
+  const [saving, setSaving] = useState(false);
+  const emptyForm = {
+    date: new Date().toISOString().split('T')[0],
+    name: '',
+    type: '',
+    amount: '',
+    mode: 'bank' as 'bank' | 'cash',
+    bank_name: '',
+    cash_handler: '',
+    remarks: '',
+  };
+  const [form, setForm] = useState(emptyForm);
+  const pg = usePagination(assets, 20);
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [a, bks, hdl] = await Promise.all([
+        api.assets.list(),
+        api.capital.banks(),
+        api.imprest.handlers(),
+      ]);
+      setAssets(a);
+      setBanks(bks as any[]);
+      setHandlers((hdl as any[]).map((h: any) => h.handler_name));
+    } catch {
+      addToast('Failed to load assets', 'error');
+    } finally {
+      setLoading(false);
+    }
+  }, [addToast]);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleSave = async () => {
+    if (!form.date || !form.name || !form.amount) {
+      addToast('Date, name and amount are required', 'error');
+      return;
+    }
+    if (form.mode === 'cash' && !form.cash_handler) {
+      addToast('Select a cash handler', 'error');
+      return;
+    }
+    const amt = parseFloat(form.amount);
+    if (!(amt > 0)) { addToast('Amount must be > 0', 'error'); return; }
+
+    setSaving(true);
+    try {
+      await api.assets.create({
+        date: form.date,
+        name: form.name.trim(),
+        type: form.type || null,
+        amount: amt,
+        mode: form.mode,
+        bank_name: form.mode === 'bank' ? form.bank_name || null : null,
+        cash_handler: form.mode === 'cash' ? form.cash_handler || null : null,
+        remarks: form.remarks.trim() || null,
+      });
+      addToast('Asset recorded', 'success');
+      setShowForm(false);
+      setForm(emptyForm);
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleDelete = async (id: number) => {
+    if (!window.confirm('Delete this asset entry? Cash/bank balance will be restored.')) return;
+    try {
+      await api.assets.delete(id);
+      addToast('Deleted', 'success');
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+  };
+
+  const totalValue = assets.reduce((s, a) => s + a.amount, 0);
+  const byType = useMemo(() => {
+    const map = new Map<string, { type: string; count: number; total: number }>();
+    assets.forEach((a) => {
+      const t = a.type || 'Other';
+      const cur = map.get(t) ?? { type: t, count: 0, total: 0 };
+      cur.count += 1;
+      cur.total += a.amount;
+      map.set(t, cur);
+    });
+    return Array.from(map.values()).sort((a, b) => b.total - a.total);
+  }, [assets]);
+
+  return (
+    <div className="space-y-8">
+      <header>
+        <h1 className="text-2xl font-bold tracking-tight text-heading">Assets</h1>
+        <p className="mt-1 text-sm text-heading/60">Investments in property, vehicles, equipment and more. Each entry debits the chosen bank or cash handler.</p>
+      </header>
+
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        <div className="rounded-xl border border-purple-200 dark:border-purple-800 bg-purple-50/80 dark:bg-purple-900/30 p-5">
+          <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300">
+            <TrendingUp className="h-5 w-5" />
+            <p className="text-xs font-semibold uppercase tracking-wide">Total Asset Value</p>
+          </div>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-purple-800 dark:text-purple-200">{formatINR(totalValue)}</p>
+          <p className="mt-1 text-xs text-purple-600 dark:text-purple-400">Across {assets.length} item{assets.length === 1 ? '' : 's'}</p>
+        </div>
+        <div className="rounded-xl border border-card-border bg-card p-5">
+          <div className="flex items-center gap-2 text-heading/70">
+            <Package className="h-5 w-5" />
+            <p className="text-xs font-semibold uppercase tracking-wide">By Type</p>
+          </div>
+          <div className="mt-2 space-y-1">
+            {byType.length === 0 ? (
+              <p className="text-xs text-heading/50">No assets yet.</p>
+            ) : byType.slice(0, 4).map((t) => (
+              <div key={t.type} className="flex items-center justify-between text-xs">
+                <span className="text-heading/80">{t.type} <span className="text-heading/50">({t.count})</span></span>
+                <span className="font-semibold tabular-nums text-heading">{formatINR(t.total)}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="rounded-xl border border-card-border bg-card p-5 flex items-center justify-center">
+          <button
+            type="button"
+            onClick={() => setShowForm(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
+          >
+            <Plus className="h-4 w-4" /> Record New Asset
+          </button>
+        </div>
+      </div>
+
+      <div className="card overflow-hidden p-0">
+        <div className="border-b border-card-border bg-surface px-4 py-2">
+          <h2 className="text-sm font-semibold text-heading">Asset register</h2>
+        </div>
+        {loading ? (
+          <p className="px-4 py-8 text-center text-sm text-heading/60">Loading…</p>
+        ) : assets.length === 0 ? (
+          <p className="px-4 py-10 text-center text-sm text-heading/60">No assets recorded yet. Click "Record New Asset" to start.</p>
+        ) : (
+          <>
+          <div className="overflow-x-auto">
+            <table className="min-w-full text-sm">
+              <thead>
+                <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
+                  <th className="px-4 py-3">Date</th>
+                  <th className="px-4 py-3">Name</th>
+                  <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3 text-right">Amount (₹)</th>
+                  <th className="px-4 py-3">Paid From</th>
+                  <th className="px-4 py-3">Remarks</th>
+                  {isAdmin && <th className="px-4 py-3"></th>}
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-card-border">
+                {pg.pageData.map((a) => (
+                  <tr key={a.id} className="hover:bg-surface">
+                    <td className="px-4 py-3 whitespace-nowrap">{formatDate(a.date)}</td>
+                    <td className="px-4 py-3 font-medium text-heading">{a.name}</td>
+                    <td className="px-4 py-3">
+                      {a.type ? (
+                        <span className="inline-flex items-center rounded-full bg-purple-100 dark:bg-purple-900/40 px-2.5 py-0.5 text-xs font-medium text-purple-800 dark:text-purple-200">
+                          {a.type}
+                        </span>
+                      ) : <span className="text-heading/40">—</span>}
+                    </td>
+                    <td className="px-4 py-3 text-right tabular-nums font-semibold text-purple-700 dark:text-purple-300">{formatINR(a.amount)}</td>
+                    <td className="px-4 py-3 text-heading/70 capitalize">
+                      {a.mode === 'bank' ? `Bank — ${a.bank_name || '—'}` : `Cash — ${a.cash_handler || '—'}`}
+                    </td>
+                    <td className="px-4 py-3 text-heading/70 max-w-[200px] truncate">{a.remarks || '—'}</td>
+                    {isAdmin && (
+                      <td className="px-4 py-3">
+                        <button type="button" onClick={() => handleDelete(a.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </button>
+                      </td>
+                    )}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <PaginationBar pg={pg} />
+          </>
+        )}
+      </div>
+
+      {showForm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-card p-6 shadow-xl overflow-y-auto max-h-[90vh]">
+            <h3 className="mb-1 text-base font-semibold text-heading">Record New Asset</h3>
+            <p className="mb-4 text-xs text-heading/60">Amount will be deducted from the chosen bank or cash handler.</p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
+                <input type="date" className="input-field w-full" value={form.date} onChange={(e) => setForm((p) => ({ ...p, date: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Asset Name *</label>
+                <input type="text" className="input-field w-full" placeholder="e.g. Office Building, Pickup Truck" value={form.name} onChange={(e) => setForm((p) => ({ ...p, name: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Type</label>
+                <select className="input-field w-full" value={form.type} onChange={(e) => setForm((p) => ({ ...p, type: e.target.value }))}>
+                  <option value="">Select type</option>
+                  {ASSET_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
+                </select>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
+                <input type="number" min={0} step={0.01} className="input-field w-full" value={form.amount} onChange={(e) => setForm((p) => ({ ...p, amount: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Payment Type *</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setForm((p) => ({ ...p, mode: 'bank' }))}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${form.mode === 'bank' ? 'border-brand-500 bg-brand-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}>
+                    Bank
+                  </button>
+                  <button type="button" onClick={() => setForm((p) => ({ ...p, mode: 'cash' }))}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${form.mode === 'cash' ? 'border-brand-500 bg-brand-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}>
+                    Cash
+                  </button>
+                </div>
+              </div>
+              {form.mode === 'bank' ? (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Bank *</label>
+                  <select className="input-field w-full" value={form.bank_name} onChange={(e) => setForm((p) => ({ ...p, bank_name: e.target.value }))}>
+                    <option value="">Select bank</option>
+                    {banks.map((b) => <option key={b.bank_name} value={b.bank_name}>{b.bank_name}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Cash Handler *</label>
+                  <select className="input-field w-full" value={form.cash_handler} onChange={(e) => setForm((p) => ({ ...p, cash_handler: e.target.value }))}>
+                    <option value="">Select handler</option>
+                    {handlers.map((h) => <option key={h} value={h}>{h}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
+                <input type="text" className="input-field w-full" value={form.remarks} onChange={(e) => setForm((p) => ({ ...p, remarks: e.target.value }))} />
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
+              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
+              <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
+                {saving ? 'Saving…' : 'Save Asset'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
