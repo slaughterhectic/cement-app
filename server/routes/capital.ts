@@ -6,81 +6,171 @@ const router = Router();
 
 router.get('/summary', async (_req, res) => {
   try {
-    // Cash: imprest handlers
-    const handlers = await getAll(`
-      SELECT ih.handler_name, ih.opening_balance,
-        COALESCE((SELECT SUM(credit) FROM imprest_transactions WHERE handler_name=ih.handler_name),0) as total_received,
-        COALESCE((SELECT SUM(debit) FROM imprest_transactions WHERE handler_name=ih.handler_name),0) as total_spent
-      FROM imprest_handlers ih ORDER BY ih.handler_name
-    `);
+    // Fire every aggregate in parallel — most of these scale with one indexed scan,
+    // so the bottleneck becomes the slowest single query rather than the sum.
+    const num = (v: any) => Number(v ?? 0);
+    const [
+      handlers,
+      payAggs,
+      expAggs,
+      truckExpAggs,
+      driverPayAggs,
+      transporterPayAggs,
+      partyLoansAggs,
+      loanRepayAggs,
+      bankReceivedRows,
+      bankPayOutRows,
+      bankExpenseRows,
+      bankOpeningRows,
+      bankTransferInRows,
+      bankTransferOutRows,
+      stockCalc,
+      outstandingCalc,
+      payableCalc,
+      loansCalc,
+      loansGivenCalc,
+    ] = await Promise.all([
+      getAll(`
+        SELECT ih.handler_name, ih.opening_balance,
+          COALESCE((SELECT SUM(credit) FROM imprest_transactions WHERE handler_name=ih.handler_name),0) as total_received,
+          COALESCE((SELECT SUM(debit) FROM imprest_transactions WHERE handler_name=ih.handler_name),0) as total_spent
+        FROM imprest_handlers ih ORDER BY ih.handler_name
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND direction='receive' AND cash_handler IS NULL),0) as cash_orphan_recv,
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND direction='pay'     AND cash_handler IS NULL),0) as cash_orphan_pay,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND direction='receive'),0) as bank_recv,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND direction='pay'),0)     as bank_pay
+        FROM payments
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank
+        FROM expenses
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank
+        FROM truck_expenses
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank
+        FROM driver_payments
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL AND COALESCE(payment_type,'paid')='paid'),0) as cash_orphan_paid,
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL AND payment_type='received'),0)               as cash_orphan_recv,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'),0) as bank_paid,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND payment_type='received'),0)              as bank_recv
+        FROM transporter_payments
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND type='disbursement'),0) as cash_disbursed,
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND type='repayment'),0)    as cash_repaid,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND type='disbursement'),0) as bank_disbursed,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND type='repayment'),0)    as bank_repaid
+        FROM party_loans
+      `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank
+        FROM loan_repayments
+      `),
+      getAll(`
+        SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as received
+        FROM payments WHERE mode='bank' AND direction='receive'
+        GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
+      `),
+      getAll(`
+        SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as paid_out
+        FROM payments WHERE mode='bank' AND direction='pay'
+        GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
+      `),
+      getAll(`
+        SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as paid
+        FROM (
+          SELECT bank_name, amount FROM expenses WHERE mode='bank'
+          UNION ALL SELECT bank_name, amount FROM truck_expenses WHERE mode='bank'
+          UNION ALL SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
+          UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
+        ) combined
+        GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
+      `),
+      getAll(`SELECT bank_name, opening_balance FROM bank_balances`),
+      getAll(`SELECT TRIM(to_bank) as bank_name, COALESCE(SUM(amount),0) as received FROM bank_transfers GROUP BY TRIM(to_bank)`),
+      getAll(`SELECT TRIM(from_bank) as bank_name, COALESCE(SUM(amount),0) as paid_out FROM bank_transfers GROUP BY TRIM(from_bank)`),
+      getOne(`
+        SELECT COALESCE(SUM(sub.stock * sub.avg_rate),0) as value, COALESCE(SUM(sub.stock),0) as bags FROM (
+          SELECT cb.id,
+            (COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=cb.id),0)
+             + COALESCE((SELECT SUM(bags) FROM purchases          WHERE brand_id=cb.id),0)
+             - COALESCE((SELECT SUM(bags) FROM sales              WHERE brand_id=cb.id),0)) as stock,
+            COALESCE(
+              (COALESCE((SELECT SUM(bags * rate)          FROM godown_opening_stock WHERE brand_id=cb.id),0)
+             + COALESCE((SELECT SUM(bags * purchase_rate) FROM purchases            WHERE brand_id=cb.id),0))
+              / NULLIF(
+                  COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=cb.id),0)
+                + COALESCE((SELECT SUM(bags) FROM purchases            WHERE brand_id=cb.id),0), 0),
+            0) as avg_rate
+          FROM cement_brands cb
+        ) sub WHERE sub.stock > 0
+      `),
+      // Outstanding receivable: rewritten as a sum of non-correlated aggregates so the planner
+      // can use plain index scans instead of one correlated subquery per party row.
+      getOne(`
+        SELECT (
+          (SELECT COALESCE(SUM(CASE WHEN COALESCE(opening_balance_type,'dr')='dr' THEN COALESCE(opening_balance,0) ELSE -COALESCE(opening_balance,0) END),0) FROM parties WHERE type != 'supplier')
+          + (SELECT COALESCE(SUM(s.sale_amount),0) FROM sales s JOIN parties p ON p.id=s.party_id WHERE p.type != 'supplier')
+          + (SELECT COALESCE(SUM(pm.amount),0)    FROM payments pm JOIN parties p ON p.id=pm.party_id WHERE p.type != 'supplier' AND pm.direction='pay')
+          - (SELECT COALESCE(SUM(pm.amount),0)    FROM payments pm JOIN parties p ON p.id=pm.party_id WHERE p.type != 'supplier' AND (pm.direction='receive' OR pm.direction IS NULL))
+          + (SELECT COALESCE(SUM(pl.amount),0)    FROM party_loans pl JOIN parties p ON p.id=pl.party_id WHERE p.type != 'supplier' AND pl.type='disbursement')
+          - (SELECT COALESCE(SUM(pl.amount),0)    FROM party_loans pl JOIN parties p ON p.id=pl.party_id WHERE p.type != 'supplier' AND pl.type='repayment')
+        ) as total
+      `),
+      getOne(`
+        SELECT (
+          (SELECT COALESCE(SUM(CASE WHEN COALESCE(opening_balance_type,'cr')='cr' THEN COALESCE(opening_balance,0) ELSE -COALESCE(opening_balance,0) END),0) FROM parties WHERE type='supplier')
+          + (SELECT COALESCE(SUM(pu.purchase_amount),0) FROM purchases pu JOIN parties p ON p.id=pu.supplier_id WHERE p.type='supplier')
+          + (SELECT COALESCE(SUM(pm.amount),0)          FROM payments pm  JOIN parties p ON p.id=pm.party_id    WHERE p.type='supplier' AND pm.direction='receive')
+          - (SELECT COALESCE(SUM(pm.amount),0)          FROM payments pm  JOIN parties p ON p.id=pm.party_id    WHERE p.type='supplier' AND (pm.direction='pay' OR pm.direction IS NULL))
+          - (SELECT COALESCE(SUM(s.sale_amount),0)      FROM sales s      JOIN parties p ON p.id=s.party_id     WHERE p.type='supplier')
+        ) as total
+      `),
+      getOne(`SELECT COALESCE(SUM(COALESCE(outstanding_principal, principal)),0) as total FROM loans`),
+      getOne(`
+        SELECT
+          COALESCE(SUM(CASE WHEN type='disbursement' THEN amount ELSE 0 END),0)
+          - COALESCE(SUM(CASE WHEN type='repayment'  THEN amount ELSE 0 END),0) AS total
+        FROM party_loans
+      `),
+    ]);
+
+    // Cash assembly
     const cash = handlers.map((h: any) => ({
       handler: h.handler_name,
-      opening: Number(h.opening_balance),
-      total_received: Number(h.total_received),
-      total_spent: Number(h.total_spent),
-      balance: Number(h.opening_balance) + Number(h.total_received) - Number(h.total_spent),
+      opening: num(h.opening_balance),
+      total_received: num(h.total_received),
+      total_spent: num(h.total_spent),
+      balance: num(h.opening_balance) + num(h.total_received) - num(h.total_spent),
     }));
     const imprestCash = cash.reduce((s: number, h: any) => s + h.balance, 0);
-
-    // Cash is ALWAYS attributed to a handler now — so imprestCash is the single source of truth.
-    // We still count orphan cash flows that have mode='cash' but no cash_handler (legacy rows or
-    // entries where the user didn't pick a handler) so nothing silently disappears.
-    const orphanCashReceived = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='receive' AND cash_handler IS NULL`))?.t ?? 0);
-    const orphanCashPaidOut = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='cash' AND direction='pay' AND cash_handler IS NULL`))?.t ?? 0);
-    const orphanCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
-    const cashLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='disbursement'`))?.t ?? 0);
-    const cashLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='repayment'`))?.t ?? 0);
-    const cashBusinessLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM loan_repayments WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
-    const orphanTruckCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
-    const orphanDriverCashPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
-    const orphanTransporterCashPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND cash_handler IS NULL AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);
-    const orphanTransporterCashReceived = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND cash_handler IS NULL AND payment_type='received'`))?.t ?? 0);
     const totalCash = imprestCash
-      + orphanCashReceived - orphanCashPaidOut - orphanCashExpenses
-      - cashLoanDisbursed + cashLoanRepaid
-      - orphanTruckCashExpenses - orphanDriverCashPayments
-      - orphanTransporterCashPaid + orphanTransporterCashReceived
-      - cashBusinessLoanRepaid;
+      + num(payAggs.cash_orphan_recv) - num(payAggs.cash_orphan_pay)
+      - num(expAggs.cash_orphan)
+      - num(partyLoansAggs.cash_disbursed) + num(partyLoansAggs.cash_repaid)
+      - num(truckExpAggs.cash_orphan) - num(driverPayAggs.cash_orphan)
+      - num(transporterPayAggs.cash_orphan_paid) + num(transporterPayAggs.cash_orphan_recv)
+      - num(loanRepayAggs.cash_orphan);
 
-    // Banks: received = payments with direction='receive'; paid = payments with direction='pay' + expenses
-    // Also include opening balances from bank_balances table for configured banks
-    const bankReceivedRows = await getAll(`
-      SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
-        COALESCE(SUM(amount),0) as received
-      FROM payments WHERE mode='bank' AND direction='receive'
-      GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
-    `);
-    const bankPayOutRows = await getAll(`
-      SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
-        COALESCE(SUM(amount),0) as paid_out
-      FROM payments WHERE mode='bank' AND direction='pay'
-      GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
-    `);
-    const bankExpenseRows = await getAll(`
-      SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name,
-        COALESCE(SUM(amount),0) as paid
-      FROM (
-        SELECT bank_name, amount FROM expenses WHERE mode='bank'
-        UNION ALL
-        SELECT bank_name, amount FROM truck_expenses WHERE mode='bank'
-        UNION ALL
-        SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
-        UNION ALL
-        SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
-      ) combined
-      GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
-    `);
-    const bankOpeningRows = await getAll(`SELECT bank_name, opening_balance FROM bank_balances`);
-    const bankTransferInRows = await getAll(`
-      SELECT TRIM(to_bank) as bank_name, COALESCE(SUM(amount),0) as received
-      FROM bank_transfers GROUP BY TRIM(to_bank)
-    `);
-    const bankTransferOutRows = await getAll(`
-      SELECT TRIM(from_bank) as bank_name, COALESCE(SUM(amount),0) as paid_out
-      FROM bank_transfers GROUP BY TRIM(from_bank)
-    `);
-
-    // Merge all distinct bank names
+    // Bank assembly — per-bank rollup
     const allNames = new Set<string>([
       ...bankReceivedRows.map((r: any) => r.bank_name),
       ...bankPayOutRows.map((r: any) => r.bank_name),
@@ -89,106 +179,38 @@ router.get('/summary', async (_req, res) => {
       ...bankTransferInRows.map((r: any) => r.bank_name),
       ...bankTransferOutRows.map((r: any) => r.bank_name),
     ]);
-
     const banks = Array.from(allNames).map((name: string) => {
-      const received = Number(bankReceivedRows.find((r: any) => r.bank_name === name)?.received ?? 0);
-      const paidOut = Number(bankPayOutRows.find((r: any) => r.bank_name === name)?.paid_out ?? 0);
-      const expense = Number(bankExpenseRows.find((r: any) => r.bank_name === name)?.paid ?? 0);
-      const transferIn = Number(bankTransferInRows.find((r: any) => r.bank_name?.toLowerCase() === name.toLowerCase())?.received ?? 0);
-      const transferOut = Number(bankTransferOutRows.find((r: any) => r.bank_name?.toLowerCase() === name.toLowerCase())?.paid_out ?? 0);
+      const lname = name?.toLowerCase();
+      const received = num(bankReceivedRows.find((r: any) => r.bank_name === name)?.received);
+      const paidOut = num(bankPayOutRows.find((r: any) => r.bank_name === name)?.paid_out);
+      const expense = num(bankExpenseRows.find((r: any) => r.bank_name === name)?.paid);
+      const transferIn = num(bankTransferInRows.find((r: any) => r.bank_name?.toLowerCase() === lname)?.received);
+      const transferOut = num(bankTransferOutRows.find((r: any) => r.bank_name?.toLowerCase() === lname)?.paid_out);
+      const ob = num(bankOpeningRows.find((r: any) => r.bank_name?.toLowerCase() === lname)?.opening_balance);
       const totalReceived = received + transferIn;
       const totalPaid = paidOut + expense + transferOut;
-      const ob = Number(bankOpeningRows.find((r: any) =>
-        r.bank_name?.toLowerCase() === name.toLowerCase()
-      )?.opening_balance ?? 0);
       return { bank_name: name, opening: ob, total_received: totalReceived, total_paid: totalPaid, balance: ob + totalReceived - totalPaid };
     }).sort((a: any, b: any) => b.balance - a.balance);
 
-    const bankLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='disbursement'`))?.t ?? 0);
-    const bankLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='repayment'`))?.t ?? 0);
-    const bankBusinessLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM loan_repayments WHERE mode='bank'`))?.t ?? 0);
-    const truckBankExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='bank'`))?.t ?? 0);
-    const driverBankPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='bank'`))?.t ?? 0);
-    const transporterBankPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);
-    const transporterBankReceived = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='bank' AND payment_type='received'`))?.t ?? 0);
-
-    // Total bank = opening balances + received payments - paid-out payments - expenses (all sources) - loan disbursements + loan repayments
+    const bankOpeningTotal = bankOpeningRows.reduce((s: number, r: any) => s + num(r.opening_balance), 0);
     const totalBank =
-      Number((await getOne(`SELECT COALESCE(SUM(opening_balance),0) as t FROM bank_balances`))?.t ?? 0) +
-      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='receive'`))?.t ?? 0) -
-      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM payments WHERE mode='bank' AND direction='pay'`))?.t ?? 0) -
-      Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0) -
-      truckBankExpenses - driverBankPayments -
-      transporterBankPaid + transporterBankReceived -
-      bankLoanDisbursed + bankLoanRepaid -
-      bankBusinessLoanRepaid;
-
-    // Stock value — includes opening stock (bags + cost) from godown_opening_stock.
-    // Average rate is weighted across opening-stock rates and purchase rates.
-    const stockCalc = await getOne(`
-      SELECT COALESCE(SUM(sub.stock * sub.avg_rate),0) as value, COALESCE(SUM(sub.stock),0) as bags FROM (
-        SELECT cb.id,
-          (COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=cb.id),0)
-           + COALESCE((SELECT SUM(bags) FROM purchases          WHERE brand_id=cb.id),0)
-           - COALESCE((SELECT SUM(bags) FROM sales              WHERE brand_id=cb.id),0)) as stock,
-          COALESCE(
-            (COALESCE((SELECT SUM(bags * rate)          FROM godown_opening_stock WHERE brand_id=cb.id),0)
-           + COALESCE((SELECT SUM(bags * purchase_rate) FROM purchases            WHERE brand_id=cb.id),0))
-            / NULLIF(
-                COALESCE((SELECT SUM(bags) FROM godown_opening_stock WHERE brand_id=cb.id),0)
-              + COALESCE((SELECT SUM(bags) FROM purchases            WHERE brand_id=cb.id),0), 0),
-          0) as avg_rate
-        FROM cement_brands cb
-      ) sub WHERE sub.stock > 0
-    `);
-
-    // Outstanding receivable = NET sum of all non-supplier balances (includes overpayments and loans given)
-    const outstandingCalc = await getOne(`
-      SELECT COALESCE(SUM(
-        CASE WHEN COALESCE(p.opening_balance_type,'dr') = 'dr' THEN COALESCE(p.opening_balance,0)
-             ELSE -COALESCE(p.opening_balance,0) END
-        + COALESCE((SELECT SUM(sale_amount) FROM sales WHERE party_id=p.id),0)
-        + COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND direction='pay'),0)
-        - COALESCE((SELECT SUM(amount) FROM payments WHERE party_id=p.id AND (direction='receive' OR direction IS NULL)),0)
-        + COALESCE((SELECT SUM(amount) FROM party_loans WHERE party_id=p.id AND type='disbursement'),0)
-        - COALESCE((SELECT SUM(amount) FROM party_loans WHERE party_id=p.id AND type='repayment'),0)
-      ),0) as total FROM parties p WHERE p.type != 'supplier'
-    `);
-    // Outstanding payable = NET sum of all supplier balances (includes overpayments)
-    const payableCalc = await getOne(`
-      SELECT COALESCE(SUM(
-        CASE WHEN COALESCE(p.opening_balance_type,'cr') = 'cr' THEN COALESCE(p.opening_balance,0)
-             ELSE -COALESCE(p.opening_balance,0) END
-        + COALESCE((SELECT SUM(pu.purchase_amount) FROM purchases pu WHERE pu.supplier_id=p.id),0)
-        + COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id AND pm.direction='receive'),0)
-        - COALESCE((SELECT SUM(pm.amount) FROM payments pm WHERE pm.party_id=p.id AND (pm.direction='pay' OR pm.direction IS NULL)),0)
-        - COALESCE((SELECT SUM(s.sale_amount) FROM sales s WHERE s.party_id=p.id),0)
-      ),0) as total FROM parties p WHERE p.type = 'supplier'
-    `);
-
-    // Loans outstanding (loans we have taken)
-    const loansCalc = await getOne(`
-      SELECT COALESCE(SUM(COALESCE(outstanding_principal, principal)),0) as total FROM loans
-    `);
-
-    // Loans given outstanding (party loans disbursed - repaid)
-    const loansGivenCalc = await getOne(`
-      SELECT
-        COALESCE(SUM(CASE WHEN type='disbursement' THEN amount ELSE 0 END),0)
-        - COALESCE(SUM(CASE WHEN type='repayment' THEN amount ELSE 0 END),0) AS total
-      FROM party_loans
-    `);
+      bankOpeningTotal
+      + num(payAggs.bank_recv) - num(payAggs.bank_pay)
+      - num(expAggs.bank) - num(truckExpAggs.bank) - num(driverPayAggs.bank)
+      - num(transporterPayAggs.bank_paid) + num(transporterPayAggs.bank_recv)
+      - num(partyLoansAggs.bank_disbursed) + num(partyLoansAggs.bank_repaid)
+      - num(loanRepayAggs.bank);
 
     res.json({
       cash,
       totalCash,
       banks,
       totalBank,
-      stockValue: { value: Number(stockCalc?.value ?? 0), bags: Number(stockCalc?.bags ?? 0) },
-      totalOutstanding: Number(outstandingCalc?.total ?? 0),
-      totalPayable: Number(payableCalc?.total ?? 0),
-      totalLoans: Number(loansCalc?.total ?? 0),
-      totalLoansGiven: Number(loansGivenCalc?.total ?? 0),
+      stockValue: { value: num(stockCalc?.value), bags: num(stockCalc?.bags) },
+      totalOutstanding: num(outstandingCalc?.total),
+      totalPayable: num(payableCalc?.total),
+      totalLoans: num(loansCalc?.total),
+      totalLoansGiven: num(loansGivenCalc?.total),
       totalCapital: totalCash + totalBank,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }

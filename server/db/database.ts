@@ -669,6 +669,29 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_period TEXT`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS compliance_remarks TEXT`);
 
+    // Performance indexes — capital/parties summaries do many SUM(...) WHERE party_id/mode/...
+    // aggregates; without these the planner falls back to seq scans.
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_party        ON payments(party_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_mode_dir     ON payments(mode, direction)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_mode_bank    ON payments(mode, bank_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_expenses_mode_bank    ON expenses(mode, bank_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_expenses_mode_handler ON expenses(mode, cash_handler)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sales_party           ON sales(party_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_sales_brand           ON sales(brand_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_purchases_supplier    ON purchases(supplier_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_purchases_brand       ON purchases(brand_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_party_loans_party     ON party_loans(party_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_party_loans_mode_type ON party_loans(mode, type)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_truck_expenses_mode   ON truck_expenses(mode, bank_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_truck_expenses_truck  ON truck_expenses(truck_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_driver_payments_mode  ON driver_payments(mode, bank_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_driver_payments_drv   ON driver_payments(driver_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_transporter_payments_mode ON transporter_payments(mode, bank_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_transporter_payments_tp   ON transporter_payments(transporter_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_imprest_handler       ON imprest_transactions(handler_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_godown_opening_brand  ON godown_opening_stock(brand_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_parties_type          ON parties(type)`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();
