@@ -1,11 +1,14 @@
 import pg from 'pg';
 import bcrypt from 'bcryptjs';
 
+// Supabase session-mode pooler caps concurrent clients; keep the local pool
+// small so we queue instead of overflowing upstream. Override via DB_POOL_MAX.
+const POOL_MAX = parseInt(process.env.DB_POOL_MAX || '8');
 const poolConfig: pg.PoolConfig = process.env.DATABASE_URL
   ? {
       connectionString: process.env.DATABASE_URL,
       ssl: { rejectUnauthorized: false },
-      max: 20,
+      max: POOL_MAX,
       idleTimeoutMillis: 30000,
     }
   : {
@@ -14,7 +17,7 @@ const poolConfig: pg.PoolConfig = process.env.DATABASE_URL
       database: process.env.DB_NAME || 'cementbook',
       user: process.env.DB_USER || 'cementbook',
       password: process.env.DB_PASS || 'cement123',
-      max: 20,
+      max: POOL_MAX,
       idleTimeoutMillis: 30000,
     };
 
