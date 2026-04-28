@@ -154,6 +154,7 @@ export const api = {
     banks: () => request<any[]>('/capital/banks'),
     upsertBank: (data: { bank_name: string; opening_balance: number }) => request<any>('/capital/banks', { method: 'POST', body: JSON.stringify(data) }),
     deleteBank: (name: string) => request<any>(`/capital/banks/${encodeURIComponent(name)}`, { method: 'DELETE' }),
+    bankTransactions: (name: string) => request<{ date: string; particulars: string; counterparty: string | null; source: string; source_id: number; inflow: number; outflow: number }[]>(`/capital/banks/${encodeURIComponent(name)}/transactions`),
   },
   imprest: {
     list: (params?: Record<string, string>) => {

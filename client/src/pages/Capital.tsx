@@ -1,5 +1,5 @@
-import { useEffect, useState, useCallback } from 'react';
-import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle } from 'lucide-react';
+import { useEffect, useState, useCallback, Fragment } from 'react';
+import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle, ChevronDown, ChevronRight } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -374,13 +374,32 @@ function ImprestSection() {
   );
 }
 
+type BankTxn = { date: string; particulars: string; counterparty: string | null; source: string; source_id: number; inflow: number; outflow: number };
+
 function BankSection({ summary }: { summary: CapitalSummary }) {
+  const [expanded, setExpanded] = useState<string | null>(null);
+  const [txns, setTxns] = useState<Record<string, { loading: boolean; rows: BankTxn[]; error?: string }>>({});
+
+  const toggle = async (bank: string) => {
+    if (expanded === bank) { setExpanded(null); return; }
+    setExpanded(bank);
+    if (!txns[bank]) {
+      setTxns((m) => ({ ...m, [bank]: { loading: true, rows: [] } }));
+      try {
+        const rows = await api.capital.bankTransactions(bank);
+        setTxns((m) => ({ ...m, [bank]: { loading: false, rows } }));
+      } catch (e) {
+        setTxns((m) => ({ ...m, [bank]: { loading: false, rows: [], error: e instanceof Error ? e.message : 'Failed' } }));
+      }
+    }
+  };
+
   return (
     <div className="space-y-3">
       <div>
         <h4 className="text-sm font-semibold text-heading">Bank balances</h4>
         <p className="text-xs text-heading/60 mt-0.5">
-          Manage bank accounts in <strong>Settings → Banks</strong>. Running balance = Opening + received payments − paid-out payments − expenses.
+          Manage bank accounts in <strong>Settings → Banks</strong>. Running balance = Opening + received payments − paid-out payments − expenses. Click a row to see every transaction.
         </p>
       </div>
 
@@ -401,15 +420,71 @@ function BankSection({ summary }: { summary: CapitalSummary }) {
               </tr>
             </thead>
             <tbody className="divide-y divide-card-border">
-              {summary.banks.map((b) => (
-                <tr key={b.bank_name} className="hover:bg-surface">
-                  <td className="px-4 py-3 font-semibold text-heading">{b.bank_name}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.opening)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(b.total_received)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(b.total_paid)}</td>
-                  <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700 dark:text-blue-300">{formatINR(b.balance)}</td>
-                </tr>
-              ))}
+              {summary.banks.map((b) => {
+                const isOpen = expanded === b.bank_name;
+                const detail = txns[b.bank_name];
+                return (
+                  <Fragment key={b.bank_name}>
+                    <tr onClick={() => toggle(b.bank_name)} className="cursor-pointer hover:bg-surface">
+                      <td className="px-4 py-3 font-semibold text-heading">
+                        <span className="inline-flex items-center gap-2">
+                          {isOpen ? <ChevronDown className="h-4 w-4 text-heading/60" /> : <ChevronRight className="h-4 w-4 text-heading/60" />}
+                          {b.bank_name}
+                        </span>
+                      </td>
+                      <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.opening)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(b.total_received)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(b.total_paid)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-xl font-bold text-blue-700 dark:text-blue-300">{formatINR(b.balance)}</td>
+                    </tr>
+                    {isOpen && (
+                      <tr className="bg-surface/60">
+                        <td colSpan={5} className="px-4 py-3">
+                          {!detail || detail.loading ? (
+                            <p className="py-4 text-center text-xs text-heading/60">Loading transactions…</p>
+                          ) : detail.error ? (
+                            <p className="py-4 text-center text-xs text-red-600">{detail.error}</p>
+                          ) : detail.rows.length === 0 ? (
+                            <p className="py-4 text-center text-xs text-heading/60">No bank transactions for this account yet.</p>
+                          ) : (
+                            <div className="max-h-96 overflow-y-auto rounded-lg border border-card-border bg-card">
+                              <table className="min-w-full text-xs">
+                                <thead className="sticky top-0 bg-surface">
+                                  <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-heading/60">
+                                    <th className="px-3 py-2">Date</th>
+                                    <th className="px-3 py-2">Particulars</th>
+                                    <th className="px-3 py-2">Counterparty</th>
+                                    <th className="px-3 py-2 text-right">In (₹)</th>
+                                    <th className="px-3 py-2 text-right">Out (₹)</th>
+                                  </tr>
+                                </thead>
+                                <tbody className="divide-y divide-card-border">
+                                  {detail.rows.map((t, i) => (
+                                    <tr key={`${t.source}-${t.source_id}-${i}`} className="hover:bg-surface/70">
+                                      <td className="px-3 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
+                                      <td className="px-3 py-2">{t.particulars}</td>
+                                      <td className="px-3 py-2 text-heading/70">{t.counterparty || '—'}</td>
+                                      <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{t.inflow > 0 ? formatINR(t.inflow) : '—'}</td>
+                                      <td className="px-3 py-2 text-right tabular-nums text-red-700 dark:text-red-300">{t.outflow > 0 ? formatINR(t.outflow) : '—'}</td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                                <tfoot className="border-t-2 border-card-border bg-surface">
+                                  <tr className="font-semibold">
+                                    <td className="px-3 py-2" colSpan={3}>Showing {detail.rows.length} {detail.rows.length === 500 ? '(latest 500)' : ''}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(detail.rows.reduce((s, t) => s + t.inflow, 0))}</td>
+                                    <td className="px-3 py-2 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(detail.rows.reduce((s, t) => s + t.outflow, 0))}</td>
+                                  </tr>
+                                </tfoot>
+                              </table>
+                            </div>
+                          )}
+                        </td>
+                      </tr>
+                    )}
+                  </Fragment>
+                );
+              })}
               <tr className="border-t-2 border-card-border bg-blue-50/60 dark:bg-blue-900/30 font-semibold">
                 <td className="px-4 py-3 text-blue-800 dark:text-blue-200">Total</td>
                 <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(summary.banks.reduce((s, b) => s + b.opening, 0))}</td>

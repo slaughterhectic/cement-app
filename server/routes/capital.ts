@@ -188,6 +188,74 @@ router.get('/banks', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
+// All transactions hitting a single bank — payments in/out, expenses, truck/driver/transporter
+// outflows, party loan disbursements/repayments, business-loan repayments. Newest first.
+router.get('/banks/:name/transactions', async (req, res) => {
+  const bank = req.params.name;
+  try {
+    const rows = await getAll(
+      `
+      SELECT date, particulars, counterparty, source, source_id, inflow, outflow FROM (
+        -- Customer / supplier payments
+        SELECT pm.date,
+          CASE WHEN pm.direction='receive' THEN 'Payment received' ELSE 'Payment paid' END AS particulars,
+          pa.name AS counterparty,
+          'payment' AS source, pm.id AS source_id,
+          CASE WHEN pm.direction='receive' THEN pm.amount ELSE 0 END AS inflow,
+          CASE WHEN pm.direction='pay' OR pm.direction IS NULL THEN pm.amount ELSE 0 END AS outflow
+        FROM payments pm
+        LEFT JOIN parties pa ON pa.id = pm.party_id
+        WHERE pm.mode='bank' AND TRIM(LOWER(COALESCE(pm.bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, COALESCE('Expense — '||category,'Expense'), description, 'expense', id, 0, amount
+        FROM expenses
+        WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, 'Truck expense', remark, 'truck_expense', id, 0, amount
+        FROM truck_expenses
+        WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, 'Driver payment', NULL, 'driver_payment', id, 0, amount
+        FROM driver_payments
+        WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT tp.date,
+          CASE WHEN COALESCE(tp.payment_type,'paid')='paid' THEN 'Transporter paid' ELSE 'Transporter received' END,
+          NULL, 'transporter_payment', tp.id,
+          CASE WHEN tp.payment_type='received' THEN tp.amount ELSE 0 END,
+          CASE WHEN COALESCE(tp.payment_type,'paid')='paid' THEN tp.amount ELSE 0 END
+        FROM transporter_payments tp
+        WHERE tp.mode='bank' AND TRIM(LOWER(COALESCE(tp.bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT pl.date,
+          CASE WHEN pl.type='disbursement' THEN 'Loan disbursed (party)' ELSE 'Loan repayment (party)' END,
+          pa.name, 'party_loan', pl.id,
+          CASE WHEN pl.type='repayment' THEN pl.amount ELSE 0 END,
+          CASE WHEN pl.type='disbursement' THEN pl.amount ELSE 0 END
+        FROM party_loans pl
+        LEFT JOIN parties pa ON pa.id = pl.party_id
+        WHERE pl.mode='bank' AND TRIM(LOWER(COALESCE(pl.bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT lr.date, 'Business loan repayment', l.lender_name, 'loan_repayment', lr.id, 0, lr.amount
+        FROM loan_repayments lr
+        LEFT JOIN loans l ON l.id = lr.loan_id
+        WHERE lr.mode='bank' AND TRIM(LOWER(COALESCE(lr.bank_name,'')))=TRIM(LOWER($1))
+      ) x
+      ORDER BY date DESC, source_id DESC
+      LIMIT 500
+      `,
+      [bank]
+    );
+    res.json(rows);
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
 router.post('/banks', async (req, res) => {
   const { bank_name, opening_balance } = req.body;
   try {
