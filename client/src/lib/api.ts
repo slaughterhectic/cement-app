@@ -172,6 +172,12 @@ export const api = {
     update: (id: number, data: any) => request<any>(`/loans/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/loans/${id}`, { method: 'DELETE' }),
   },
+  loanRepayments: {
+    list: (loanId?: number) => request<any[]>(loanId ? `/loan-repayments?loan_id=${loanId}` : '/loan-repayments'),
+    summary: () => request<{ loan_id: number; count: number; total_repaid: number }[]>('/loan-repayments/summary'),
+    create: (data: any) => request<any>('/loan-repayments', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/loan-repayments/${id}`, { method: 'DELETE' }),
+  },
   dealers: {
     list: () => request<any[]>('/dealers'),
     create: (data: any) => request<any>('/dealers', { method: 'POST', body: JSON.stringify(data) }),

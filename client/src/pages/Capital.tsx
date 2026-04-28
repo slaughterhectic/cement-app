@@ -14,6 +14,7 @@ interface CapitalSummary {
   totalOutstanding: number;
   totalPayable: number;
   totalLoans: number;
+  totalLoansGiven?: number;
   totalCapital: number;
 }
 
@@ -476,14 +477,25 @@ export default function Capital() {
               <p className="mt-2 text-2xl font-bold tabular-nums text-emerald-800 dark:text-emerald-200">{formatINR(summary.totalCapital)}</p>
               <p className="mt-1 text-xs text-emerald-700 dark:text-emerald-300">Cash + all banks</p>
             </div>
-            <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-900/30 p-5">
-              <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
-                <Wallet className="h-5 w-5" />
-                <span className="text-xs font-semibold uppercase tracking-wide">Cash in Hand</span>
+            {summary.totalCash < 0 ? (
+              <div className="rounded-xl border-2 border-orange-400 dark:border-orange-600 bg-orange-50/90 dark:bg-orange-900/40 p-5">
+                <div className="flex items-center gap-2 text-orange-700 dark:text-orange-300">
+                  <AlertCircle className="h-5 w-5" />
+                  <span className="text-xs font-semibold uppercase tracking-wide">Cash in Hand</span>
+                </div>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-orange-700 dark:text-orange-300">−{formatINR(Math.abs(summary.totalCash))}</p>
+                <p className="mt-1 text-xs font-medium text-orange-700 dark:text-orange-300">⚠ Cash given exceeds cash on hand — please recheck entries.</p>
               </div>
-              <p className="mt-2 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(summary.totalCash)}</p>
-              <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{summary.cash.map((c) => c.handler).join(', ')}</p>
-            </div>
+            ) : (
+              <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/90 dark:bg-amber-900/30 p-5">
+                <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+                  <Wallet className="h-5 w-5" />
+                  <span className="text-xs font-semibold uppercase tracking-wide">Cash in Hand</span>
+                </div>
+                <p className="mt-2 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(summary.totalCash)}</p>
+                <p className="mt-1 text-xs text-amber-700 dark:text-amber-300">{summary.cash.map((c) => c.handler).join(', ')}</p>
+              </div>
+            )}
             <div className="rounded-xl border border-blue-200 dark:border-blue-800 bg-blue-50/90 dark:bg-blue-900/30 p-5">
               <div className="flex items-center gap-2 text-blue-700 dark:text-blue-300">
                 <Building2 className="h-5 w-5" />

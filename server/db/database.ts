@@ -329,6 +329,20 @@ export async function initializeDatabase() {
     `);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS loan_repayments (
+        id SERIAL PRIMARY KEY,
+        loan_id INTEGER NOT NULL REFERENCES loans(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('bank','cash')) DEFAULT 'bank',
+        bank_name TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_loan_repayments_loan ON loan_repayments(loan_id)`);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS imprest_transactions (
         id SERIAL PRIMARY KEY,
         date TEXT NOT NULL,
@@ -543,12 +557,15 @@ export async function initializeDatabase() {
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
-    // Seed default partners
-    await client.query(`
-      INSERT INTO rl_partners (name, opening_capital) VALUES
-        ('Shubham', 0), ('Rahul', 0), ('Rahul Ashish Singh', 0), ('Partner 4', 0)
-      ON CONFLICT (name) DO NOTHING;
-    `);
+    // Seed default partners only on first setup (empty table)
+    const partnerCount = await client.query(`SELECT COUNT(*)::int AS c FROM rl_partners`);
+    if (partnerCount.rows[0].c === 0) {
+      await client.query(`
+        INSERT INTO rl_partners (name, opening_capital) VALUES
+          ('Shubham', 0), ('Rahul', 0), ('Rahul Ashish Singh', 0), ('Partner 4', 0)
+        ON CONFLICT (name) DO NOTHING;
+      `);
+    }
 
     // Global key-value settings (handling charges, bilty rate, gps rent, etc.)
     await client.query(`

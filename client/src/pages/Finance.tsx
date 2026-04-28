@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Pencil, Plus, Trash2, Calculator, ArrowUpRight, ArrowDownLeft } from 'lucide-react';
+import { Pencil, Plus, Trash2, Calculator, ArrowUpRight, ArrowDownLeft, IndianRupee } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -372,23 +372,112 @@ const emptyForm = {
 export default function Finance() {
   const addToast = useToastStore((s) => s.addToast);
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const isAdmin = useAuthStore((s) => s.isAdmin());
   const [loans, setLoans] = useState<Loan[]>([]);
+  const [repaymentSummary, setRepaymentSummary] = useState<Record<number, { count: number; total: number }>>({});
+  const [partyLoanNet, setPartyLoanNet] = useState(0);
+  const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<Loan | null>(null);
   const [form, setForm] = useState(emptyForm);
 
+  // Repayment modal
+  const [repayLoan, setRepayLoan] = useState<Loan | null>(null);
+  const [repayForm, setRepayForm] = useState({
+    date: new Date().toISOString().split('T')[0],
+    amount: '',
+    mode: 'bank' as 'bank' | 'cash',
+    bank_name: '',
+    remarks: '',
+  });
+  const [repaySaving, setRepaySaving] = useState(false);
+  const [repayHistory, setRepayHistory] = useState<any[]>([]);
+
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const r = await api.loans.list();
+      const [r, summary, partyLoans, bks] = await Promise.all([
+        api.loans.list(),
+        api.loanRepayments.summary(),
+        api.partyLoans.list(),
+        api.capital.banks(),
+      ]);
       setLoans(r as Loan[]);
+      const map: Record<number, { count: number; total: number }> = {};
+      summary.forEach((s) => { map[s.loan_id] = { count: s.count, total: Number(s.total_repaid) }; });
+      setRepaymentSummary(map);
+      const net = (partyLoans as any[]).reduce((acc, l) => acc + (l.type === 'disbursement' ? l.amount : -l.amount), 0);
+      setPartyLoanNet(net);
+      setBanks(bks as any[]);
     } catch {
       addToast('Failed to load loans', 'error');
     } finally {
       setLoading(false);
     }
   }, [addToast]);
+
+  const openRepay = async (loan: Loan) => {
+    setRepayLoan(loan);
+    setRepayForm({
+      date: new Date().toISOString().split('T')[0],
+      amount: loan.emi_amount != null ? String(loan.emi_amount) : '',
+      mode: 'bank',
+      bank_name: '',
+      remarks: '',
+    });
+    try {
+      const history = await api.loanRepayments.list(loan.id);
+      setRepayHistory(history);
+    } catch { setRepayHistory([]); }
+  };
+
+  const closeRepay = () => {
+    setRepayLoan(null);
+    setRepayHistory([]);
+  };
+
+  const saveRepayment = async () => {
+    if (!repayLoan) return;
+    const amt = parseFloat(repayForm.amount);
+    if (!repayForm.date || !(amt > 0)) {
+      addToast('Date and amount > 0 are required', 'error');
+      return;
+    }
+    setRepaySaving(true);
+    try {
+      await api.loanRepayments.create({
+        loan_id: repayLoan.id,
+        date: repayForm.date,
+        amount: amt,
+        mode: repayForm.mode,
+        bank_name: repayForm.mode === 'bank' ? repayForm.bank_name || null : null,
+        remarks: repayForm.remarks.trim() || null,
+      });
+      addToast('Repayment recorded', 'success');
+      closeRepay();
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally {
+      setRepaySaving(false);
+    }
+  };
+
+  const deleteRepayment = async (id: number) => {
+    if (!window.confirm('Delete this repayment? Outstanding will be restored.')) return;
+    try {
+      await api.loanRepayments.delete(id);
+      addToast('Repayment deleted', 'success');
+      if (repayLoan) {
+        const history = await api.loanRepayments.list(repayLoan.id);
+        setRepayHistory(history);
+      }
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+  };
 
   useEffect(() => { load(); }, [load]);
 
@@ -478,7 +567,7 @@ export default function Finance() {
       </header>
 
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-3">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/30 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Total Loan Principal</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-red-800 dark:text-red-200">{formatINR(totalPrincipal)}</p>
@@ -493,6 +582,14 @@ export default function Finance() {
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Monthly EMI Obligation</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(totalMonthlyEMI)}</p>
           <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Sum of all EMIs</p>
+        </div>
+        <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/30 p-5">
+          <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">
+            <IndianRupee className="h-4 w-4" />
+            <p className="text-xs font-semibold uppercase tracking-wide">Loans Given (Outstanding)</p>
+          </div>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-amber-800 dark:text-amber-200">{formatINR(partyLoanNet)}</p>
+          <p className="mt-1 text-xs text-amber-600 dark:text-amber-400">Net of party disbursements − repayments</p>
         </div>
       </div>
 
@@ -522,6 +619,7 @@ export default function Finance() {
                     <th className="px-4 py-3">Lender</th>
                     <th className="px-4 py-3 text-right">Principal (₹)</th>
                     <th className="px-4 py-3 text-right">Outstanding (₹)</th>
+                    <th className="px-4 py-3 text-right">Repaid (₹)</th>
                     <th className="px-4 py-3 text-right">Rate (%)</th>
                     <th className="px-4 py-3 text-right">EMI (₹/mo)</th>
                     <th className="px-4 py-3">Start Date</th>
@@ -533,6 +631,10 @@ export default function Finance() {
                 <tbody className="divide-y divide-card-border">
                   {loanPg.pageData.map((loan) => {
                     const outstanding = loan.outstanding_principal ?? loan.principal;
+                    const repaidInfo = repaymentSummary[loan.id];
+                    const repaidTotal = repaidInfo?.total ?? 0;
+                    const repaidCount = repaidInfo?.count ?? 0;
+                    const repaidPct = loan.principal > 0 ? (repaidTotal / loan.principal) * 100 : 0;
                     const pct = loan.principal > 0 ? (outstanding / loan.principal) * 100 : 0;
                     return (
                       <tr key={loan.id} className="hover:bg-surface">
@@ -546,6 +648,10 @@ export default function Finance() {
                             <div className="h-1.5 rounded-full bg-red-400" style={{ width: `${Math.min(pct, 100)}%` }} />
                           </div>
                         </td>
+                        <td className="px-4 py-3 text-right tabular-nums">
+                          <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(repaidTotal)}</span>
+                          <p className="mt-0.5 text-[10px] text-heading/60">{repaidCount} payment{repaidCount === 1 ? '' : 's'} • {repaidPct.toFixed(0)}%</p>
+                        </td>
                         <td className="px-4 py-3 text-right tabular-nums">{loan.interest_rate.toFixed(2)}%</td>
                         <td className="px-4 py-3 text-right tabular-nums font-medium text-blue-700 dark:text-blue-300">
                           {loan.emi_amount != null ? formatINR(loan.emi_amount) : '—'}
@@ -555,6 +661,14 @@ export default function Finance() {
                         <td className="px-4 py-3 max-w-[150px] truncate text-heading/70">{loan.remarks || '—'}</td>
                         <td className="px-4 py-3">
                           <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              onClick={() => openRepay(loan)}
+                              className="inline-flex items-center gap-1 rounded bg-green-600 px-2 py-1 text-xs font-medium text-white hover:bg-green-700"
+                              title="Record repayment"
+                            >
+                              <ArrowDownLeft className="h-3 w-3" /> Repay
+                            </button>
                             <button type="button" onClick={() => openEdit(loan)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50"><Pencil className="h-3.5 w-3.5" /></button>
                             {hasPermission('delete_loans') && (
                               <button type="button" onClick={() => handleDelete(loan.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="h-3.5 w-3.5" /></button>
@@ -623,6 +737,98 @@ export default function Finance() {
             <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
               <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
               <button type="button" onClick={handleSave} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700">Save</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Repayment modal */}
+      {repayLoan && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-2xl rounded-xl bg-card p-6 shadow-xl overflow-y-auto max-h-[90vh]">
+            <h3 className="mb-1 text-base font-semibold text-heading">Record Repayment</h3>
+            <p className="mb-4 text-xs text-heading/60">
+              {repayLoan.lender_name} • Outstanding {formatINR(repayLoan.outstanding_principal ?? repayLoan.principal)}
+            </p>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
+                <input type="date" className="input-field w-full" value={repayForm.date} onChange={(e) => setRepayForm((p) => ({ ...p, date: e.target.value }))} />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
+                <input type="number" min={0} step={0.01} className="input-field w-full" value={repayForm.amount} onChange={(e) => setRepayForm((p) => ({ ...p, amount: e.target.value }))} />
+                <p className="mt-1 text-[11px] text-heading/50">Reduces outstanding principal and debits cash/bank.</p>
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Mode *</label>
+                <div className="flex gap-2">
+                  <button type="button" onClick={() => setRepayForm((p) => ({ ...p, mode: 'bank' }))}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${repayForm.mode === 'bank' ? 'border-brand-500 bg-brand-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}>
+                    Bank
+                  </button>
+                  <button type="button" onClick={() => setRepayForm((p) => ({ ...p, mode: 'cash' }))}
+                    className={`flex-1 rounded-lg border px-3 py-2 text-sm font-medium ${repayForm.mode === 'cash' ? 'border-brand-500 bg-brand-500 text-white' : 'border-card-border bg-card text-heading/80 hover:bg-surface'}`}>
+                    Cash
+                  </button>
+                </div>
+              </div>
+              {repayForm.mode === 'bank' && (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Bank</label>
+                  <select className="input-field w-full" value={repayForm.bank_name} onChange={(e) => setRepayForm((p) => ({ ...p, bank_name: e.target.value }))}>
+                    <option value="">Select bank</option>
+                    {banks.map((b) => <option key={b.bank_name} value={b.bank_name}>{b.bank_name}</option>)}
+                  </select>
+                </div>
+              )}
+              <div className="sm:col-span-2">
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
+                <input type="text" className="input-field w-full" value={repayForm.remarks} onChange={(e) => setRepayForm((p) => ({ ...p, remarks: e.target.value }))} />
+              </div>
+            </div>
+
+            {repayHistory.length > 0 && (
+              <div className="mt-5 border-t border-card-border pt-4">
+                <p className="mb-2 text-xs font-semibold uppercase tracking-wide text-heading/70">Repayment History ({repayHistory.length})</p>
+                <div className="max-h-48 overflow-y-auto rounded-lg border border-card-border">
+                  <table className="min-w-full text-xs">
+                    <thead>
+                      <tr className="bg-surface text-left text-heading/60">
+                        <th className="px-3 py-2">Date</th>
+                        <th className="px-3 py-2 text-right">Amount</th>
+                        <th className="px-3 py-2">Mode</th>
+                        <th className="px-3 py-2">Remarks</th>
+                        {isAdmin && <th className="px-3 py-2"></th>}
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-card-border">
+                      {repayHistory.map((r) => (
+                        <tr key={r.id}>
+                          <td className="px-3 py-2 whitespace-nowrap">{formatDate(r.date)}</td>
+                          <td className="px-3 py-2 text-right tabular-nums font-medium text-green-700 dark:text-green-300">{formatINR(r.amount)}</td>
+                          <td className="px-3 py-2 capitalize">{r.mode}{r.bank_name ? ` — ${r.bank_name}` : ''}</td>
+                          <td className="px-3 py-2 text-heading/70">{r.remarks || '—'}</td>
+                          {isAdmin && (
+                            <td className="px-3 py-2">
+                              <button type="button" onClick={() => deleteRepayment(r.id)} className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                <Trash2 className="h-3 w-3" />
+                              </button>
+                            </td>
+                          )}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
+              <button type="button" onClick={closeRepay} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Close</button>
+              <button type="button" onClick={saveRepayment} disabled={repaySaving} className="rounded-lg bg-green-600 px-4 py-2 text-sm font-medium text-white hover:bg-green-700 disabled:opacity-50">
+                {repaySaving ? 'Saving…' : 'Save Repayment'}
+              </button>
             </div>
           </div>
         </div>

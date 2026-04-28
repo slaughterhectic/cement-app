@@ -30,6 +30,7 @@ router.get('/summary', async (_req, res) => {
     const orphanCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const cashLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='disbursement'`))?.t ?? 0);
     const cashLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='repayment'`))?.t ?? 0);
+    const cashBusinessLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM loan_repayments WHERE mode='cash'`))?.t ?? 0);
     const orphanTruckCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const orphanDriverCashPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const orphanTransporterCashPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND cash_handler IS NULL AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);
@@ -38,7 +39,8 @@ router.get('/summary', async (_req, res) => {
       + orphanCashReceived - orphanCashPaidOut - orphanCashExpenses
       - cashLoanDisbursed + cashLoanRepaid
       - orphanTruckCashExpenses - orphanDriverCashPayments
-      - orphanTransporterCashPaid + orphanTransporterCashReceived;
+      - orphanTransporterCashPaid + orphanTransporterCashReceived
+      - cashBusinessLoanRepaid;
 
     // Banks: received = payments with direction='receive'; paid = payments with direction='pay' + expenses
     // Also include opening balances from bank_balances table for configured banks
@@ -91,6 +93,7 @@ router.get('/summary', async (_req, res) => {
 
     const bankLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='disbursement'`))?.t ?? 0);
     const bankLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='bank' AND type='repayment'`))?.t ?? 0);
+    const bankBusinessLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM loan_repayments WHERE mode='bank'`))?.t ?? 0);
     const truckBankExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='bank'`))?.t ?? 0);
     const driverBankPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='bank'`))?.t ?? 0);
     const transporterBankPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);
@@ -104,7 +107,8 @@ router.get('/summary', async (_req, res) => {
       Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='bank'`))?.t ?? 0) -
       truckBankExpenses - driverBankPayments -
       transporterBankPaid + transporterBankReceived -
-      bankLoanDisbursed + bankLoanRepaid;
+      bankLoanDisbursed + bankLoanRepaid -
+      bankBusinessLoanRepaid;
 
     // Stock value — includes opening stock (bags + cost) from godown_opening_stock.
     // Average rate is weighted across opening-stock rates and purchase rates.
@@ -147,9 +151,17 @@ router.get('/summary', async (_req, res) => {
       ),0) as total FROM parties p WHERE p.type = 'supplier'
     `);
 
-    // Loans outstanding
+    // Loans outstanding (loans we have taken)
     const loansCalc = await getOne(`
       SELECT COALESCE(SUM(COALESCE(outstanding_principal, principal)),0) as total FROM loans
+    `);
+
+    // Loans given outstanding (party loans disbursed - repaid)
+    const loansGivenCalc = await getOne(`
+      SELECT
+        COALESCE(SUM(CASE WHEN type='disbursement' THEN amount ELSE 0 END),0)
+        - COALESCE(SUM(CASE WHEN type='repayment' THEN amount ELSE 0 END),0) AS total
+      FROM party_loans
     `);
 
     res.json({
@@ -161,6 +173,7 @@ router.get('/summary', async (_req, res) => {
       totalOutstanding: Number(outstandingCalc?.total ?? 0),
       totalPayable: Number(payableCalc?.total ?? 0),
       totalLoans: Number(loansCalc?.total ?? 0),
+      totalLoansGiven: Number(loansGivenCalc?.total ?? 0),
       totalCapital: totalCash + totalBank,
     });
   } catch (e: any) { res.status(500).json({ error: e.message }); }
