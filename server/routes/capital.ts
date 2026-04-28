@@ -30,7 +30,7 @@ router.get('/summary', async (_req, res) => {
     const orphanCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const cashLoanDisbursed = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='disbursement'`))?.t ?? 0);
     const cashLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM party_loans WHERE mode='cash' AND type='repayment'`))?.t ?? 0);
-    const cashBusinessLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM loan_repayments WHERE mode='cash'`))?.t ?? 0);
+    const cashBusinessLoanRepaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM loan_repayments WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const orphanTruckCashExpenses = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM truck_expenses WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const orphanDriverCashPayments = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM driver_payments WHERE mode='cash' AND cash_handler IS NULL`))?.t ?? 0);
     const orphanTransporterCashPaid = Number((await getOne(`SELECT COALESCE(SUM(amount),0) as t FROM transporter_payments WHERE mode='cash' AND cash_handler IS NULL AND COALESCE(payment_type,'paid')='paid'`))?.t ?? 0);

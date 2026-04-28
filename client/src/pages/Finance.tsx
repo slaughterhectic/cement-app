@@ -377,6 +377,7 @@ export default function Finance() {
   const [repaymentSummary, setRepaymentSummary] = useState<Record<number, { count: number; total: number }>>({});
   const [partyLoanNet, setPartyLoanNet] = useState(0);
   const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<Loan | null>(null);
@@ -389,6 +390,7 @@ export default function Finance() {
     amount: '',
     mode: 'bank' as 'bank' | 'cash',
     bank_name: '',
+    cash_handler: '',
     remarks: '',
   });
   const [repaySaving, setRepaySaving] = useState(false);
@@ -397,11 +399,12 @@ export default function Finance() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const [r, summary, partyLoans, bks] = await Promise.all([
+      const [r, summary, partyLoans, bks, handlers] = await Promise.all([
         api.loans.list(),
         api.loanRepayments.summary(),
         api.partyLoans.list(),
         api.capital.banks(),
+        api.imprest.handlers(),
       ]);
       setLoans(r as Loan[]);
       const map: Record<number, { count: number; total: number }> = {};
@@ -410,6 +413,7 @@ export default function Finance() {
       const net = (partyLoans as any[]).reduce((acc, l) => acc + (l.type === 'disbursement' ? l.amount : -l.amount), 0);
       setPartyLoanNet(net);
       setBanks(bks as any[]);
+      setCashHandlers((handlers as any[]).map((h: any) => h.handler_name));
     } catch {
       addToast('Failed to load loans', 'error');
     } finally {
@@ -424,6 +428,7 @@ export default function Finance() {
       amount: loan.emi_amount != null ? String(loan.emi_amount) : '',
       mode: 'bank',
       bank_name: '',
+      cash_handler: '',
       remarks: '',
     });
     try {
@@ -444,6 +449,10 @@ export default function Finance() {
       addToast('Date and amount > 0 are required', 'error');
       return;
     }
+    if (repayForm.mode === 'cash' && !repayForm.cash_handler) {
+      addToast('Select a cash handler', 'error');
+      return;
+    }
     setRepaySaving(true);
     try {
       await api.loanRepayments.create({
@@ -452,6 +461,7 @@ export default function Finance() {
         amount: amt,
         mode: repayForm.mode,
         bank_name: repayForm.mode === 'bank' ? repayForm.bank_name || null : null,
+        cash_handler: repayForm.mode === 'cash' ? repayForm.cash_handler || null : null,
         remarks: repayForm.remarks.trim() || null,
       });
       addToast('Repayment recorded', 'success');
@@ -773,12 +783,20 @@ export default function Finance() {
                   </button>
                 </div>
               </div>
-              {repayForm.mode === 'bank' && (
+              {repayForm.mode === 'bank' ? (
                 <div>
                   <label className="mb-1 block text-xs font-medium text-heading/70">Bank</label>
                   <select className="input-field w-full" value={repayForm.bank_name} onChange={(e) => setRepayForm((p) => ({ ...p, bank_name: e.target.value }))}>
                     <option value="">Select bank</option>
                     {banks.map((b) => <option key={b.bank_name} value={b.bank_name}>{b.bank_name}</option>)}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Cash Handler *</label>
+                  <select className="input-field w-full" value={repayForm.cash_handler} onChange={(e) => setRepayForm((p) => ({ ...p, cash_handler: e.target.value }))}>
+                    <option value="">Select handler</option>
+                    {cashHandlers.map((h) => <option key={h} value={h}>{h}</option>)}
                   </select>
                 </div>
               )}

@@ -336,10 +336,12 @@ export async function initializeDatabase() {
         amount REAL NOT NULL,
         mode TEXT CHECK(mode IN ('bank','cash')) DEFAULT 'bank',
         bank_name TEXT,
+        cash_handler TEXT,
         remarks TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
     `);
+    await client.query(`ALTER TABLE loan_repayments ADD COLUMN IF NOT EXISTS cash_handler TEXT`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_loan_repayments_loan ON loan_repayments(loan_id)`);
 
     await client.query(`
