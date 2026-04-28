@@ -3,6 +3,33 @@ import { getAll, getOne, query } from '../db/database';
 
 const router = Router();
 
+// Compute current balance for a single bank (mirrors capital summary math).
+// Used to reject transfers that would overdraw the source bank.
+async function bankBalance(bank: string): Promise<number> {
+  const row = await getOne(
+    `
+    SELECT (
+      COALESCE((SELECT opening_balance FROM bank_balances WHERE LOWER(TRIM(bank_name)) = LOWER(TRIM($1)) LIMIT 1), 0)
+      + COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank' AND direction='receive' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM payments WHERE mode='bank' AND direction='pay'     AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM expenses           WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM truck_expenses     WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM driver_payments    WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      + COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE mode='bank' AND payment_type='received'                AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM party_loans WHERE mode='bank' AND type='disbursement' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      + COALESCE((SELECT SUM(amount) FROM party_loans WHERE mode='bank' AND type='repayment'    AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM loan_repayments WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM assets          WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      + COALESCE((SELECT SUM(amount) FROM bank_transfers WHERE LOWER(TRIM(to_bank))   = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM bank_transfers WHERE LOWER(TRIM(from_bank)) = LOWER(TRIM($1))), 0)
+    ) AS balance
+    `,
+    [bank]
+  );
+  return Number(row?.balance ?? 0);
+}
+
 // GET /api/bank-transfers
 router.get('/', async (_req, res) => {
   try {
@@ -23,6 +50,10 @@ router.post('/', async (req, res) => {
   const amt = Number(amount);
   if (!(amt > 0)) return res.status(400).json({ error: 'amount must be > 0' });
   try {
+    const sourceBalance = await bankBalance(from_bank);
+    if (amt > sourceBalance + 1e-6) {
+      return res.status(400).json({ error: `Transfer exceeds ${from_bank} balance (₹${sourceBalance.toFixed(2)} available)` });
+    }
     const row = await getOne(
       `INSERT INTO bank_transfers (date, from_bank, to_bank, amount, remarks)
        VALUES ($1,$2,$3,$4,$5) RETURNING *`,

@@ -414,6 +414,11 @@ function BankSection({ summary, onChange }: { summary: CapitalSummary; onChange:
     }
     const amt = Number(transferForm.amount);
     if (!(amt > 0)) { addToast('Amount must be > 0', 'error'); return; }
+    const sourceBalance = summary.banks.find((b) => b.bank_name === transferForm.from_bank)?.balance ?? 0;
+    if (amt > sourceBalance) {
+      addToast(`Cannot transfer more than ${transferForm.from_bank} balance (${formatINR(sourceBalance)})`, 'error');
+      return;
+    }
     setSavingTransfer(true);
     try {
       await api.bankTransfers.create({
@@ -560,10 +565,34 @@ function BankSection({ summary, onChange }: { summary: CapitalSummary; onChange:
                 <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
                 <input type="date" className="input-field w-full" value={transferForm.date} onChange={(e) => setTransferForm((p) => ({ ...p, date: e.target.value }))} />
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
-                <input type="number" min={0} step={0.01} className="input-field w-full" value={transferForm.amount} onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))} />
-              </div>
+              {(() => {
+                const sourceBal = summary.banks.find((b) => b.bank_name === transferForm.from_bank)?.balance ?? 0;
+                const amt = Number(transferForm.amount) || 0;
+                const overLimit = transferForm.from_bank && amt > sourceBal;
+                return (
+                  <div>
+                    <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
+                    <input
+                      type="number"
+                      min={0}
+                      max={transferForm.from_bank ? sourceBal : undefined}
+                      step={0.01}
+                      className={`input-field w-full ${overLimit ? 'border-red-500 focus:ring-red-500' : ''}`}
+                      value={transferForm.amount}
+                      onChange={(e) => setTransferForm((p) => ({ ...p, amount: e.target.value }))}
+                    />
+                    {transferForm.from_bank ? (
+                      overLimit ? (
+                        <p className="mt-1 text-[11px] text-red-600">Exceeds available balance ({formatINR(sourceBal)}).</p>
+                      ) : (
+                        <p className="mt-1 text-[11px] text-heading/50">Max available in {transferForm.from_bank}: {formatINR(sourceBal)}</p>
+                      )
+                    ) : (
+                      <p className="mt-1 text-[11px] text-heading/50">Pick a source bank to see the available balance.</p>
+                    )}
+                  </div>
+                );
+              })()}
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">From Bank *</label>
                 <select className="input-field w-full" value={transferForm.from_bank} onChange={(e) => setTransferForm((p) => ({ ...p, from_bank: e.target.value }))}>
