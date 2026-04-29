@@ -18,6 +18,7 @@ import Capital from './pages/Capital';
 import Finance from './pages/Finance';
 import Assets from './pages/Assets';
 import SuspensePage from './pages/Suspense';
+import BankTransfers from './pages/BankTransfers';
 import ImportPage from './pages/Import';
 import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
@@ -123,6 +124,7 @@ export default function App() {
           <Route path="/stock" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Stock /></BookGuard>} />
           <Route path="/parties" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Parties /></BookGuard>} />
           <Route path="/suspense" element={<BookGuard permission="access_cementbook" fallback="/no-access"><SuspensePage /></BookGuard>} />
+          <Route path="/bank-transfers" element={<BookGuard permission="access_cementbook" fallback="/no-access"><BankTransfers /></BookGuard>} />
           <Route path="/parties/:id" element={<BookGuard permission="access_cementbook" fallback="/no-access"><PartyLedger /></BookGuard>} />
           <Route path="/dealers" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Dealers /></BookGuard>} />
           <Route path="/dealers/:id" element={<BookGuard permission="access_cementbook" fallback="/no-access"><DealerDetail /></BookGuard>} />

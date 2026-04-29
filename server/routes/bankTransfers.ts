@@ -63,6 +63,37 @@ router.post('/', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+// PUT /api/bank-transfers/:id  (admin only)
+router.put('/:id', async (req: any, res) => {
+  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  const { date, from_bank, to_bank, amount, remarks } = req.body;
+  if (!date || !from_bank || !to_bank || !amount) {
+    return res.status(400).json({ error: 'date, from_bank, to_bank and amount are required' });
+  }
+  if (from_bank === to_bank) return res.status(400).json({ error: 'From and To bank must be different' });
+  const amt = Number(amount);
+  if (!(amt > 0)) return res.status(400).json({ error: 'amount must be > 0' });
+  try {
+    // Compute the source-bank balance excluding the current transfer so the cap reflects
+    // the user's intent to change this row.
+    const sourceBalance = await bankBalance(from_bank);
+    const current = await getOne(`SELECT amount, from_bank FROM bank_transfers WHERE id=$1`, [req.params.id]);
+    if (!current) return res.status(404).json({ error: 'Transfer not found' });
+    const adjustedBalance = current.from_bank === from_bank
+      ? sourceBalance + Number(current.amount) // add the existing outflow back
+      : sourceBalance;
+    if (amt > adjustedBalance + 1e-6) {
+      return res.status(400).json({ error: `Transfer exceeds ${from_bank} balance (₹${adjustedBalance.toFixed(2)} available)` });
+    }
+    const row = await getOne(
+      `UPDATE bank_transfers SET date=$1, from_bank=$2, to_bank=$3, amount=$4, remarks=$5
+       WHERE id=$6 RETURNING *`,
+      [date, from_bank, to_bank, amt, remarks || null, req.params.id]
+    );
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 // DELETE /api/bank-transfers/:id  (admin only)
 router.delete('/:id', async (req: any, res) => {
   if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });

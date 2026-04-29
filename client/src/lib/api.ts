@@ -182,6 +182,7 @@ export const api = {
   bankTransfers: {
     list: () => request<{ id: number; date: string; from_bank: string; to_bank: string; amount: number; remarks: string | null }[]>('/bank-transfers'),
     create: (data: { date: string; from_bank: string; to_bank: string; amount: number; remarks?: string | null }) => request<any>('/bank-transfers', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: { date: string; from_bank: string; to_bank: string; amount: number; remarks?: string | null }) => request<any>(`/bank-transfers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/bank-transfers/${id}`, { method: 'DELETE' }),
   },
   assets: {

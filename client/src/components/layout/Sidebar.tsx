@@ -52,6 +52,7 @@ const cementNavItems = [
   { to: '/suspense', label: 'Suspense', icon: Wallet },
   { to: '/dealers', label: 'Dealers', icon: Store },
   { to: '/payments', label: 'Payments', icon: CreditCard },
+  { to: '/bank-transfers', label: 'Bank Transfers', icon: Building2 },
   { to: '/expenses', label: 'Expenses', icon: Receipt },
   { to: '/reports', label: 'Reports', icon: BarChart3 },
   { to: '/import', label: 'Import', icon: Upload },
