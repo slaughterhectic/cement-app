@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import type { ColumnDef } from '../components/tables/DataTable';
 import { DataTable } from '../components/tables/DataTable';
 import PaymentForm from '../components/forms/PaymentForm';
+import { BankTransferButton } from '../components/BankTransferButton';
 import { api } from '../lib/api';
 import { formatDate, formatINR } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -152,14 +153,17 @@ export default function Payments() {
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-center justify-between gap-4">
         <h1 className="text-2xl font-bold text-heading">Payments</h1>
-        <button
-          type="button"
-          onClick={() => setModalOpen(true)}
-          className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
-        >
-          <Plus className="h-4 w-4" />
-          Record Payment
-        </button>
+        <div className="flex items-center gap-2">
+          <BankTransferButton onSaved={load} />
+          <button
+            type="button"
+            onClick={() => setModalOpen(true)}
+            className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-brand-700"
+          >
+            <Plus className="h-4 w-4" />
+            Record Payment
+          </button>
+        </div>
       </div>
 
       <DataTable<PaymentRow>
