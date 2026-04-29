@@ -805,7 +805,10 @@ export default function Finance() {
       {/* Loans table */}
       <div className="space-y-3">
         <div className="flex items-center justify-between">
-          <h2 className="text-lg font-semibold text-heading">Loan register</h2>
+          <div>
+            <h2 className="text-lg font-semibold text-heading">Loan register</h2>
+            <p className="text-xs text-heading/60 mt-0.5">Double-click a row (or click the Repaid amount) to open the repayment ledger and delete past payments.</p>
+          </div>
           <button type="button" onClick={openCreate} className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-3 py-2 text-sm font-medium text-white hover:bg-brand-700">
             <Plus className="h-4 w-4" /> Add Loan
           </button>
@@ -843,7 +846,12 @@ export default function Finance() {
                     const repaidPct = loan.principal > 0 ? (repaidTotal / loan.principal) * 100 : 0;
                     const pct = loan.principal > 0 ? (outstanding / loan.principal) * 100 : 0;
                     return (
-                      <tr key={loan.id} className="hover:bg-surface">
+                      <tr
+                        key={loan.id}
+                        className="cursor-pointer hover:bg-surface"
+                        onDoubleClick={() => openRepay(loan)}
+                        title="Double-click to view repayment history"
+                      >
                         <td className="px-4 py-3 font-medium text-heading">{loan.lender_name}</td>
                         <td className="px-4 py-3 text-right tabular-nums">{formatINR(loan.principal)}</td>
                         <td className="px-4 py-3 text-right tabular-nums">
@@ -855,8 +863,22 @@ export default function Finance() {
                           </div>
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">
-                          <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(repaidTotal)}</span>
-                          <p className="mt-0.5 text-[10px] text-heading/60">{repaidCount} payment{repaidCount === 1 ? '' : 's'} • {repaidPct.toFixed(0)}%</p>
+                          {repaidCount > 0 ? (
+                            <button
+                              type="button"
+                              onClick={(e) => { e.stopPropagation(); openRepay(loan); }}
+                              className="ml-auto block text-right hover:underline"
+                              title="View / delete repayments"
+                            >
+                              <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(repaidTotal)}</span>
+                              <p className="mt-0.5 text-[10px] text-heading/60">{repaidCount} payment{repaidCount === 1 ? '' : 's'} • {repaidPct.toFixed(0)}% · view</p>
+                            </button>
+                          ) : (
+                            <>
+                              <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(repaidTotal)}</span>
+                              <p className="mt-0.5 text-[10px] text-heading/60">No payments yet</p>
+                            </>
+                          )}
                         </td>
                         <td className="px-4 py-3 text-right tabular-nums">{loan.interest_rate.toFixed(2)}%</td>
                         <td className="px-4 py-3 text-right tabular-nums font-medium text-blue-700 dark:text-blue-300">
