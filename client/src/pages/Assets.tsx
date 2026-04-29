@@ -1,5 +1,5 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
-import { Plus, Trash2, Package, TrendingUp } from 'lucide-react';
+import { Plus, Trash2, Pencil, Package, TrendingUp } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -28,6 +28,7 @@ export default function Assets() {
   const [loading, setLoading] = useState(true);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [editId, setEditId] = useState<number | null>(null);
   const emptyForm = {
     date: new Date().toISOString().split('T')[0],
     name: '',
@@ -61,6 +62,27 @@ export default function Assets() {
 
   useEffect(() => { load(); }, [load]);
 
+  const openEdit = (a: Asset) => {
+    setEditId(a.id);
+    setForm({
+      date: a.date,
+      name: a.name,
+      type: a.type ?? '',
+      amount: String(a.amount),
+      mode: a.mode,
+      bank_name: a.bank_name ?? '',
+      cash_handler: a.cash_handler ?? '',
+      remarks: a.remarks ?? '',
+    });
+    setShowForm(true);
+  };
+
+  const closeForm = () => {
+    setShowForm(false);
+    setEditId(null);
+    setForm(emptyForm);
+  };
+
   const handleSave = async () => {
     if (!form.date || !form.name || !form.amount) {
       addToast('Date, name and amount are required', 'error');
@@ -75,7 +97,7 @@ export default function Assets() {
 
     setSaving(true);
     try {
-      await api.assets.create({
+      const payload = {
         date: form.date,
         name: form.name.trim(),
         type: form.type || null,
@@ -84,10 +106,15 @@ export default function Assets() {
         bank_name: form.mode === 'bank' ? form.bank_name || null : null,
         cash_handler: form.mode === 'cash' ? form.cash_handler || null : null,
         remarks: form.remarks.trim() || null,
-      });
-      addToast('Asset recorded', 'success');
-      setShowForm(false);
-      setForm(emptyForm);
+      };
+      if (editId != null) {
+        await api.assets.update(editId, payload);
+        addToast('Asset updated', 'success');
+      } else {
+        await api.assets.create(payload);
+        addToast('Asset recorded', 'success');
+      }
+      closeForm();
       load();
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Save failed', 'error');
@@ -155,7 +182,7 @@ export default function Assets() {
         <div className="rounded-xl border border-card-border bg-card p-5 flex items-center justify-center">
           <button
             type="button"
-            onClick={() => setShowForm(true)}
+            onClick={() => { setEditId(null); setForm(emptyForm); setShowForm(true); }}
             className="inline-flex items-center gap-2 rounded-lg bg-brand-600 px-4 py-2.5 text-sm font-medium text-white hover:bg-brand-700"
           >
             <Plus className="h-4 w-4" /> Record New Asset
@@ -205,9 +232,14 @@ export default function Assets() {
                     <td className="px-4 py-3 text-heading/70 max-w-[200px] truncate">{a.remarks || '—'}</td>
                     {isAdmin && (
                       <td className="px-4 py-3">
-                        <button type="button" onClick={() => handleDelete(a.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
-                          <Trash2 className="h-3.5 w-3.5" />
-                        </button>
+                        <div className="flex items-center gap-1">
+                          <button type="button" onClick={() => openEdit(a)} className="rounded p-1.5 text-brand-600 hover:bg-brand-50 dark:hover:bg-brand-900/30" title="Edit">
+                            <Pencil className="h-3.5 w-3.5" />
+                          </button>
+                          <button type="button" onClick={() => handleDelete(a.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete">
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
                       </td>
                     )}
                   </tr>
@@ -223,8 +255,8 @@ export default function Assets() {
       {showForm && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-2xl rounded-xl bg-card p-6 shadow-xl overflow-y-auto max-h-[90vh]">
-            <h3 className="mb-1 text-base font-semibold text-heading">Record New Asset</h3>
-            <p className="mb-4 text-xs text-heading/60">Amount will be deducted from the chosen bank or cash handler.</p>
+            <h3 className="mb-1 text-base font-semibold text-heading">{editId != null ? 'Edit Asset' : 'Record New Asset'}</h3>
+            <p className="mb-4 text-xs text-heading/60">{editId != null ? 'Changes re-sync the cash/bank debit automatically.' : 'Amount will be deducted from the chosen bank or cash handler.'}</p>
             <div className="grid gap-4 sm:grid-cols-2">
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Date *</label>
@@ -281,9 +313,9 @@ export default function Assets() {
               </div>
             </div>
             <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
-              <button type="button" onClick={() => setShowForm(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
+              <button type="button" onClick={closeForm} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
               <button type="button" onClick={handleSave} disabled={saving} className="rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-700 disabled:opacity-50">
-                {saving ? 'Saving…' : 'Save Asset'}
+                {saving ? 'Saving…' : editId != null ? 'Update Asset' : 'Save Asset'}
               </button>
             </div>
           </div>
