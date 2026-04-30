@@ -219,6 +219,50 @@ router.post('/:id/approve', async (req, res) => {
         particulars: `Expense — ${data.category || 'General'}`,
         narration: data.description || null,
       });
+    } else if (pending.entry_type === 'rl_trip') {
+      const d = data;
+      // Resolve commission % the same way the live POST does, for consistency
+      let resolvedCommissionPct = Number(d.commission_pct);
+      if (!Number.isFinite(resolvedCommissionPct)) {
+        const owner = await getOne('SELECT commission_pct FROM rl_truck_owners WHERE id=$1', [Number(d.truck_owner_id)]);
+        resolvedCommissionPct = Number(owner?.commission_pct);
+        if (!Number.isFinite(resolvedCommissionPct)) resolvedCommissionPct = 6.29;
+      }
+      result = await getOne(
+        `INSERT INTO rl_trips
+          (date, builty_number, do_number, truck_owner_id, party_name, location, dch_type, material_type,
+           qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
+           petrol_slip_number, epod_bill_number, difference_rate, remarks,
+           eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
+           delivery_status, delivered_at)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+         RETURNING *`,
+        [
+          d.date, d.builty_number?.trim() || null, d.do_number?.trim() || null,
+          Number(d.truck_owner_id), (d.party_name || '').trim(),
+          d.location?.trim() || null, d.dch_type?.trim() || null, d.material_type || null,
+          Number(d.qty) || 0, Number(d.acc_freight_rate) || 0, resolvedCommissionPct,
+          Number(d.diesel_advance) || 0, Number(d.cash_advance) || 0,
+          d.petrol_slip_number?.trim() || null, d.epod_bill_number?.trim() || null,
+          Number(d.difference_rate) || 0, d.remarks?.trim() || null,
+          d.eway_bill_number?.trim() || null, d.eway_bill_generated_at || null, d.eway_bill_valid_until || null,
+          d.delivery_status || 'pending', d.delivered_at || null,
+        ]
+      );
+    } else if (pending.entry_type === 'rl_owner_advance') {
+      const d = data;
+      result = await getOne(
+        `INSERT INTO rl_owner_advances (owner_name, date, amount, remarks)
+         VALUES ($1,$2,$3,$4) RETURNING *`,
+        [(d.owner_name || '').trim(), d.date, Number(d.amount), d.remarks?.trim() || null]
+      );
+    } else if (pending.entry_type === 'rl_partner_transaction') {
+      const d = data;
+      result = await getOne(
+        `INSERT INTO rl_partner_transactions (date, partner_id, type, amount, remarks)
+         VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+        [d.date, Number(d.partner_id), d.type, Number(d.amount), d.remarks?.trim() || null]
+      );
     } else {
       return res.status(400).json({ error: 'Unknown entry type' });
     }

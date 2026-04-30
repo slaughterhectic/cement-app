@@ -154,6 +154,18 @@ router.post('/', async (req, res) => {
     if (!truck_owner_id) return res.status(400).json({ error: 'Truck owner is required' });
     if (!party_name?.trim()) return res.status(400).json({ error: 'Party name is required' });
 
+    // Non-admin past/future-date entries route through the TransportBook approval queue
+    const today = new Date().toISOString().split('T')[0];
+    if (req.user?.role !== 'admin' && date !== today) {
+      const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
+      const pending = await getOne(
+        `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)
+         VALUES ('rl_trip', $1::jsonb, $2, $3, 'transportbook') RETURNING id`,
+        [JSON.stringify(req.body), req.user!.id, user?.display_name || req.user!.username]
+      );
+      return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
+    }
+
     // Fall back to the owner's default commission % when the trip body omits it
     let resolvedCommissionPct = Number(commission_pct);
     if (!Number.isFinite(resolvedCommissionPct)) {

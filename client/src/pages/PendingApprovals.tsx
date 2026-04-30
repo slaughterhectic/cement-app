@@ -10,6 +10,9 @@ import {
   ShoppingCart,
   CreditCard,
   Receipt,
+  Truck,
+  Users,
+  Wallet,
 } from 'lucide-react';
 import { api } from '../lib/api';
 import { useToastStore, useAuthStore } from '../lib/store';
@@ -17,7 +20,7 @@ import { formatDate, formatINR } from '../lib/format';
 
 interface PendingEntry {
   id: number;
-  entry_type: 'sale' | 'purchase' | 'payment' | 'expense';
+  entry_type: 'sale' | 'purchase' | 'payment' | 'expense' | 'rl_trip' | 'rl_owner_advance' | 'rl_partner_transaction';
   entry_data: Record<string, any>;
   status: 'pending' | 'approved' | 'rejected';
   created_by: number;
@@ -36,6 +39,9 @@ const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: s
   purchase: { label: 'Purchase', icon: ShoppingCart, color: 'text-violet-700', bg: 'bg-violet-100' },
   payment:  { label: 'Payment',  icon: CreditCard,  color: 'text-green-700 dark:text-green-300',  bg: 'bg-green-100 dark:bg-green-900/40' },
   expense:  { label: 'Expense',  icon: Receipt,     color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-100 dark:bg-orange-900/40' },
+  rl_trip:                 { label: 'Trip',                icon: Truck,       color: 'text-indigo-700 dark:text-indigo-300', bg: 'bg-indigo-100 dark:bg-indigo-900/40' },
+  rl_owner_advance:        { label: 'Owner Advance',       icon: Users,       color: 'text-amber-700 dark:text-amber-300',  bg: 'bg-amber-100 dark:bg-amber-900/40' },
+  rl_partner_transaction:  { label: 'Partner Transaction', icon: Wallet,      color: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-100 dark:bg-purple-900/40' },
 };
 
 function formatDateTime(ts: string) {
@@ -92,10 +98,40 @@ function EntrySummary({ type, data }: { type: string; data: Record<string, any> 
       </div>
     );
   }
+  if (type === 'rl_trip') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        <div><span className="text-heading/60">Party:</span> {data.party_name}{data.location ? ` · ${data.location}` : ''}</div>
+        <div><span className="text-heading/60">Bilty:</span> {data.builty_number || '—'}{data.do_number ? ` · DO ${data.do_number}` : ''}</div>
+        <div><span className="text-heading/60">Qty / Rate:</span> {data.qty} MT @ {formatINR(data.acc_freight_rate || 0)}</div>
+        {data.material_type && <div><span className="text-heading/60">Material:</span> {data.material_type}</div>}
+        {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
+      </div>
+    );
+  }
+  if (type === 'rl_owner_advance') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        <div><span className="text-heading/60">Owner:</span> {data.owner_name}</div>
+        <div><span className="text-heading/60">Amount:</span> <strong>{formatINR(data.amount)}</strong></div>
+        {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
+      </div>
+    );
+  }
+  if (type === 'rl_partner_transaction') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        <div><span className="text-heading/60">Partner ID:</span> {data.partner_id}</div>
+        <div><span className="text-heading/60">Type:</span> {data.type}</div>
+        <div><span className="text-heading/60">Amount:</span> <strong>{formatINR(data.amount)}</strong></div>
+        {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
+      </div>
+    );
+  }
   return null;
 }
 
-export default function PendingApprovals({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' }) {
+export default function PendingApprovals({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' | 'transportbook' }) {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin)();
 

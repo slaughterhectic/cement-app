@@ -159,6 +159,9 @@ export default function App() {
           {/* TruckBook requests/approvals */}
           <Route path="/truckbook/requests" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Requests source="truckbook" /></BookGuard>} />
           <Route path="/truckbook/pending-approvals" element={<BookGuard permission="access_truckbook" fallback="/no-access"><PendingApprovals source="truckbook" /></BookGuard>} />
+          {/* TransportBook requests/approvals */}
+          <Route path="/transportbook/requests" element={<BookGuard permission="access_transportbook" fallback="/no-access"><Requests source="transportbook" /></BookGuard>} />
+          <Route path="/transportbook/pending-approvals" element={<BookGuard permission="access_transportbook" fallback="/no-access"><PendingApprovals source="transportbook" /></BookGuard>} />
           {/* Admin only */}
           <Route path="/settings" element={<AdminOnly><Settings /></AdminOnly>} />
           <Route path="/users" element={<AdminOnly><UserManagement /></AdminOnly>} />

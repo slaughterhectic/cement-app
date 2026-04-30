@@ -92,6 +92,8 @@ const transportNavItems = [
   { to: '/transportbook/compliance', label: 'Compliance', icon: ShieldCheck },
   { to: '/transportbook/partners', label: 'Partners', icon: Users },
   { to: '/transportbook/rates', label: 'Rates', icon: Settings, permission: 'manage_transport_rates' },
+  { to: '/transportbook/pending-approvals', label: 'Approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
+  { to: '/transportbook/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];
 
 const BOOK_META: Record<Book, { label: string; dot: string; activeClass: string; hoverClass: string; defaultRoute: string }> = {
@@ -178,7 +180,7 @@ export function Sidebar() {
   // Poll pending request count for badge — scoped to current book
   useEffect(() => {
     let active = true;
-    const source = book === 'truck' ? 'truckbook' : 'cementbook';
+    const source = book === 'truck' ? 'truckbook' : book === 'transport' ? 'transportbook' : 'cementbook';
     const fetchCount = async () => {
       try {
         const rows: any[] = await api.requests.list(source);
@@ -193,7 +195,7 @@ export function Sidebar() {
   // Poll pending approvals count for badge — scoped to current book
   useEffect(() => {
     let active = true;
-    const source = book === 'truck' ? 'truckbook' : 'cementbook';
+    const source = book === 'truck' ? 'truckbook' : book === 'transport' ? 'transportbook' : 'cementbook';
     const fetchApprovals = async () => {
       try {
         const res = await api.pendingEntries.count(source);

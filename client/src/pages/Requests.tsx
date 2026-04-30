@@ -23,7 +23,7 @@ function formatDateTime(ts: string) {
     + ' ' + d.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' });
 }
 
-export default function Requests({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' }) {
+export default function Requests({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' | 'transportbook' }) {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const user = useAuthStore((s) => s.user);
