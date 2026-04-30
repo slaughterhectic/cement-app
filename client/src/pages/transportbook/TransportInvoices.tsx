@@ -1,8 +1,11 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { Plus, Pencil, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
+
+type Company = 'acc' | 'jk';
 
 interface InvoiceRow {
   id: number;
@@ -14,6 +17,7 @@ interface InvoiceRow {
   tds_amount: number;
   status: 'pending' | 'done' | 'partial';
   remarks: string | null;
+  company: Company;
 }
 
 const emptyForm = {
@@ -24,6 +28,7 @@ const emptyForm = {
   received_amount: '',
   tds_amount: '',
   remarks: '',
+  company: 'acc' as Company,
 };
 
 function computeStatus(invoiceAmount: number, receivedAmount: number): 'pending' | 'done' | 'partial' {
@@ -47,6 +52,10 @@ function StatusBadge({ status }: { status: string }) {
 export default function TransportInvoices() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
+  const [searchParams, setSearchParams] = useSearchParams();
+  const company: Company = searchParams.get('company') === 'jk' ? 'jk' : 'acc';
+  const setCompany = (c: Company) => setSearchParams(c === 'acc' ? {} : { company: c });
+
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -57,20 +66,22 @@ export default function TransportInvoices() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.rlInvoices.list();
+      const data = await api.rlInvoices.list(company);
       setRows(data);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load invoices', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, company]);
+
+  const heading = useMemo(() => company === 'jk' ? 'JK Billing' : 'ACC Billing', [company]);
 
   useEffect(() => { load(); }, [load]);
 
   const openAdd = () => {
     setEditing(null);
-    setForm(emptyForm);
+    setForm({ ...emptyForm, company });
     setModalOpen(true);
   };
 
@@ -84,6 +95,7 @@ export default function TransportInvoices() {
       received_amount: String(row.received_amount || ''),
       tds_amount: String(row.tds_amount || ''),
       remarks: row.remarks || '',
+      company: row.company,
     });
     setModalOpen(true);
   };
@@ -105,6 +117,9 @@ export default function TransportInvoices() {
         tds_amount: tdsAmt,
         status: computeStatus(invAmt, recAmt),
         remarks: form.remarks || null,
+        // New rows take the form's company (defaulted to the active tab); edits respect
+        // the dropdown so a row can be moved between ACC and JK.
+        company: form.company,
       };
       if (editing) {
         await api.rlInvoices.update(editing.id, payload);
@@ -153,14 +168,30 @@ export default function TransportInvoices() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold text-heading">ACC Billing</h1>
-          <p className="text-sm text-heading/60 mt-1">{rows.length} invoice{rows.length !== 1 ? 's' : ''}</p>
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold text-heading">{heading}</h1>
+          <div className="inline-flex rounded-lg border border-card-border bg-card p-1 text-xs font-medium">
+            <button
+              type="button"
+              onClick={() => setCompany('acc')}
+              className={`rounded-md px-3 py-1.5 ${company === 'acc' ? 'bg-indigo-500 text-white shadow-sm' : 'text-heading/70 hover:bg-surface'}`}
+            >
+              ACC Billing
+            </button>
+            <button
+              type="button"
+              onClick={() => setCompany('jk')}
+              className={`rounded-md px-3 py-1.5 ${company === 'jk' ? 'bg-emerald-500 text-white shadow-sm' : 'text-heading/70 hover:bg-surface'}`}
+            >
+              JK Billing
+            </button>
+          </div>
+          <p className="text-sm text-heading/60">{rows.length} invoice{rows.length !== 1 ? 's' : ''}</p>
         </div>
         <button
           type="button"
           onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
+          className={`inline-flex items-center gap-2 rounded-lg px-4 py-2.5 text-sm font-medium text-white shadow-sm transition-colors ${company === 'jk' ? 'bg-emerald-500 hover:bg-emerald-600' : 'bg-indigo-500 hover:bg-indigo-600'}`}
         >
           <Plus className="h-4 w-4" />
           Add Invoice
@@ -285,6 +316,28 @@ export default function TransportInvoices() {
             </div>
             <form onSubmit={handleSubmit} className="p-5 flex flex-col gap-4">
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div className="col-span-2">
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Billing Company *</label>
+                  <div className="inline-flex w-full rounded-lg border border-card-border bg-card p-1 text-sm">
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, company: 'acc' }))}
+                      className={`flex-1 rounded-md px-3 py-1.5 font-medium ${form.company === 'acc' ? 'bg-indigo-500 text-white shadow-sm' : 'text-heading/70 hover:bg-surface'}`}
+                    >
+                      ACC
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setForm((p) => ({ ...p, company: 'jk' }))}
+                      className={`flex-1 rounded-md px-3 py-1.5 font-medium ${form.company === 'jk' ? 'bg-emerald-500 text-white shadow-sm' : 'text-heading/70 hover:bg-surface'}`}
+                    >
+                      JK
+                    </button>
+                  </div>
+                  {editing && form.company !== editing.company && (
+                    <p className="mt-1 text-[11px] text-amber-600 dark:text-amber-400">Moving this invoice from {editing.company.toUpperCase()} to {form.company.toUpperCase()} on save.</p>
+                  )}
+                </div>
                 <div className="col-span-2">
                   <label className="block text-sm font-medium text-heading/80 mb-1">Invoice Number *</label>
                   <input className="input-field" value={form.invoice_number} onChange={f('invoice_number')} placeholder="e.g. ACC/2024/001" required />

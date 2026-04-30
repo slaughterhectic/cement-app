@@ -329,7 +329,7 @@ export const api = {
     ewayAlerts: () => request<{ atRisk: any[]; counts: { expired: number; risk: number; warning: number; ok: number } }>('/rl/trips/eway-alerts'),
   },
   rlInvoices: {
-    list: () => request<any[]>('/rl/invoices'),
+    list: (company?: 'acc' | 'jk') => request<any[]>(`/rl/invoices${company ? `?company=${company}` : ''}`),
     create: (data: any) => request<any>('/rl/invoices', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/rl/invoices/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/rl/invoices/${id}`, { method: 'DELETE' }),

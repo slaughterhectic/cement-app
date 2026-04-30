@@ -696,6 +696,13 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_period TEXT`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS compliance_remarks TEXT`);
 
+    // ACC vs JK billing — invoices are tagged per company; numbering is unique per company.
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS company TEXT NOT NULL DEFAULT 'acc'`);
+    await client.query(`ALTER TABLE rl_invoices DROP CONSTRAINT IF EXISTS rl_invoices_company_check`);
+    await client.query(`ALTER TABLE rl_invoices ADD CONSTRAINT rl_invoices_company_check CHECK (company IN ('acc','jk'))`);
+    await client.query(`ALTER TABLE rl_invoices DROP CONSTRAINT IF EXISTS rl_invoices_invoice_number_key`);
+    await client.query(`CREATE UNIQUE INDEX IF NOT EXISTS uq_rl_invoices_company_number ON rl_invoices(company, invoice_number)`);
+
     // Performance indexes — capital/parties summaries do many SUM(...) WHERE party_id/mode/...
     // aggregates; without these the planner falls back to seq scans.
     await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_party        ON payments(party_id)`);

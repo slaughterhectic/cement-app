@@ -88,6 +88,7 @@ const transportNavItems = [
   { to: '/transportbook/trucks', label: 'Trucks', icon: Truck },
   { to: '/transportbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/transportbook/invoices', label: 'ACC Billing', icon: Receipt },
+  { to: '/transportbook/invoices?company=jk', label: 'JK Billing', icon: Receipt },
   { to: '/transportbook/compliance', label: 'Compliance', icon: ShieldCheck },
   { to: '/transportbook/partners', label: 'Partners', icon: Users },
   { to: '/transportbook/rates', label: 'Rates', icon: Settings, permission: 'manage_transport_rates' },
@@ -344,19 +345,38 @@ export function Sidebar() {
       <nav className="flex flex-1 flex-col gap-0.5 overflow-y-auto p-2">
         {navItems.map(({ to, label, icon: Icon, badge, badgeKey }) => {
           const badgeCount = badgeKey === 'approvals' ? approvalsCount : (badge ? pendingCount : 0);
+          // For sibling nav items that share a pathname but differ on query string
+          // (e.g. ACC Billing vs JK Billing) NavLink's default active match ignores
+          // the search portion, so both would highlight at once. Compare query
+          // strings too when the nav target carries one.
+          const [navPath, navSearch = ''] = to.split('?');
+          const isCustomActive = navSearch
+            ? location.pathname === navPath && location.search === '?' + navSearch
+            : null;
           return (
           <NavLink
             key={to}
             to={to}
             end={to === '/truckbook' || to === '/dashboard' || to === '/transportbook'}
             title={effectiveCollapsed ? label : undefined}
-            className={({ isActive }) =>
-              [
+            className={({ isActive }) => {
+              // For pathname-only nav items that have a query-string sibling, treat them
+              // as active only when the URL has no query — otherwise they'd both light up.
+              const siblingHasQuery = navItems.some((n) => {
+                const [p, s = ''] = n.to.split('?');
+                return p === navPath && s !== navSearch;
+              });
+              const computedActive = isCustomActive !== null
+                ? isCustomActive
+                : siblingHasQuery
+                  ? isActive && location.search === ''
+                  : isActive;
+              return [
                 'flex items-center gap-3 rounded-lg py-2.5 text-sm font-medium transition-colors',
                 effectiveCollapsed ? 'justify-center px-2' : 'px-3',
-                isActive ? meta.activeClass : `text-heading/80 ${meta.hoverClass}`,
-              ].join(' ')
-            }
+                computedActive ? meta.activeClass : `text-heading/80 ${meta.hoverClass}`,
+              ].join(' ');
+            }}
           >
             <div className="relative shrink-0">
               <Icon className="h-5 w-5" strokeWidth={2} />

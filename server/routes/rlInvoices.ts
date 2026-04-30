@@ -15,11 +15,15 @@ function normItc(v: any, def = 'not_claimed'): string {
   return ITC_STATUSES.has(s) ? s : def;
 }
 
-// GET /rl/invoices
-router.get('/', async (_req, res) => {
+// GET /rl/invoices?company=acc|jk (optional filter)
+router.get('/', async (req, res) => {
   try {
+    const company = typeof req.query.company === 'string' ? req.query.company.trim().toLowerCase() : '';
+    const where = company === 'acc' || company === 'jk' ? `WHERE company=$1` : '';
+    const params = where ? [company] : [];
     const rows = await getAll(
-      `SELECT * FROM rl_invoices ORDER BY invoice_number DESC`
+      `SELECT * FROM rl_invoices ${where} ORDER BY invoice_number DESC`,
+      params
     );
     res.json(rows.map((r: any) => ({
       ...r,
@@ -75,12 +79,14 @@ router.post('/', async (req, res) => {
   try {
     const {
       invoice_number, invoice_date, invoice_amount, payment_receive_date,
-      received_amount, tds_amount, status, remarks,
+      received_amount, tds_amount, status, remarks, company,
       gstr1_status, gstr1_period, gstr3b_status, gstr3b_period,
       itc_status, itc_period, compliance_remarks,
     } = req.body;
 
     if (!invoice_number?.trim()) return res.status(400).json({ error: 'Invoice number is required' });
+    const co = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
+    if (co !== 'acc' && co !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
     const invAmt = Number(invoice_amount) || 0;
     const recAmt = Number(received_amount) || 0;
@@ -96,10 +102,10 @@ router.post('/', async (req, res) => {
     const row = await getOne(
       `INSERT INTO rl_invoices
         (invoice_number, invoice_date, invoice_amount, payment_receive_date,
-         received_amount, tds_amount, status, remarks,
+         received_amount, tds_amount, status, remarks, company,
          gstr1_status, gstr1_period, gstr3b_status, gstr3b_period,
          itc_status, itc_period, compliance_remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
        RETURNING *`,
       [
         invoice_number.trim(),
@@ -110,6 +116,7 @@ router.post('/', async (req, res) => {
         tdsAmt,
         computedStatus,
         remarks?.trim() || null,
+        co,
         normGstr(gstr1_status),
         gstr1_period?.trim() || null,
         normGstr(gstr3b_status),
@@ -128,12 +135,18 @@ router.put('/:id', async (req, res) => {
   try {
     const {
       invoice_number, invoice_date, invoice_amount, payment_receive_date,
-      received_amount, tds_amount, status, remarks,
+      received_amount, tds_amount, status, remarks, company,
       gstr1_status, gstr1_period, gstr3b_status, gstr3b_period,
       itc_status, itc_period, compliance_remarks,
     } = req.body;
 
     if (!invoice_number?.trim()) return res.status(400).json({ error: 'Invoice number is required' });
+
+    // Preserve existing company if the client didn't send one (older edit forms).
+    const existing = await getOne('SELECT company FROM rl_invoices WHERE id=$1', [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Invoice not found' });
+    const co = (typeof company === 'string' ? company.trim().toLowerCase() : '') || existing.company || 'acc';
+    if (co !== 'acc' && co !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
     const invAmt = Number(invoice_amount) || 0;
     const recAmt = Number(received_amount) || 0;
@@ -149,10 +162,10 @@ router.put('/:id', async (req, res) => {
     const row = await getOne(
       `UPDATE rl_invoices SET
         invoice_number=$1, invoice_date=$2, invoice_amount=$3, payment_receive_date=$4,
-        received_amount=$5, tds_amount=$6, status=$7, remarks=$8,
-        gstr1_status=$9, gstr1_period=$10, gstr3b_status=$11, gstr3b_period=$12,
-        itc_status=$13, itc_period=$14, compliance_remarks=$15
-       WHERE id=$16 RETURNING *`,
+        received_amount=$5, tds_amount=$6, status=$7, remarks=$8, company=$9,
+        gstr1_status=$10, gstr1_period=$11, gstr3b_status=$12, gstr3b_period=$13,
+        itc_status=$14, itc_period=$15, compliance_remarks=$16
+       WHERE id=$17 RETURNING *`,
       [
         invoice_number.trim(),
         invoice_date || null,
@@ -162,6 +175,7 @@ router.put('/:id', async (req, res) => {
         tdsAmt,
         computedStatus,
         remarks?.trim() || null,
+        co,
         normGstr(gstr1_status),
         gstr1_period?.trim() || null,
         normGstr(gstr3b_status),
@@ -172,7 +186,6 @@ router.put('/:id', async (req, res) => {
         req.params.id,
       ]
     );
-    if (!row) return res.status(404).json({ error: 'Invoice not found' });
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
