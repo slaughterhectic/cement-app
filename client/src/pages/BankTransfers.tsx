@@ -5,6 +5,7 @@ import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
 import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
 import { BankTransferButton } from '../components/BankTransferButton';
+import { BankOpeningButton } from '../components/BankOpeningButton';
 
 type Transfer = { id: number; date: string; from_bank: string; to_bank: string; amount: number; remarks: string | null };
 type BankRow = { bank_name: string; balance: number };
@@ -99,7 +100,10 @@ export default function BankTransfers() {
           <h1 className="text-2xl font-bold tracking-tight text-heading">Bank Transfers</h1>
           <p className="mt-1 text-sm text-heading/60">Money moved from one bank account to another. Net cash effect is zero — only the per-bank balances move.</p>
         </div>
-        <BankTransferButton onSaved={load} />
+        <div className="flex flex-wrap items-center gap-2">
+          <BankOpeningButton onSaved={load} />
+          <BankTransferButton onSaved={load} />
+        </div>
       </header>
 
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
