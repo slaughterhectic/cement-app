@@ -131,10 +131,23 @@ router.delete('/:id', async (req, res) => {
 });
 
 // POST /transporters/:id/payments
-router.post('/:id/payments', async (req, res) => {
+router.post('/:id/payments', async (req: any, res) => {
   try {
     const { date, amount, mode, bank_name, cash_handler, remarks, payment_type } = req.body;
     if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
+
+    // Non-admin past/future-date entries route through the TruckBook approval queue
+    const today = new Date().toISOString().split('T')[0];
+    if (req.user?.role !== 'admin' && date !== today) {
+      const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
+      const payload = { ...req.body, transporter_id: Number(req.params.id) };
+      const pending = await getOne(
+        `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)
+         VALUES ('transporter_payment', $1::jsonb, $2, $3, 'truckbook') RETURNING id`,
+        [JSON.stringify(payload), req.user!.id, user?.display_name || req.user!.username]
+      );
+      return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
+    }
 
     const normalizedMode = mode || 'cash';
     const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;

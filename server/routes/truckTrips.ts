@@ -3,7 +3,7 @@ import { query, getOne, getAll } from '../db/database';
 
 const router = Router();
 
-function computeTripFields(body: any) {
+export function computeTripFields(body: any) {
   const quantity             = Number(body.quantity)              || 0;
   const freight_rate         = Number(body.freight_rate)          || 0;
   const loading_charge       = Number(body.loading_charge)        || 0;
@@ -77,6 +77,18 @@ router.post('/', async (req, res) => {
       billed_destination, transporter_id, diesel_from_id, remarks,
     } = req.body;
     if (!date || !truck_id) return res.status(400).json({ error: 'date and truck_id are required' });
+
+    // Non-admin past/future-date entries route through the TruckBook approval queue
+    const today = new Date().toISOString().split('T')[0];
+    if (req.user?.role !== 'admin' && date !== today) {
+      const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
+      const pending = await getOne(
+        `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)
+         VALUES ('truck_trip', $1::jsonb, $2, $3, 'truckbook') RETURNING id`,
+        [JSON.stringify(req.body), req.user!.id, user?.display_name || req.user!.username]
+      );
+      return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
+    }
 
     const c = computeTripFields(req.body);
 

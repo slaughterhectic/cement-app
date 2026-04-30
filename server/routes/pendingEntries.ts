@@ -219,6 +219,104 @@ router.post('/:id/approve', async (req, res) => {
         particulars: `Expense — ${data.category || 'General'}`,
         narration: data.description || null,
       });
+    } else if (pending.entry_type === 'truck_trip') {
+      const d = data;
+      // Replay the full computeTripFields → INSERT flow that the live POST does.
+      const { computeTripFields } = await import('./truckTrips');
+      const c = computeTripFields(d);
+      result = await getOne(
+        `INSERT INTO truck_trips (
+          date, truck_id, driver_id, material_name, quantity,
+          load_from, billed_party, billed_destination,
+          transporter_id, diesel_from_id, transporter_commission,
+          freight_rate, loading_charge, unloading_charge,
+          advance_litres, advance_rate, advance_deduction,
+          toll_expense, diesel_litres, diesel_rate, diesel_amount,
+          driver_payment, miscellaneous,
+          odometer_start, odometer_end, total_km,
+          total_freight, net_freight, net_profit, remarks
+        ) VALUES (
+          $1,$2,$3,$4,$5,
+          $6,$7,$8,
+          $9,$10,$11,
+          $12,$13,$14,
+          $15,$16,$17,
+          $18,$19,$20,$21,
+          $22,$23,
+          $24,$25,$26,
+          $27,$28,$29,$30
+        ) RETURNING *`,
+        [
+          d.date, d.truck_id, d.driver_id || null, d.material_name || null, c.quantity,
+          d.load_from || null, d.billed_party || null, d.billed_destination || null,
+          d.transporter_id || null, d.diesel_from_id || null, c.transporter_commission,
+          c.freight_rate, c.loading_charge, c.unloading_charge,
+          c.advance_litres, c.advance_rate, c.advance_deduction,
+          c.toll_expense, c.diesel_litres, c.diesel_rate, c.diesel_amount,
+          c.driver_payment, c.miscellaneous,
+          c.odometer_start, c.odometer_end, c.total_km,
+          c.total_freight, c.net_freight, c.net_profit, d.remarks || null,
+        ]
+      );
+    } else if (pending.entry_type === 'truck_expense') {
+      const d = data;
+      const mode = d.mode || 'cash';
+      const handler = mode === 'cash' ? (d.cash_handler || null) : null;
+      const bank    = mode === 'bank' ? (d.bank_name    || null) : null;
+      result = await getOne(
+        `INSERT INTO truck_expenses (date, truck_id, category, description, amount, mode, bank_name, cash_handler)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [d.date, d.truck_id || null, d.category || null, d.description || null, d.amount, mode, bank, handler]
+      );
+      const truck = d.truck_id ? await getOne(`SELECT truck_number FROM trucks WHERE id=$1`, [d.truck_id]) : null;
+      await syncImprestForCashTxn({
+        sourceTable: 'truck_expenses',
+        sourceId: result.id,
+        mode, cashHandler: handler,
+        amount: Number(d.amount), date: d.date,
+        particulars: `Truck expense — ${d.category || 'General'}${truck?.truck_number ? ' (' + truck.truck_number + ')' : ''}`,
+        narration: d.description || null,
+      });
+    } else if (pending.entry_type === 'driver_payment') {
+      const d = data;
+      const mode = d.mode || 'cash';
+      const handler = mode === 'cash' ? (d.cash_handler || null) : null;
+      const bank    = mode === 'bank' ? (d.bank_name    || null) : null;
+      result = await getOne(
+        `INSERT INTO driver_payments (date, driver_id, amount, mode, bank_name, cash_handler, trip_id, remarks)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [d.date, d.driver_id, d.amount, mode, bank, handler, d.trip_id || null, d.remarks || null]
+      );
+      const driver = await getOne(`SELECT name FROM drivers WHERE id=$1`, [d.driver_id]);
+      await syncImprestForCashTxn({
+        sourceTable: 'driver_payments',
+        sourceId: result.id,
+        mode, cashHandler: handler,
+        amount: Number(d.amount), date: d.date,
+        particulars: `Driver payment — ${driver?.name ?? 'Driver #' + d.driver_id}`,
+        narration: d.remarks || null,
+      });
+    } else if (pending.entry_type === 'transporter_payment') {
+      const d = data;
+      const mode = d.mode || 'cash';
+      const handler = mode === 'cash' ? (d.cash_handler || null) : null;
+      const bank    = mode === 'bank' ? (d.bank_name    || null) : null;
+      const pType   = d.payment_type || 'paid';
+      result = await getOne(
+        `INSERT INTO transporter_payments (date, transporter_id, amount, mode, bank_name, cash_handler, remarks, payment_type)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [d.date, Number(d.transporter_id), Number(d.amount), mode, bank, handler, d.remarks || null, pType]
+      );
+      const transporter = await getOne(`SELECT name FROM transporters WHERE id=$1`, [d.transporter_id]);
+      await syncImprestForCashTxn({
+        sourceTable: 'transporter_payments',
+        sourceId: result.id,
+        mode, cashHandler: handler,
+        amount: Number(d.amount), date: d.date,
+        direction: pType === 'received' ? 'credit' : 'debit',
+        particulars: `Transporter ${pType === 'received' ? 'receipt' : 'payment'} — ${transporter?.name ?? 'Transporter #' + d.transporter_id}`,
+        narration: d.remarks || null,
+      });
     } else if (pending.entry_type === 'rl_trip') {
       const d = data;
       // Resolve commission % the same way the live POST does, for consistency

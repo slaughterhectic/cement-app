@@ -20,7 +20,10 @@ import { formatDate, formatINR } from '../lib/format';
 
 interface PendingEntry {
   id: number;
-  entry_type: 'sale' | 'purchase' | 'payment' | 'expense' | 'rl_trip' | 'rl_owner_advance' | 'rl_partner_transaction';
+  entry_type:
+    | 'sale' | 'purchase' | 'payment' | 'expense'
+    | 'truck_trip' | 'truck_expense' | 'driver_payment' | 'transporter_payment'
+    | 'rl_trip' | 'rl_owner_advance' | 'rl_partner_transaction';
   entry_data: Record<string, any>;
   status: 'pending' | 'approved' | 'rejected';
   created_by: number;
@@ -42,6 +45,10 @@ const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: s
   rl_trip:                 { label: 'Trip',                icon: Truck,       color: 'text-indigo-700 dark:text-indigo-300', bg: 'bg-indigo-100 dark:bg-indigo-900/40' },
   rl_owner_advance:        { label: 'Owner Advance',       icon: Users,       color: 'text-amber-700 dark:text-amber-300',  bg: 'bg-amber-100 dark:bg-amber-900/40' },
   rl_partner_transaction:  { label: 'Partner Transaction', icon: Wallet,      color: 'text-purple-700 dark:text-purple-300', bg: 'bg-purple-100 dark:bg-purple-900/40' },
+  truck_trip:              { label: 'Truck Trip',          icon: Truck,       color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-100 dark:bg-orange-900/40' },
+  truck_expense:           { label: 'Truck Expense',       icon: Receipt,     color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-100 dark:bg-orange-900/40' },
+  driver_payment:          { label: 'Driver Payment',      icon: CreditCard,  color: 'text-orange-700 dark:text-orange-300', bg: 'bg-orange-100 dark:bg-orange-900/40' },
+  transporter_payment:     { label: 'Transporter Payment', icon: CreditCard,  color: 'text-amber-700 dark:text-amber-300',  bg: 'bg-amber-100 dark:bg-amber-900/40' },
 };
 
 function formatDateTime(ts: string) {
@@ -114,6 +121,51 @@ function EntrySummary({ type, data }: { type: string; data: Record<string, any> 
       <div className="text-sm text-heading/80 space-y-0.5">
         <div><span className="text-heading/60">Owner:</span> {data.owner_name}</div>
         <div><span className="text-heading/60">Amount:</span> <strong>{formatINR(data.amount)}</strong></div>
+        {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
+      </div>
+    );
+  }
+  if (type === 'truck_trip') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        <div><span className="text-heading/60">Truck ID:</span> {data.truck_id}</div>
+        {data.material_name && <div><span className="text-heading/60">Material:</span> {data.material_name}</div>}
+        {data.billed_party && <div><span className="text-heading/60">Billed party:</span> {data.billed_party}</div>}
+        {data.billed_destination && <div><span className="text-heading/60">Destination:</span> {data.billed_destination}</div>}
+        {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
+      </div>
+    );
+  }
+  if (type === 'truck_expense') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        {data.category && <div><span className="text-heading/60">Category:</span> {data.category}</div>}
+        {data.description && <div><span className="text-heading/60">Description:</span> {data.description}</div>}
+        <div><span className="text-heading/60">Amount:</span> <strong>{formatINR(data.amount)}</strong> ({data.mode || 'cash'})</div>
+        {data.bank_name && <div><span className="text-heading/60">Bank:</span> {data.bank_name}</div>}
+        {data.cash_handler && <div><span className="text-heading/60">Handler:</span> {data.cash_handler}</div>}
+      </div>
+    );
+  }
+  if (type === 'driver_payment') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        <div><span className="text-heading/60">Driver ID:</span> {data.driver_id}</div>
+        <div><span className="text-heading/60">Amount:</span> <strong>{formatINR(data.amount)}</strong> ({data.mode || 'cash'})</div>
+        {data.bank_name && <div><span className="text-heading/60">Bank:</span> {data.bank_name}</div>}
+        {data.cash_handler && <div><span className="text-heading/60">Handler:</span> {data.cash_handler}</div>}
+        {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
+      </div>
+    );
+  }
+  if (type === 'transporter_payment') {
+    return (
+      <div className="text-sm text-heading/80 space-y-0.5">
+        <div><span className="text-heading/60">Transporter ID:</span> {data.transporter_id}</div>
+        <div><span className="text-heading/60">Type:</span> {data.payment_type === 'received' ? 'Received' : 'Paid'}</div>
+        <div><span className="text-heading/60">Amount:</span> <strong>{formatINR(data.amount)}</strong> ({data.mode || 'cash'})</div>
+        {data.bank_name && <div><span className="text-heading/60">Bank:</span> {data.bank_name}</div>}
+        {data.cash_handler && <div><span className="text-heading/60">Handler:</span> {data.cash_handler}</div>}
         {data.remarks && <div><span className="text-heading/60">Remarks:</span> {data.remarks}</div>}
       </div>
     );
