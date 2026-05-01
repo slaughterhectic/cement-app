@@ -737,6 +737,54 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_godown_opening_brand  ON godown_opening_stock(brand_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_parties_type          ON parties(type)`);
 
+    // TruckBook wallet — single virtual account funded from bank/cash, drained by trip freight.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS wallet_transactions (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('credit','debit')),
+        amount REAL NOT NULL CHECK (amount > 0),
+        mode TEXT CHECK (mode IN ('bank','cash')),
+        bank_name TEXT,
+        cash_handler TEXT,
+        source_table TEXT NOT NULL DEFAULT 'manual',
+        source_id INTEGER,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_date ON wallet_transactions(date)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_wallet_txn_source ON wallet_transactions(source_table, source_id)`);
+
+    // FastTag accounts — multiple, bank-funded only, drained by trip toll expenses.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS fastags (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        opening_balance REAL NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS fastag_transactions (
+        id SERIAL PRIMARY KEY,
+        fastag_id INTEGER NOT NULL REFERENCES fastags(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('credit','debit')),
+        amount REAL NOT NULL CHECK (amount > 0),
+        bank_name TEXT,
+        source_table TEXT NOT NULL DEFAULT 'manual',
+        source_id INTEGER,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_fastag_txn_fastag ON fastag_transactions(fastag_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_fastag_txn_source ON fastag_transactions(source_table, source_id)`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS fastag_id INTEGER REFERENCES fastags(id)`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

@@ -185,6 +185,22 @@ export const api = {
     update: (id: number, data: { date: string; from_bank: string; to_bank: string; amount: number; remarks?: string | null }) => request<any>(`/bank-transfers/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/bank-transfers/${id}`, { method: 'DELETE' }),
   },
+  wallet: {
+    summary: () => request<{ total_credits: number; total_debits: number; balance: number; count: number }>('/wallet/summary'),
+    transactions: () => request<any[]>('/wallet/transactions'),
+    credit: (data: { date: string; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>('/wallet/credit', { method: 'POST', body: JSON.stringify(data) }),
+    deleteTxn: (id: number) => request<any>(`/wallet/transactions/${id}`, { method: 'DELETE' }),
+  },
+  fastags: {
+    list: () => request<any[]>('/fastags'),
+    create: (data: { name: string; opening_balance?: number; remarks?: string | null }) => request<any>('/fastags', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/fastags/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/fastags/${id}`, { method: 'DELETE' }),
+    transactions: (id: number) => request<any[]>(`/fastags/${id}/transactions`),
+    credit: (id: number, data: { date: string; amount: number; bank_name: string; remarks?: string | null }) => request<any>(`/fastags/${id}/credit`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteTxn: (id: number, txId: number) => request<any>(`/fastags/${id}/transactions/${txId}`, { method: 'DELETE' }),
+    balance: (id: number) => request<{ balance: number }>(`/fastags/${id}/balance`),
+  },
   assets: {
     list: () => request<{ id: number; date: string; name: string; type: string | null; amount: number; mode: 'bank' | 'cash'; bank_name: string | null; cash_handler: string | null; remarks: string | null }[]>('/assets'),
     create: (data: { date: string; name: string; type?: string | null; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>('/assets', { method: 'POST', body: JSON.stringify(data) }),

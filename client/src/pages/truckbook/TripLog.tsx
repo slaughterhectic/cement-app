@@ -71,6 +71,7 @@ const emptyForm = {
   odometer_start: '',
   odometer_end: '',
   remarks: '',
+  fastag_id: '',
 };
 
 function n(v: string) { return Number(v) || 0; }
@@ -100,6 +101,7 @@ export default function TripLog() {
   const [editing, setEditing] = useState<TripRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [fastags, setFastags] = useState<{ id: number; name: string; balance: number; is_active: number }[]>([]);
   const [filterTruck, setFilterTruck] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
 
@@ -120,10 +122,11 @@ export default function TripLog() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, d, tp] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list()]);
+      const [t, d, tp, f] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list(), api.fastags.list()]);
       setTrucks(t);
       setDrivers(d);
       setTransporters(tp);
+      setFastags(f as any[]);
     } catch (_) {}
   }, []);
 
@@ -159,6 +162,7 @@ export default function TripLog() {
       odometer_start: row.odometer_start ? String(row.odometer_start) : '',
       odometer_end: row.odometer_end ? String(row.odometer_end) : '',
       remarks: row.remarks || '',
+      fastag_id: (row as any).fastag_id ? String((row as any).fastag_id) : '',
     });
     setModalOpen(true);
   };
@@ -192,6 +196,7 @@ export default function TripLog() {
         odometer_start: form.odometer_start ? n(form.odometer_start) : null,
         odometer_end: form.odometer_end ? n(form.odometer_end) : null,
         remarks: form.remarks || null,
+        fastag_id: form.fastag_id ? Number(form.fastag_id) : null,
       };
       if (editing) { await api.truckTrips.update(editing.id, payload); addToast('Trip updated', 'success'); }
       else { await api.truckTrips.create(payload); addToast('Trip added', 'success'); }
@@ -480,6 +485,23 @@ export default function TripLog() {
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Toll Expense (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" required />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Toll FastTag {n(form.toll_expense) > 0 ? '*' : ''}</label>
+                        <select className="input-field" value={form.fastag_id} onChange={f('fastag_id')}>
+                          <option value="">{n(form.toll_expense) > 0 ? 'Select FastTag' : 'No toll'}</option>
+                          {fastags.filter((ft) => ft.is_active === 1 || String(ft.id) === form.fastag_id).map((ft) => (
+                            <option key={ft.id} value={ft.id}>{ft.name} — {formatINR(ft.balance)}</option>
+                          ))}
+                        </select>
+                        {form.fastag_id && n(form.toll_expense) > 0 && (() => {
+                          const sel = fastags.find((ft) => String(ft.id) === form.fastag_id);
+                          if (!sel) return null;
+                          const effective = sel.balance + (editing && (editing as any).fastag_id === sel.id ? Number((editing as any).toll_expense) || 0 : 0);
+                          return effective < n(form.toll_expense) ? (
+                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">FastTag has only {formatINR(effective)} — top up before saving.</p>
+                          ) : null;
+                        })()}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Transporter Commission (₹) *</label>

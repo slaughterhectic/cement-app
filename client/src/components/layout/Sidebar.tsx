@@ -78,6 +78,8 @@ const truckNavItems = [
   { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },
   { to: '/truckbook/transporters', label: 'Transporters', icon: Store },
   { to: '/truckbook/expenses', label: 'Expenses', icon: Receipt },
+  { to: '/truckbook/wallet', label: 'Wallet', icon: Wallet },
+  { to: '/truckbook/fastags', label: 'FastTags', icon: CreditCard },
   { to: '/truckbook/pending-approvals', label: 'Approvals', icon: ClipboardCheck, badgeKey: 'approvals' },
   { to: '/truckbook/requests', label: 'Requests', icon: MessageSquare, badge: true },
 ];

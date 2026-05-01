@@ -1,6 +1,11 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import {
+  walletBalance, fastagBalance,
+  syncWalletDebitForSource, syncFastagDebitForSource,
+  deleteWalletForSource, deleteFastagForSource,
+} from '../lib/walletSync';
 
 const router = Router();
 
@@ -92,6 +97,22 @@ router.post('/', async (req, res) => {
     }
 
     const c = computeTripFields(req.body);
+    const fastagId = req.body.fastag_id ? Number(req.body.fastag_id) : null;
+
+    // Pre-flight balance checks. We don't want a trip to silently leave the wallet or
+    // a FastTag with a negative balance.
+    if (c.total_freight > 0) {
+      const wb = await walletBalance();
+      if (wb < c.total_freight) {
+        return res.status(400).json({ error: `Wallet balance (₹${wb.toFixed(2)}) is less than the trip's total freight (₹${c.total_freight.toFixed(2)}). Top up the wallet before saving.` });
+      }
+    }
+    if (fastagId && c.toll_expense > 0) {
+      const fb = await fastagBalance(fastagId);
+      if (fb < c.toll_expense) {
+        return res.status(400).json({ error: `Selected FastTag balance (₹${fb.toFixed(2)}) is less than the trip's toll (₹${c.toll_expense.toFixed(2)}). Top up the FastTag before saving.` });
+      }
+    }
 
     const row = await getOne(
       `INSERT INTO truck_trips (
@@ -103,7 +124,7 @@ router.post('/', async (req, res) => {
         toll_expense, diesel_litres, diesel_rate, diesel_amount,
         driver_payment, miscellaneous,
         odometer_start, odometer_end, total_km,
-        total_freight, net_freight, net_profit, remarks
+        total_freight, net_freight, net_profit, remarks, fastag_id
       ) VALUES (
         $1,$2,$3,$4,$5,
         $6,$7,$8,
@@ -113,7 +134,7 @@ router.post('/', async (req, res) => {
         $18,$19,$20,$21,
         $22,$23,
         $24,$25,$26,
-        $27,$28,$29,$30
+        $27,$28,$29,$30,$31
       ) RETURNING *`,
       [
         date, truck_id, driver_id || null, material_name || null, c.quantity,
@@ -124,9 +145,11 @@ router.post('/', async (req, res) => {
         c.toll_expense, c.diesel_litres, c.diesel_rate, c.diesel_amount,
         c.driver_payment, c.miscellaneous,
         c.odometer_start, c.odometer_end, c.total_km,
-        c.total_freight, c.net_freight, c.net_profit, remarks || null,
+        c.total_freight, c.net_freight, c.net_profit, remarks || null, fastagId,
       ]
     );
+    await syncWalletDebitForSource('truck_trip', row.id, c.total_freight, date, `Freight for trip #${row.id}`);
+    await syncFastagDebitForSource('truck_trip', row.id, fastagId, c.toll_expense, date, `Toll for trip #${row.id}`);
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
@@ -139,6 +162,32 @@ router.put('/:id', async (req, res) => {
       billed_destination, transporter_id, diesel_from_id, remarks,
     } = req.body;
     const c = computeTripFields(req.body);
+    const fastagId = req.body.fastag_id ? Number(req.body.fastag_id) : null;
+
+    // Pre-flight balance checks excluding this trip's own existing debits, since on edit
+    // we'll replace them. Effective balance = current balance + the row we're about to drop.
+    const existing = await getOne(
+      `SELECT total_freight, toll_expense, fastag_id FROM truck_trips WHERE id=$1`,
+      [req.params.id]
+    );
+    const oldFreight = Number(existing?.total_freight) || 0;
+    const oldToll = Number(existing?.toll_expense) || 0;
+    const oldFastag = existing?.fastag_id ? Number(existing.fastag_id) : null;
+
+    if (c.total_freight > 0) {
+      const wb = await walletBalance();
+      const effective = wb + oldFreight;
+      if (effective < c.total_freight) {
+        return res.status(400).json({ error: `Wallet balance (₹${effective.toFixed(2)}) is less than the trip's total freight (₹${c.total_freight.toFixed(2)}).` });
+      }
+    }
+    if (fastagId && c.toll_expense > 0) {
+      const fb = await fastagBalance(fastagId);
+      const effective = fb + (oldFastag === fastagId ? oldToll : 0);
+      if (effective < c.toll_expense) {
+        return res.status(400).json({ error: `Selected FastTag balance (₹${effective.toFixed(2)}) is less than the trip's toll (₹${c.toll_expense.toFixed(2)}).` });
+      }
+    }
 
     const row = await getOne(
       `UPDATE truck_trips SET
@@ -150,7 +199,7 @@ router.put('/:id', async (req, res) => {
         toll_expense=$18, diesel_litres=$19, diesel_rate=$20, diesel_amount=$21,
         driver_payment=$22, miscellaneous=$23,
         odometer_start=$24, odometer_end=$25, total_km=$26,
-        total_freight=$27, net_freight=$28, net_profit=$29, remarks=$30
+        total_freight=$27, net_freight=$28, net_profit=$29, remarks=$30, fastag_id=$32
       WHERE id=$31 RETURNING *`,
       [
         date, truck_id, driver_id || null, material_name || null, c.quantity,
@@ -162,10 +211,12 @@ router.put('/:id', async (req, res) => {
         c.driver_payment, c.miscellaneous,
         c.odometer_start, c.odometer_end, c.total_km,
         c.total_freight, c.net_freight, c.net_profit, remarks || null,
-        req.params.id,
+        req.params.id, fastagId,
       ]
     );
     if (!row) return res.status(404).json({ error: 'Trip not found' });
+    await syncWalletDebitForSource('truck_trip', row.id, c.total_freight, date, `Freight for trip #${row.id}`);
+    await syncFastagDebitForSource('truck_trip', row.id, fastagId, c.toll_expense, date, `Toll for trip #${row.id}`);
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
@@ -174,6 +225,8 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    await deleteWalletForSource('truck_trip', Number(req.params.id));
+    await deleteFastagForSource('truck_trip', Number(req.params.id));
     await query('DELETE FROM truck_trips WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }

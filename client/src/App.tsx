@@ -29,6 +29,8 @@ import Trucks from './pages/truckbook/Trucks';
 import TripLog from './pages/truckbook/TripLog';
 import DriverLedger from './pages/truckbook/DriverLedger';
 import TruckExpenses from './pages/truckbook/TruckExpenses';
+import Wallet from './pages/truckbook/Wallet';
+import Fastags from './pages/truckbook/Fastags';
 import Requests from './pages/Requests';
 import Transporters from './pages/truckbook/Transporters';
 import PendingApprovals from './pages/PendingApprovals';
@@ -142,6 +144,8 @@ export default function App() {
           <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />
           <Route path="/truckbook/expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckExpenses /></BookGuard>} />
           <Route path="/truckbook/transporters" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Transporters /></BookGuard>} />
+          <Route path="/truckbook/wallet" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Wallet /></BookGuard>} />
+          <Route path="/truckbook/fastags" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Fastags /></BookGuard>} />
           {/* TransportBook routes — require access_transportbook */}
           <Route path="/transportbook" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportDashboard /></BookGuard>} />
           <Route path="/transportbook/trucks" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TruckOwners /></BookGuard>} />

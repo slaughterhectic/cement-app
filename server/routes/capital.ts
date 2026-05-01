@@ -20,6 +20,8 @@ router.get('/summary', async (_req, res) => {
       partyLoansAggs,
       loanRepayAggs,
       assetsAggs,
+      walletAggs,
+      fastagAggs,
       bankReceivedRows,
       bankPayOutRows,
       bankExpenseRows,
@@ -94,6 +96,16 @@ router.get('/summary', async (_req, res) => {
           COALESCE(SUM(amount),0) as total
         FROM assets
       `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank
+        FROM wallet_transactions WHERE type='credit'
+      `),
+      getOne(`
+        SELECT COALESCE(SUM(amount),0) as bank
+        FROM fastag_transactions WHERE type='credit'
+      `),
       getAll(`
         SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as received
         FROM (
@@ -118,6 +130,8 @@ router.get('/summary', async (_req, res) => {
           UNION ALL SELECT bank_name, amount FROM assets WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM party_loans WHERE mode='bank' AND type='disbursement'
           UNION ALL SELECT bank_name, amount FROM loan_repayments WHERE mode='bank'
+          UNION ALL SELECT bank_name, amount FROM wallet_transactions WHERE mode='bank' AND type='credit'
+          UNION ALL SELECT bank_name, amount FROM fastag_transactions WHERE bank_name IS NOT NULL AND type='credit'
         ) combined
         GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
       `),
@@ -187,7 +201,8 @@ router.get('/summary', async (_req, res) => {
       - num(truckExpAggs.cash_orphan) - num(driverPayAggs.cash_orphan)
       - num(transporterPayAggs.cash_orphan_paid) + num(transporterPayAggs.cash_orphan_recv)
       - num(loanRepayAggs.cash_orphan)
-      - num(assetsAggs.cash_orphan);
+      - num(assetsAggs.cash_orphan)
+      - num(walletAggs?.cash_orphan);
 
     // Bank assembly — per-bank rollup
     const allNames = new Set<string>([
@@ -219,7 +234,9 @@ router.get('/summary', async (_req, res) => {
       - num(transporterPayAggs.bank_paid) + num(transporterPayAggs.bank_recv)
       - num(partyLoansAggs.bank_disbursed) + num(partyLoansAggs.bank_repaid)
       - num(loanRepayAggs.bank)
-      - num(assetsAggs.bank);
+      - num(assetsAggs.bank)
+      - num(walletAggs?.bank)
+      - num(fastagAggs?.bank);
 
     res.json({
       cash,
