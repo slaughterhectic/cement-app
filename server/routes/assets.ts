@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
@@ -8,7 +9,7 @@ router.get('/', async (_req, res) => {
   try {
     const rows = await getAll(`SELECT * FROM assets ORDER BY date DESC, id DESC`);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -44,7 +45,7 @@ router.post('/', async (req, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -80,7 +81,7 @@ router.put('/:id', async (req, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', async (req: any, res) => {
@@ -89,7 +90,7 @@ router.delete('/:id', async (req: any, res) => {
     await deleteImprestForSource('assets', Number(req.params.id));
     await query(`DELETE FROM assets WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

@@ -474,6 +474,17 @@ export async function initializeDatabase() {
     await client.query(
       `CREATE INDEX IF NOT EXISTS idx_pending_entries_source_status_created ON pending_entries (source, status, created_at DESC)`
     );
+    // Widen entry_type CHECK to cover TruckBook + TransportBook entry types — must
+    // stay in sync with the entry types accepted by /api/pending-entries/:id/approve.
+    await client.query(`ALTER TABLE pending_entries DROP CONSTRAINT IF EXISTS pending_entries_entry_type_check`);
+    await client.query(`
+      ALTER TABLE pending_entries ADD CONSTRAINT pending_entries_entry_type_check
+        CHECK (entry_type IN (
+          'sale','purchase','payment','expense',
+          'truck_trip','truck_expense','driver_payment','transporter_payment',
+          'rl_trip','rl_owner_advance','rl_partner_transaction'
+        ))
+    `);
 
     // opening_balance_type: 'dr' = they owe us (debit), 'cr' = we owe them (credit)
     await client.query(`ALTER TABLE parties ADD COLUMN IF NOT EXISTS opening_balance_type TEXT NOT NULL DEFAULT 'dr'`);

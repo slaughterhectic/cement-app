@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -31,7 +32,7 @@ router.get('/', async (req, res) => {
       received_amount: Number(r.received_amount) || 0,
       tds_amount: Number(r.tds_amount) || 0,
     })));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /rl/invoices/compliance-summary — aggregate counts for dashboard
@@ -71,7 +72,7 @@ router.get('/compliance-summary', async (req, res) => {
       itc_reconciled: Number(totals.itc_reconciled) || 0,
       itc_disputed: Number(totals.itc_disputed) || 0,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /rl/invoices
@@ -127,7 +128,7 @@ router.post('/', async (req, res) => {
       ]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /rl/invoices/:id
@@ -187,7 +188,7 @@ router.put('/:id', async (req, res) => {
       ]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PATCH /rl/invoices/:id/compliance — inline edit compliance fields only
@@ -218,7 +219,7 @@ router.patch('/:id/compliance', async (req, res) => {
       ]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /rl/invoices/:id
@@ -226,7 +227,7 @@ router.delete('/:id', async (req, res) => {
   try {
     await query('DELETE FROM rl_invoices WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

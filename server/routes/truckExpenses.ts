@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
@@ -21,7 +22,7 @@ router.get('/', async (req, res) => {
 
     sql += ' ORDER BY te.date DESC, te.id DESC';
     res.json(await getAll(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /truck-expenses
@@ -65,7 +66,7 @@ router.post('/', async (req, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /truck-expenses/:id
@@ -100,7 +101,7 @@ router.put('/:id', async (req, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /truck-expenses/:id (admin only)
@@ -110,7 +111,7 @@ router.delete('/:id', async (req, res) => {
     await deleteImprestForSource('truck_expenses', Number(req.params.id));
     await query('DELETE FROM truck_expenses WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

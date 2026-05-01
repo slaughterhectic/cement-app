@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -43,7 +44,7 @@ router.get('/dashboard', async (_req, res) => {
       monthProfit: Number(monthProfit.total),
       perTruck,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /trucks — list with stats
@@ -62,7 +63,7 @@ router.get('/', async (_req, res) => {
       ORDER BY t.truck_number
     `);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /trucks
@@ -80,7 +81,7 @@ router.post('/', async (req, res) => {
        financed_amount || 0, emi_amount || 0, emi_tenure || null, lender_name || null, remarks || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /trucks/:id
@@ -102,7 +103,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Truck not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /trucks/:id
@@ -112,7 +113,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Cannot delete truck with existing trips' });
     await query('DELETE FROM trucks WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

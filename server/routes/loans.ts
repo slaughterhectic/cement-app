@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 
 const router = Router();
@@ -8,7 +9,7 @@ router.get('/', async (_req, res) => {
   try {
     const rows = await getAll(`SELECT * FROM loans ORDER BY start_date DESC`);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -20,7 +21,7 @@ router.post('/', async (req, res) => {
       [lender_name, principal, interest_rate, emi_amount || null, start_date, tenure_months || null, outstanding_principal ?? principal, remarks || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -32,14 +33,14 @@ router.put('/:id', async (req, res) => {
       [lender_name, principal, interest_rate, emi_amount || null, start_date, tenure_months || null, outstanding_principal ?? principal, remarks || null, req.params.id]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', requirePermission('delete_loans'), async (req, res) => {
   try {
     await query('DELETE FROM loans WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

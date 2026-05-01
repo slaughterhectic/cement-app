@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 
 const router = Router();
@@ -55,7 +56,7 @@ router.get('/', async (req, res) => {
     const summary = await getOne(sumSql, sp);
 
     res.json({ data: rows, summary });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/stock/:brandId', async (req, res) => {
@@ -63,7 +64,7 @@ router.get('/stock/:brandId', async (req, res) => {
     const godownId = req.query.godown_id ? Number(req.query.godown_id) : undefined;
     const stock = await getStock(Number(req.params.brandId), godownId);
     res.json({ stock });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -96,7 +97,7 @@ router.post('/', async (req, res) => {
       [date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate || 0, destination, invoice_number, billed_party, billed_quantity || null, billed_rate || null, billed_amount || null, truck_number, godown_id || null, remarks]
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -116,7 +117,7 @@ router.put('/:id', async (req, res) => {
       [date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate || 0, destination, invoice_number, billed_party, billed_quantity || null, billed_rate || null, billed_amount || null, truck_number, godown_id || null, remarks, req.params.id]
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.patch('/:id/received', async (req, res) => {
@@ -128,14 +129,14 @@ router.patch('/:id/received', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Sale not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', requirePermission('delete_sales'), async (req, res) => {
   try {
     await query('DELETE FROM sales WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

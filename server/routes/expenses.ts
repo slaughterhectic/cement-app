@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
@@ -25,7 +26,7 @@ router.get('/', async (req, res) => {
     `);
 
     res.json({ data: rows, monthTotal: Number(monthTotal.total) });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -65,7 +66,7 @@ router.post('/', async (req, res) => {
     });
 
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', requirePermission('delete_expenses'), async (req, res) => {
@@ -73,7 +74,7 @@ router.delete('/:id', requirePermission('delete_expenses'), async (req, res) => 
     await deleteImprestForSource('expenses', Number(req.params.id));
     await query('DELETE FROM expenses WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

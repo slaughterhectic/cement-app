@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 
 const router = Router();
@@ -17,7 +18,7 @@ router.get('/', async (_req, res) => {
     const out: Record<string, string> = {};
     for (const r of rows) out[r.key] = r.value;
     res.json(out);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:key', requirePermission('manage_transport_rates'), async (req, res) => {
@@ -39,7 +40,7 @@ router.put('/:key', requirePermission('manage_transport_rates'), async (req, res
     );
     const row = await getOne('SELECT key, value FROM app_settings WHERE key = $1', [key]);
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export async function getSettingNumber(key: string, fallback: number): Promise<number> {

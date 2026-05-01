@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 
 const router = Router();
@@ -233,14 +234,14 @@ router.get('/summary', async (_req, res) => {
       totalAssets: num(assetsAggs?.total),
       totalCapital: totalCash + totalBank,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/banks', async (_req, res) => {
   try {
     const rows = await getAll(`SELECT * FROM bank_balances ORDER BY bank_name`);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // All transactions hitting a single bank — payments in/out, expenses, truck/driver/transporter
@@ -328,7 +329,7 @@ router.get('/banks/:name/transactions', async (req, res) => {
       [bank]
     );
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/banks', async (req, res) => {
@@ -342,14 +343,14 @@ router.post('/banks', async (req, res) => {
       [bank_name, opening_balance ?? 0]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/banks/:name', requirePermission('delete_capital_banks'), async (req, res) => {
   try {
     await query('DELETE FROM bank_balances WHERE bank_name=$1', [req.params.name]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

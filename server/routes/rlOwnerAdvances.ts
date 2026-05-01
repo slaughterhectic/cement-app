@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -13,7 +14,7 @@ router.get('/', async (req, res) => {
       [ownerName]
     );
     res.json(rows.map((r: any) => ({ ...r, amount: Number(r.amount) })));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /rl/owner-advances — body: { owner_name, date, amount, remarks }
@@ -50,7 +51,7 @@ router.post('/', async (req, res) => {
       [owner_name.trim(), date, amt, remarks?.trim() || null]
     );
     res.json({ ...row, amount: Number(row.amount) });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /rl/owner-advances/:id
@@ -58,7 +59,7 @@ router.delete('/:id', async (req, res) => {
   try {
     await query('DELETE FROM rl_owner_advances WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

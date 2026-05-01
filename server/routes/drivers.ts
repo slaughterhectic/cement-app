@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -19,7 +20,7 @@ router.get('/', async (_req, res) => {
       ORDER BY d.name
     `);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /drivers/:id/ledger
@@ -95,7 +96,7 @@ router.get('/:id/ledger', async (req, res) => {
       totalPaid,
       outstanding: totalEarned - totalPaid,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /drivers
@@ -108,7 +109,7 @@ router.post('/', async (req, res) => {
       [name.trim(), phone || null, license_number || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /drivers/:id
@@ -121,7 +122,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Driver not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /drivers/:id
@@ -133,7 +134,7 @@ router.delete('/:id', async (req, res) => {
     if (usedPay) return res.status(400).json({ error: 'Cannot delete driver with existing payments' });
     await query('DELETE FROM drivers WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

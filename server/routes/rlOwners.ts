@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { backfillGpsRent } from '../lib/gpsRent';
 import { getAllSettingsMap } from './settings';
 
@@ -54,7 +55,7 @@ router.get('/', async (_req, res) => {
       active_truck_count: Number(r.active_truck_count),
       trip_count: Number(r.trip_count),
     })));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /rl/owners/by-name/:name/ledger — aggregated ledger across all trucks of an owner
@@ -216,7 +217,7 @@ router.get('/by-name/:name/ledger', async (req, res) => {
         netOwed: totalFinalPayment - totalGpsRent - totalAdvancePaid,
       },
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;

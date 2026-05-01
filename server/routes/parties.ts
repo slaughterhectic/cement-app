@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -46,7 +47,7 @@ router.get('/', async (_req, res) => {
       FROM parties p ORDER BY p.name
     `);
     res.json(parties);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -57,7 +58,7 @@ router.post('/', async (req, res) => {
       [name, phone, location, district, type, opening_balance || 0, opening_balance_type || 'dr']
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -68,7 +69,7 @@ router.put('/:id', async (req, res) => {
       [name, phone, location, district, type, opening_balance || 0, opening_balance_type || 'dr', req.params.id]
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', async (req, res) => {
@@ -84,7 +85,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Cannot delete: party has existing transactions. Remove all sales, payments, and purchases first.' });
     await query('DELETE FROM parties WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/:id/summary', async (req, res) => {
@@ -135,7 +136,7 @@ router.get('/:id/summary', async (req, res) => {
       total_purchases: Number(totals.total_purchases),
       outstanding,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/:id/ledger', async (req, res) => {
@@ -279,7 +280,7 @@ router.get('/:id/ledger', async (req, res) => {
     });
 
     res.json({ party, opening_balance: party.opening_balance || 0, ledger: ledgerWithBalance });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;

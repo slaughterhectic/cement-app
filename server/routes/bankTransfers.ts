@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -35,7 +36,7 @@ router.get('/', async (_req, res) => {
   try {
     const rows = await getAll(`SELECT * FROM bank_transfers ORDER BY date DESC, id DESC`);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /api/bank-transfers
@@ -60,7 +61,7 @@ router.post('/', async (req, res) => {
       [date, from_bank, to_bank, amt, remarks || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /api/bank-transfers/:id  (admin only)
@@ -91,7 +92,7 @@ router.put('/:id', async (req: any, res) => {
       [date, from_bank, to_bank, amt, remarks || null, req.params.id]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /api/bank-transfers/:id  (admin only)
@@ -100,7 +101,7 @@ router.delete('/:id', async (req: any, res) => {
   try {
     await query(`DELETE FROM bank_transfers WHERE id=$1`, [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

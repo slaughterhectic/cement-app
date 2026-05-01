@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { backfillGpsRent } from '../lib/gpsRent';
 import { getAllSettingsMap } from './settings';
 
@@ -15,7 +16,7 @@ router.get('/', async (_req, res) => {
       ORDER BY t.truck_number
     `);
     res.json(rows.map((r: any) => ({ ...r, trip_count: Number(r.trip_count) })));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /rl/truck-owners/:id/ledger — all trips with computed columns
@@ -138,7 +139,7 @@ router.get('/:id/ledger', async (req, res) => {
         netOwed: totalFinalPayment - totalGpsRent,
       },
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 function normalizeCommissionPct(v: any, fallback = 6.29): number {
@@ -178,7 +179,7 @@ router.post('/', async (req, res) => {
       ]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /rl/truck-owners/:id
@@ -247,7 +248,7 @@ router.put('/:id', async (req, res) => {
         );
     if (!row) return res.status(404).json({ error: 'Truck owner not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /rl/truck-owners/:id
@@ -260,7 +261,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Truck owner has trips and cannot be deleted' });
     await query('DELETE FROM rl_truck_owners WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

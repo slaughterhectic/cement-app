@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
@@ -25,7 +26,7 @@ router.get('/', async (_req, res) => {
       trip_count: Number(r.trip_count),
       outstanding: Number(r.total_commission) + Number(r.total_advance_diesel) - Number(r.total_paid) - Number(r.total_received),
     })));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /transporters/:id/ledger
@@ -88,7 +89,7 @@ router.get('/:id/ledger', async (req, res) => {
       .reduce((s: number, r: any) => s + Number(r.amount), 0);
 
     res.json({ transporter, ledger, totalEarned, totalPaid, totalReceived, outstanding: totalEarned - totalPaid - totalReceived });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /transporters
@@ -101,7 +102,7 @@ router.post('/', async (req, res) => {
       [name.trim(), phone?.trim() || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /transporters/:id
@@ -114,7 +115,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Transporter not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /transporters/:id
@@ -127,7 +128,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Transporter has trips and cannot be deleted' });
     await query('DELETE FROM transporters WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // POST /transporters/:id/payments
@@ -175,7 +176,7 @@ router.post('/:id/payments', async (req: any, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /transporters/:id/payments/:pid (admin only)
@@ -185,7 +186,7 @@ router.delete('/:id/payments/:pid', async (req, res) => {
     await deleteImprestForSource('transporter_payments', Number(req.params.pid));
     await query('DELETE FROM transporter_payments WHERE id=$1 AND transporter_id=$2', [req.params.pid, req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

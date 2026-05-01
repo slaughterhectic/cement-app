@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import pool, { getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
@@ -23,7 +24,7 @@ router.get('/', async (req, res) => {
         );
     res.json(rows);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 
@@ -61,7 +62,7 @@ router.post('/', async (req, res) => {
   } catch (e: any) {
     await client.query('ROLLBACK');
     client.release();
-    return res.status(500).json({ error: e.message });
+    return res.status(500).json({ error: friendlyError(e) });
   }
   client.release();
 
@@ -102,7 +103,7 @@ router.delete('/:id', async (req: any, res) => {
     res.json({ success: true });
   } catch (e: any) {
     await client.query('ROLLBACK');
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: friendlyError(e) });
   } finally {
     client.release();
   }
@@ -117,7 +118,7 @@ router.get('/summary', async (_req, res) => {
     );
     res.json(rows);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 

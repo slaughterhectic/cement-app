@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 
 const router = Router();
@@ -14,7 +15,7 @@ router.get('/', async (_req, res) => {
       ORDER BY pl.date DESC, pl.id DESC
     `);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /api/party-loans
@@ -47,7 +48,7 @@ router.post('/', async (req: any, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // PUT /api/party-loans/:id — edit existing entry, re-sync imprest
@@ -83,7 +84,7 @@ router.put('/:id', async (req: any, res) => {
     });
 
     res.json(row);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /api/party-loans/:id
@@ -93,7 +94,7 @@ router.delete('/:id', async (req: any, res) => {
     await deleteImprestForSource('party_loans', Number(req.params.id));
     await query('DELETE FROM party_loans WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;

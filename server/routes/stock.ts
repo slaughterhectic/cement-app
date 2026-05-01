@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -29,7 +30,7 @@ router.get('/', async (_req, res) => {
       FROM cement_brands cb WHERE cb.is_active = 1 ORDER BY cb.name
     `);
     res.json(stock);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/movement', async (req, res) => {
@@ -85,7 +86,7 @@ router.get('/movement', async (req, res) => {
 
     const combined = [...opening, ...purchases, ...sales].sort((a: any, b: any) => b.date.localeCompare(a.date));
     res.json(combined);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/godown-profit', async (_req, res) => {
@@ -109,7 +110,7 @@ router.get('/godown-profit', async (_req, res) => {
       profit: Number(r.total_sale) - Number(r.total_purchase) - Number(r.opening_value),
     }));
     res.json(result);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/godown', async (_req, res) => {
@@ -131,7 +132,7 @@ router.get('/godown', async (_req, res) => {
       ORDER BY g.name, cb.name
     `);
     res.json(stock);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // ─── Opening-stock CRUD ──────────────────────────────────────────────────────
@@ -147,7 +148,7 @@ router.get('/opening', async (_req, res) => {
       ORDER BY g.name, cb.name
     `);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // Upsert (one row per godown+brand).
@@ -171,7 +172,7 @@ router.post('/opening', async (req, res) => {
       [godown_id, brand_id, b, r, as_of_date || null, remarks || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/opening/:id', async (req, res) => {
@@ -179,7 +180,7 @@ router.delete('/opening/:id', async (req, res) => {
     if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     await query('DELETE FROM godown_opening_stock WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

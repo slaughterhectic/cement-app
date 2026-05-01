@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn } from '../lib/imprestSync';
 
 const router = Router();
@@ -116,7 +117,7 @@ router.get('/', async (req, res) => {
 
     res.json(rows);
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 
@@ -132,7 +133,7 @@ router.get('/count', async (req, res) => {
     }
     res.json({ count: Number(r.count) });
   } catch (e: any) {
-    res.status(500).json({ error: e.message });
+    res.status(500).json({ error: friendlyError(e) });
   }
 });
 
@@ -372,7 +373,7 @@ router.post('/:id/approve', async (req, res) => {
 
     res.json({ approved: true, entry: result });
   } catch (e: any) {
-    res.status(400).json({ error: e.message });
+    res.status(400).json({ error: friendlyError(e) });
   }
 });
 
@@ -395,7 +396,7 @@ router.post('/:id/reject', async (req, res) => {
 
     res.json({ rejected: true });
   } catch (e: any) {
-    res.status(400).json({ error: e.message });
+    res.status(400).json({ error: friendlyError(e) });
   }
 });
 
@@ -417,7 +418,7 @@ router.delete('/:id', async (req, res) => {
     await query('DELETE FROM pending_entries WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) {
-    res.status(400).json({ error: e.message });
+    res.status(400).json({ error: friendlyError(e) });
   }
 });
 

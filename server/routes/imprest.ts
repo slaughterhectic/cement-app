@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 
 const router = Router();
@@ -8,7 +9,7 @@ router.get('/handlers', async (_req, res) => {
   try {
     const rows = await getAll(`SELECT * FROM imprest_handlers ORDER BY handler_name`);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.put('/handlers/:name', async (req, res) => {
@@ -22,7 +23,7 @@ router.put('/handlers/:name', async (req, res) => {
       [req.params.name, opening_balance ?? 0]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.post('/handlers', async (req, res) => {
@@ -36,7 +37,7 @@ router.post('/handlers', async (req, res) => {
       [handler_name, opening_balance ?? 0]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.get('/', async (req, res) => {
@@ -71,7 +72,7 @@ router.get('/', async (req, res) => {
     });
 
     res.json(result);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -83,7 +84,7 @@ router.post('/', async (req, res) => {
       [date, handler_name || 'Akash', particulars, narration, debit || 0, credit || 0, remark]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -95,14 +96,14 @@ router.put('/:id', async (req, res) => {
       [date, handler_name || 'Akash', particulars, narration, debit || 0, credit || 0, remark, req.params.id]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', requirePermission('delete_imprest'), async (req, res) => {
   try {
     await query('DELETE FROM imprest_transactions WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

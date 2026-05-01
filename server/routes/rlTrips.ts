@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { getAllSettingsMap } from './settings';
 
 const router = Router();
@@ -112,7 +113,7 @@ router.get('/', async (req, res) => {
 
     const settings = await loadSettings();
     res.json(rows.map(r => computeTrip(r, settings)));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /rl/trips/eway-alerts — trips with at-risk E-Way Bills (not delivered)
@@ -136,7 +137,7 @@ router.get('/eway-alerts', async (_req, res) => {
       ok: all.filter((r: any) => r.eway_status === 'ok').length,
     };
     res.json({ atRisk, counts });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /rl/trips
@@ -214,7 +215,7 @@ router.post('/', async (req, res) => {
 
     const settings = await loadSettings();
     res.json(computeTrip(row, settings));
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /rl/trips/:id
@@ -270,7 +271,7 @@ router.put('/:id', async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Trip not found' });
     const settings = await loadSettings();
     res.json(computeTrip(row, settings));
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /rl/trips/:id
@@ -278,7 +279,7 @@ router.delete('/:id', async (req, res) => {
   try {
     await query('DELETE FROM rl_trips WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, query, getOne } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -14,7 +15,7 @@ router.get('/', async (_req, res) => {
       FROM cement_brands cb WHERE cb.is_active = 1 ORDER BY cb.name
     `);
     res.json(brands);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /api/brands/all — all brands including inactive
@@ -28,7 +29,7 @@ router.get('/all', async (_req, res) => {
       FROM cement_brands cb ORDER BY cb.is_active DESC, cb.name
     `);
     res.json(brands);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /api/brands
@@ -42,7 +43,7 @@ router.post('/', async (req, res) => {
       [name.trim(), type, manufacturer?.trim() || null]
     );
     res.json(row);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // PUT /api/brands/:id
@@ -56,7 +57,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Brand not found' });
     res.json(row);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /api/brands/:id
@@ -69,7 +70,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Brand is used in purchases/sales — deactivate instead of deleting' });
     await query('DELETE FROM cement_brands WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;

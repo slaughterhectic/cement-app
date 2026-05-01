@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -20,7 +21,7 @@ router.get('/', async (_req, res) => {
       FROM parties p WHERE p.type = 'dealer' ORDER BY p.name
     `);
     res.json(dealers);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST / — create a new dealer
@@ -32,7 +33,7 @@ router.post('/', async (req, res) => {
       [name, phone || null, location || null, district || null, 'dealer', opening_balance || 0, opening_balance_type || 'dr']
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /:id — update dealer
@@ -45,7 +46,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!result) return res.status(404).json({ error: 'Dealer not found' });
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /:id — delete a dealer (only if no transactions)
@@ -62,7 +63,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Cannot delete: dealer has existing transactions or sub-parties.' });
     await query('DELETE FROM parties WHERE id=$1 AND type=\'dealer\'', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /:id/sub-parties — list sub-parties for this dealer
@@ -73,7 +74,7 @@ router.get('/:id/sub-parties', async (req, res) => {
       [req.params.id]
     );
     res.json(subParties);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /:id/sub-parties/:subId — remove a sub-party
@@ -91,7 +92,7 @@ router.delete('/:id/sub-parties/:subId', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Cannot delete: sub-party has existing transactions.' });
     await query('DELETE FROM parties WHERE id=$1', [req.params.subId]);
     res.json({ success: true });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /:id/sub-parties — add a sub-party under this dealer
@@ -106,7 +107,7 @@ router.post('/:id/sub-parties', async (req, res) => {
       [name, phone || null, location || null, district || null, type || 'other', opening_balance || 0, dealerId]
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // GET /:id/ledger — aggregated ledger for dealer
@@ -174,7 +175,7 @@ router.get('/:id/ledger', async (req, res) => {
     });
 
     res.json({ party: dealer, opening_balance: dealer.opening_balance || 0, ledger: ledgerWithBalance });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;

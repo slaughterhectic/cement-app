@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -66,7 +67,7 @@ router.get('/', async (req, res) => {
 
     sql += ' ORDER BY tt.date DESC, tt.id DESC';
     res.json(await getAll(sql, params));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /truck-trips
@@ -127,7 +128,7 @@ router.post('/', async (req, res) => {
       ]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /truck-trips/:id
@@ -166,7 +167,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Trip not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /truck-trips/:id (admin only)
@@ -175,7 +176,7 @@ router.delete('/:id', async (req, res) => {
     if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
     await query('DELETE FROM truck_trips WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

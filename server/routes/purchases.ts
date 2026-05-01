@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 import { requirePermission } from '../middleware/auth';
 
 const router = Router();
@@ -36,7 +37,7 @@ router.get('/', async (req, res) => {
     const summary = await getOne(sumSql, sumParams);
 
     res.json({ data: rows, summary });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.post('/', async (req, res) => {
@@ -63,7 +64,7 @@ router.post('/', async (req, res) => {
       [date, supplier_name, supplier_id || null, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks]
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.put('/:id', async (req, res) => {
@@ -77,21 +78,21 @@ router.put('/:id', async (req, res) => {
       [date, supplier_name, supplier_id || null, brand_id, cement_type, bags, purchase_rate, freight_rate || 0, godown_id || null, truck_number, source_location, invoice_number || null, remarks, req.params.id]
     );
     res.json(result);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.delete('/:id', requirePermission('delete_purchases'), async (req, res) => {
   try {
     await query('DELETE FROM purchases WHERE id = $1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 router.get('/suppliers', async (_req, res) => {
   try {
     const rows = await getAll('SELECT DISTINCT supplier_name FROM purchases ORDER BY supplier_name');
     res.json(rows.map((s: any) => s.supplier_name));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // GET /api/purchases/rates/:brandId — distinct landed rates with available stock per rate (FIFO)
@@ -158,7 +159,7 @@ router.get('/rates/:brandId', async (req, res) => {
 
     const totalStock = rates.reduce((sum: number, r: any) => sum + Number(r.available_bags), 0);
     res.json({ rates, totalStock });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;

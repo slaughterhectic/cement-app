@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -28,7 +29,7 @@ router.get('/', async (_req, res) => {
         balance,
       };
     }));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /rl/partners
@@ -41,7 +42,7 @@ router.post('/', async (req, res) => {
       [name.trim(), Number(opening_capital) || 0]
     );
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // PUT /rl/partners/:id
@@ -55,7 +56,7 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Partner not found' });
     res.json(row);
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /rl/partners/:id
@@ -68,7 +69,7 @@ router.delete('/:id', async (req, res) => {
     if (used) return res.status(400).json({ error: 'Partner has transactions and cannot be deleted' });
     await query('DELETE FROM rl_partners WHERE id=$1', [req.params.id]);
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // GET /rl/partners/:id/transactions
@@ -79,7 +80,7 @@ router.get('/:id/transactions', async (req, res) => {
       [req.params.id]
     );
     res.json(rows.map((r: any) => ({ ...r, amount: Number(r.amount) })));
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 // POST /rl/partners/:id/transactions
@@ -109,7 +110,7 @@ router.post('/:id/transactions', async (req: any, res) => {
       [date, req.params.id, type, Number(amount), remarks?.trim() || null]
     );
     res.json({ ...row, amount: Number(row.amount) });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 // DELETE /rl/partners/:id/transactions/:txId
@@ -120,7 +121,7 @@ router.delete('/:id/transactions/:txId', async (req, res) => {
       [req.params.txId, req.params.id]
     );
     res.json({ success: true });
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
 export default router;

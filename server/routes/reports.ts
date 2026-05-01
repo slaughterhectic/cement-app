@@ -1,5 +1,6 @@
 import { Router } from 'express';
 import { getOne, getAll } from '../db/database';
+import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
@@ -42,7 +43,7 @@ router.get('/pnl', async (req, res) => {
       profitMargin: Number(sales.total) > 0 ? (netProfit / Number(sales.total)) * 100 : 0,
       monthlyTrend,
     });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/brands', async (_req, res) => {
@@ -61,7 +62,7 @@ router.get('/brands', async (_req, res) => {
       FROM cement_brands cb WHERE cb.is_active=1 ORDER BY total_profit DESC
     `);
     res.json(brands);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/outstanding', async (_req, res) => {
@@ -95,7 +96,7 @@ router.get('/outstanding', async (_req, res) => {
       ORDER BY outstanding DESC
     `);
     res.json(parties);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/daily-register', async (req, res) => {
@@ -116,7 +117,7 @@ router.get('/daily-register', async (req, res) => {
       ORDER BY s.date, s.id
     `, [month]);
     res.json(register);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/daily-pnl', async (req, res) => {
@@ -141,7 +142,7 @@ router.get('/daily-pnl', async (req, res) => {
       ORDER BY d.date
     `, [month]);
     res.json(rows);
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 router.get('/daily-collection', async (req, res) => {
@@ -189,7 +190,7 @@ router.get('/daily-collection', async (req, res) => {
     `, [month]);
 
     res.json({ rows, daily, view: 'daily' });
-  } catch (e: any) { res.status(500).json({ error: e.message }); }
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
 export default router;
