@@ -225,19 +225,19 @@ export default function Trucks() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Total Value (₹)</label>
-                  <input type="number" min="0" className="input-field" value={form.total_value} onChange={f('total_value')} placeholder="0" />
+                  <input type="number" min="0" step="0.01" className="input-field" value={form.total_value} onChange={f('total_value')} placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Down Payment (₹)</label>
-                  <input type="number" min="0" className="input-field" value={form.down_payment} onChange={f('down_payment')} placeholder="0" />
+                  <input type="number" min="0" step="0.01" className="input-field" value={form.down_payment} onChange={f('down_payment')} placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Financed Amount (₹)</label>
-                  <input type="number" min="0" className="input-field" value={form.financed_amount} onChange={f('financed_amount')} placeholder="0" />
+                  <input type="number" min="0" step="0.01" className="input-field" value={form.financed_amount} onChange={f('financed_amount')} placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">EMI Amount (₹)</label>
-                  <input type="number" min="0" className="input-field" value={form.emi_amount} onChange={f('emi_amount')} placeholder="0" />
+                  <input type="number" min="0" step="0.01" className="input-field" value={form.emi_amount} onChange={f('emi_amount')} placeholder="0" />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">EMI Tenure (months)</label>

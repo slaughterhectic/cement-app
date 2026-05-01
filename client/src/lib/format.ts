@@ -1,9 +1,12 @@
+// Display ₹ amounts with two decimals everywhere. `Intl` requires the same value for
+// minimum and maximum here so e.g. ₹1,000 renders as ₹1,000.00 (not ₹1,000).
 export const formatINR = (amount: number): string => {
   return new Intl.NumberFormat('en-IN', {
     style: 'currency',
     currency: 'INR',
-    maximumFractionDigits: 0,
-  }).format(amount);
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  }).format(Number.isFinite(amount) ? amount : 0);
 };
 
 export const formatDate = (date: string): string => {

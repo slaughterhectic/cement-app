@@ -106,7 +106,7 @@ function EMICalculator() {
       <div className="grid gap-4 sm:grid-cols-3">
         <div>
           <label className="mb-1 block text-xs font-medium text-heading/70">Principal Amount (₹)</label>
-          <input type="number" min={0} step={1000} className="input-field w-full" placeholder="e.g. 500000" value={p} onChange={(e) => setP(e.target.value)} />
+          <input type="number" min={0} step={0.01} className="input-field w-full" placeholder="e.g. 500000" value={p} onChange={(e) => setP(e.target.value)} />
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-heading/70">Annual Interest Rate (%)</label>
@@ -930,11 +930,11 @@ export default function Finance() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Principal Amount (₹) *</label>
-                <input type="number" min={0} step={1000} className="input-field w-full" value={form.principal} onChange={(e) => setForm((p) => ({ ...p, principal: e.target.value }))} />
+                <input type="number" min={0} step={0.01} className="input-field w-full" value={form.principal} onChange={(e) => setForm((p) => ({ ...p, principal: e.target.value }))} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Outstanding Principal (₹)</label>
-                <input type="number" min={0} step={1000} className="input-field w-full" placeholder="Defaults to principal if empty" value={form.outstanding_principal} onChange={(e) => setForm((p) => ({ ...p, outstanding_principal: e.target.value }))} />
+                <input type="number" min={0} step={0.01} className="input-field w-full" placeholder="Defaults to principal if empty" value={form.outstanding_principal} onChange={(e) => setForm((p) => ({ ...p, outstanding_principal: e.target.value }))} />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Annual Interest Rate (%) *</label>
@@ -946,7 +946,7 @@ export default function Finance() {
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">EMI Amount (₹/month)</label>
-                <input type="number" min={0} step={100} className="input-field w-full" placeholder="Auto-calculated if empty" value={form.emi_amount} onChange={(e) => setForm((p) => ({ ...p, emi_amount: e.target.value }))} />
+                <input type="number" min={0} step={0.01} className="input-field w-full" placeholder="Auto-calculated if empty" value={form.emi_amount} onChange={(e) => setForm((p) => ({ ...p, emi_amount: e.target.value }))} />
                 {form.principal && form.interest_rate && form.tenure_months && !form.emi_amount && (
                   <p className="mt-1 text-xs text-brand-600">
                     Computed EMI: {formatINR(calcEMI(parseFloat(form.principal) || 0, parseFloat(form.interest_rate) || 0, parseInt(form.tenure_months) || 1))}

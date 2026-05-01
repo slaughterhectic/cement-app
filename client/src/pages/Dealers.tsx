@@ -255,7 +255,7 @@ export default function Dealers() {
       <div>
         <label className="mb-1 block text-sm font-medium text-heading">Opening balance</label>
         <div className="flex gap-2">
-          <input className="input-field flex-1" type="number" min={0} step="1" {...register('opening_balance')} />
+          <input className="input-field flex-1" type="number" min={0} step="0.01" {...register('opening_balance')} />
           <div className="flex rounded-lg border border-card-border overflow-hidden text-sm font-medium">
             <button type="button"
               onClick={() => setValue('opening_balance_type', 'dr')}
