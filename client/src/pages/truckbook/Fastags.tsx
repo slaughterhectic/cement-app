@@ -221,6 +221,7 @@ export default function Fastags() {
                                   <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-heading/60">
                                     <th className="px-3 py-2">Date</th>
                                     <th className="px-3 py-2">Type</th>
+                                    <th className="px-3 py-2">Vehicle</th>
                                     <th className="px-3 py-2">Source</th>
                                     <th className="px-3 py-2 text-right">Credit (₹)</th>
                                     <th className="px-3 py-2 text-right">Debit (₹)</th>
@@ -233,10 +234,13 @@ export default function Fastags() {
                                     <tr key={t.id} className="hover:bg-surface/70">
                                       <td className="px-3 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
                                       <td className="px-3 py-2">{t.type === 'credit' ? 'Credit' : 'Debit'}</td>
+                                      <td className="px-3 py-2 font-medium text-heading">
+                                        {t.source_table === 'truck_trip' && t.truck_number ? t.truck_number : <span className="text-heading/40">—</span>}
+                                      </td>
                                       <td className="px-3 py-2 text-heading/70">
                                         {t.type === 'credit'
                                           ? (t.bank_name ? `Bank — ${t.bank_name}` : 'Bank')
-                                          : t.source_table === 'truck_trip' ? `Trip #${t.source_id}${t.truck_number ? ` (${t.truck_number})` : ''}` : t.source_table}
+                                          : t.source_table === 'truck_trip' ? `Trip #${t.source_id}` : t.source_table}
                                       </td>
                                       <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{t.type === 'credit' ? formatINR(t.amount) : '—'}</td>
                                       <td className="px-3 py-2 text-right tabular-nums text-amber-700 dark:text-amber-300">{t.type === 'debit' ? formatINR(t.amount) : '—'}</td>

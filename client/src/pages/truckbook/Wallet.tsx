@@ -153,6 +153,7 @@ export default function Wallet() {
                 <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                   <th className="px-4 py-3">Date</th>
                   <th className="px-4 py-3">Type</th>
+                  <th className="px-4 py-3">Vehicle</th>
                   <th className="px-4 py-3">Source / Trip</th>
                   <th className="px-4 py-3 text-right">Credit (₹)</th>
                   <th className="px-4 py-3 text-right">Debit (₹)</th>
@@ -171,10 +172,13 @@ export default function Wallet() {
                         <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 dark:bg-amber-900/40 px-2.5 py-0.5 text-xs font-medium text-amber-700 dark:text-amber-300">Debit</span>
                       )}
                     </td>
+                    <td className="px-4 py-3 font-medium text-heading">
+                      {t.source_table === 'truck_trip' && t.truck_number ? t.truck_number : <span className="text-heading/40">—</span>}
+                    </td>
                     <td className="px-4 py-3 text-heading/80">
                       {t.type === 'credit'
                         ? (t.mode === 'bank' ? `Bank — ${t.bank_name || '—'}` : `Cash — ${t.cash_handler || '—'}`)
-                        : t.source_table === 'truck_trip' ? `Trip #${t.source_id}${t.truck_number ? ` (${t.truck_number})` : ''}` : t.source_table}
+                        : t.source_table === 'truck_trip' ? `Trip #${t.source_id}` : t.source_table}
                     </td>
                     <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{t.type === 'credit' ? formatINR(t.amount) : '—'}</td>
                     <td className="px-4 py-3 text-right tabular-nums text-amber-700 dark:text-amber-300">{t.type === 'debit' ? formatINR(t.amount) : '—'}</td>
