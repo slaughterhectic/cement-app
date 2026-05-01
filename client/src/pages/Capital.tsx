@@ -1,9 +1,10 @@
 import { useEffect, useState, useCallback, Fragment } from 'react';
-import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle, ChevronDown, ChevronRight, ArrowLeftRight } from 'lucide-react';
+import { Pencil, Plus, Trash2, RefreshCw, Building2, Wallet, TrendingUp, AlertCircle, ChevronDown, ChevronRight, ArrowLeftRight, Download } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
 import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
+import { openBankStatementPdf } from '../lib/bankStatementPdf';
 
 interface CapitalSummary {
   cash: { handler: string; opening: number; total_received: number; total_spent: number; balance: number }[];
@@ -505,6 +506,34 @@ function BankSection({ summary, onChange }: { summary: CapitalSummary; onChange:
                           ) : detail.rows.length === 0 ? (
                             <p className="py-4 text-center text-xs text-heading/60">No bank transactions for this account yet.</p>
                           ) : (
+                          <>
+                            <div className="mb-2 flex items-center justify-end">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const totalIn = detail.rows.reduce((s, t) => s + t.inflow, 0);
+                                  const totalOut = detail.rows.reduce((s, t) => s + t.outflow, 0);
+                                  openBankStatementPdf({
+                                    bankName: b.bank_name,
+                                    opening: b.opening,
+                                    totalReceived: totalIn,
+                                    totalPaid: totalOut,
+                                    closingBalance: b.opening + totalIn - totalOut,
+                                    rows: detail.rows.map((t) => ({
+                                      date: t.date,
+                                      particulars: t.particulars,
+                                      counterparty: t.counterparty,
+                                      inflow: Number(t.inflow) || 0,
+                                      outflow: Number(t.outflow) || 0,
+                                    })),
+                                  });
+                                }}
+                                className="inline-flex items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 py-1.5 text-xs font-medium text-heading/80 hover:bg-surface"
+                                title="Open print preview / save as PDF"
+                              >
+                                <Download className="h-3.5 w-3.5" /> Download PDF
+                              </button>
+                            </div>
                             <div className="max-h-96 overflow-y-auto rounded-lg border border-card-border bg-card">
                               <table className="min-w-full text-xs">
                                 <thead className="sticky top-0 bg-surface">
@@ -536,6 +565,7 @@ function BankSection({ summary, onChange }: { summary: CapitalSummary; onChange:
                                 </tfoot>
                               </table>
                             </div>
+                          </>
                           )}
                         </td>
                       </tr>
