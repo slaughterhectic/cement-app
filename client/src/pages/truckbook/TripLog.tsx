@@ -102,6 +102,7 @@ export default function TripLog() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [fastags, setFastags] = useState<{ id: number; name: string; balance: number; is_active: number }[]>([]);
+  const [walletBal, setWalletBal] = useState<number>(0);
   const [filterTruck, setFilterTruck] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
 
@@ -122,13 +123,21 @@ export default function TripLog() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, d, tp, f] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list(), api.fastags.list()]);
+      const [t, d, tp, f, w] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list(), api.fastags.list(), api.wallet.summary()]);
       setTrucks(t);
       setDrivers(d);
       setTransporters(tp);
       setFastags(f as any[]);
+      setWalletBal(Number(w.balance) || 0);
     } catch (_) {}
   }, []);
+
+  // Refresh wallet balance whenever the modal opens — picks up any top-ups since last load.
+  useEffect(() => {
+    if (!modalOpen) return;
+    api.wallet.summary().then((s) => setWalletBal(Number(s.balance) || 0)).catch(() => {});
+    api.fastags.list().then((f) => setFastags(f as any[])).catch(() => {});
+  }, [modalOpen]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadMeta(); }, [loadMeta]);
@@ -609,14 +618,55 @@ export default function TripLog() {
 
                 </div>
 
-                <div className="flex justify-end gap-3 border-t border-card-border px-5 py-4">
-                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
-                    Cancel
-                  </button>
-                  <button type="submit" disabled={saving} className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 transition-colors">
-                    {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}
-                  </button>
-                </div>
+                {(() => {
+                  // Effective wallet balance gates Save: editing the same trip can re-use its
+                  // own existing freight debit, so add it back before comparing.
+                  const oldFreight = editing ? Number(editing.total_freight) || 0 : 0;
+                  const effectiveWallet = walletBal + oldFreight;
+                  const tripFreight = live.total_freight;
+                  const walletShort = tripFreight > 0 && effectiveWallet < tripFreight;
+                  const selectedFastag = fastags.find((ft) => String(ft.id) === form.fastag_id);
+                  const oldToll = editing && (editing as any).fastag_id === selectedFastag?.id ? Number(editing.toll_expense) || 0 : 0;
+                  const fastagShort = !!selectedFastag && n(form.toll_expense) > 0 && (selectedFastag.balance + oldToll) < n(form.toll_expense);
+                  const tollNeedsTag = n(form.toll_expense) > 0 && !form.fastag_id;
+                  const blockSave = walletShort || fastagShort || tollNeedsTag;
+                  return (
+                    <>
+                      {(walletShort || fastagShort || tollNeedsTag) && (
+                        <div className="border-t border-amber-300 bg-amber-50 dark:bg-amber-900/30 px-5 py-3 text-xs text-amber-800 dark:text-amber-200">
+                          {walletShort && (
+                            <div>⚠ Wallet has only <strong>{formatINR(effectiveWallet)}</strong> — trip freight is <strong>{formatINR(tripFreight)}</strong>. Top up the Wallet before saving.</div>
+                          )}
+                          {tollNeedsTag && (
+                            <div>⚠ Toll is {formatINR(n(form.toll_expense))} but no FastTag is selected. Pick one to deduct from.</div>
+                          )}
+                          {fastagShort && selectedFastag && (
+                            <div>⚠ {selectedFastag.name} has only <strong>{formatINR(selectedFastag.balance + oldToll)}</strong> — toll is <strong>{formatINR(n(form.toll_expense))}</strong>. Top up the FastTag or pick a different one.</div>
+                          )}
+                        </div>
+                      )}
+                      <div className="flex items-center justify-between gap-3 border-t border-card-border px-5 py-4">
+                        <span className="text-xs text-heading/60">
+                          Wallet: <strong className={walletShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(effectiveWallet)}</strong>
+                          {selectedFastag && <> · {selectedFastag.name}: <strong className={fastagShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(selectedFastag.balance + oldToll)}</strong></>}
+                        </span>
+                        <div className="flex items-center gap-3">
+                          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
+                            Cancel
+                          </button>
+                          <button
+                            type="submit"
+                            disabled={saving || blockSave}
+                            title={blockSave ? 'Insufficient wallet or FastTag balance' : undefined}
+                            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                          >
+                            {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}
+                          </button>
+                        </div>
+                      </div>
+                    </>
+                  );
+                })()}
               </form>
             </div>
           </div>
