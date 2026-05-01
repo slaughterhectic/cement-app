@@ -229,7 +229,7 @@ function buildHtml(opts: LedgerPdfOptions): string {
   <div class="container">
     <div class="brand-bar">
       <div>
-        <div class="brand-name">CementBook</div>
+        <div class="brand-name">armtech</div>
         <div class="brand-subtitle">Business ledger &amp; account statement</div>
       </div>
       <div class="doc-meta">
