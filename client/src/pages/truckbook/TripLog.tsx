@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, IndianRupee } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -92,6 +92,11 @@ function computeLive(form: typeof emptyForm) {
 export default function TripLog() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  // Admin always can. Non-admin needs the explicit permission to use the inline freight
+  // updater — deliberately decoupled from the full edit modal so admins can hand out a
+  // narrow "fill freight later" capability without opening up the rest of the trip.
+  const canUpdateFreight = isAdmin() || hasPermission('update_truck_trip_freight');
   const [rows, setRows] = useState<TripRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -105,6 +110,9 @@ export default function TripLog() {
   const [walletBal, setWalletBal] = useState<number>(0);
   const [filterTruck, setFilterTruck] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+  const [freightTarget, setFreightTarget] = useState<TripRow | null>(null);
+  const [freightForm, setFreightForm] = useState({ freight_rate: '', quantity: '' });
+  const [savingFreight, setSavingFreight] = useState(false);
 
   const live = computeLive(form);
 
@@ -214,6 +222,35 @@ export default function TripLog() {
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally { setSaving(false); }
+  };
+
+  const openFreight = (row: TripRow) => {
+    setFreightTarget(row);
+    setFreightForm({
+      freight_rate: row.freight_rate ? String(row.freight_rate) : '',
+      quantity: row.quantity ? String(row.quantity) : '',
+    });
+  };
+
+  const saveFreight = async () => {
+    if (!freightTarget) return;
+    const rate = Number(freightForm.freight_rate);
+    if (!Number.isFinite(rate) || rate <= 0) {
+      addToast('Enter a valid freight rate', 'error'); return;
+    }
+    const qty = freightForm.quantity ? Number(freightForm.quantity) : undefined;
+    if (qty !== undefined && (!Number.isFinite(qty) || qty < 0)) {
+      addToast('Enter a valid quantity', 'error'); return;
+    }
+    setSavingFreight(true);
+    try {
+      await api.truckTrips.updateFreight(freightTarget.id, { freight_rate: rate, ...(qty !== undefined ? { quantity: qty } : {}) });
+      addToast('Freight updated', 'success');
+      setFreightTarget(null);
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Update failed', 'error');
+    } finally { setSavingFreight(false); }
   };
 
   const handleDelete = async (row: TripRow) => {
@@ -357,12 +394,35 @@ export default function TripLog() {
                     <td className="px-4 py-3 text-heading/70 text-xs max-w-[140px] truncate">
                       {row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination || '—'}
                     </td>
-                    <td className="px-4 py-3 text-right font-medium">{formatINR(Number(row.total_freight))}</td>
+                    <td className="px-4 py-3 text-right font-medium">
+                      {Number(row.freight_rate) > 0 ? (
+                        formatINR(Number(row.total_freight))
+                      ) : (
+                        <div className="flex items-center justify-end gap-2">
+                          <span className="text-heading/40">—</span>
+                          {canUpdateFreight && (
+                            <button
+                              type="button"
+                              onClick={() => openFreight(row)}
+                              className="inline-flex items-center gap-1 rounded-md border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 text-[11px] font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50"
+                              title="Set freight rate"
+                            >
+                              <IndianRupee className="h-3 w-3" /> Set
+                            </button>
+                          )}
+                        </div>
+                      )}
+                    </td>
                     <td className={`px-4 py-3 text-right font-semibold ${Number(row.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(Number(row.net_profit))}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        {canUpdateFreight && Number(row.freight_rate) > 0 && (
+                          <button type="button" onClick={() => openFreight(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-600 dark:text-orange-400 transition-colors" title="Update freight rate">
+                            <IndianRupee className="h-4 w-4" />
+                          </button>
+                        )}
                         <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-600 dark:text-orange-400 transition-colors" title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -380,6 +440,76 @@ export default function TripLog() {
           </table>
         </div>
       </div>
+
+      {/* Set / Update Freight — small focused modal scoped to freight rate + qty.
+          Re-runs the wallet pre-flight on the server side. */}
+      {freightTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
+            <div className="flex items-start justify-between mb-3">
+              <div>
+                <h3 className="text-base font-semibold text-heading">
+                  {Number(freightTarget.freight_rate) > 0 ? 'Update Freight' : 'Set Freight'}
+                </h3>
+                <p className="mt-0.5 text-xs text-heading/60">
+                  {freightTarget.truck_number} · {formatDate(freightTarget.date)}
+                </p>
+              </div>
+              <button type="button" onClick={() => setFreightTarget(null)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                <X className="h-5 w-5 text-heading/60" />
+              </button>
+            </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Quantity (tons)</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input-field w-full"
+                    value={freightForm.quantity}
+                    onChange={(e) => setFreightForm((p) => ({ ...p, quantity: e.target.value }))}
+                    placeholder={String(freightTarget.quantity || 0)}
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Freight Rate (₹/ton) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input-field w-full"
+                    value={freightForm.freight_rate}
+                    onChange={(e) => setFreightForm((p) => ({ ...p, freight_rate: e.target.value }))}
+                    placeholder="0"
+                    autoFocus
+                  />
+                </div>
+              </div>
+              <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs">
+                <span className="text-heading/60">New Total Freight: </span>
+                <span className="font-bold text-orange-700 dark:text-orange-300">
+                  {formatINR((Number(freightForm.quantity) || Number(freightTarget.quantity) || 0) * (Number(freightForm.freight_rate) || 0))}
+                </span>
+              </div>
+            </div>
+            <div className="mt-5 flex justify-end gap-2 border-t border-card-border pt-4">
+              <button type="button" onClick={() => setFreightTarget(null)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={saveFreight}
+                disabled={savingFreight}
+                className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-50"
+              >
+                {savingFreight ? 'Saving…' : 'Save Freight'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Modal — flat form, no accordions */}
       {modalOpen && (
@@ -461,8 +591,8 @@ export default function TripLog() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Freight</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Freight Rate (₹/ton) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0" required />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Freight Rate (₹/ton)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.freight_rate} onChange={f('freight_rate')} placeholder="0 — fill later if not yet locked" />
                       </div>
                       <div className="flex items-end">
                         <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs w-full">

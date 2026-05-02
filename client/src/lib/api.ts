@@ -280,6 +280,8 @@ export const api = {
     },
     create: (data: any) => request<any>('/truck-trips', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/truck-trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    updateFreight: (id: number, data: { freight_rate: number; quantity?: number }) =>
+      request<any>(`/truck-trips/${id}/freight`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-trips/${id}`, { method: 'DELETE' }),
   },
   driverPayments: {

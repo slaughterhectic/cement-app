@@ -14,6 +14,10 @@ const ALL_PERMISSIONS = [
   'delete_purchases', 'delete_sales', 'delete_payments', 'delete_expenses',
   'delete_imprest', 'delete_capital_banks', 'delete_loans',
   'manage_transport_rates',
+  // Lets a non-admin update the freight rate on an already-saved truck trip via the
+  // inline "Set Freight" action. Useful when the trip is logged before the freight
+  // is locked in and someone with field knowledge needs to fill it in later.
+  'update_truck_trip_freight',
   'download',
 ];
 

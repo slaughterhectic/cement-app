@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import { requirePermission } from '../middleware/auth';
 import {
   walletBalance, fastagBalance,
   syncWalletDebitForSource, syncFastagDebitForSource,
@@ -217,6 +218,64 @@ router.put('/:id', async (req, res) => {
     if (!row) return res.status(404).json({ error: 'Trip not found' });
     await syncWalletDebitForSource('truck_trip', row.id, c.total_freight, date, `Freight for trip #${row.id}`);
     await syncFastagDebitForSource('truck_trip', row.id, fastagId, c.toll_expense, date, `Toll for trip #${row.id}`);
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
+});
+
+// PATCH /truck-trips/:id/freight — update only the freight rate (and optionally the
+// quantity) on an existing trip and re-sync the wallet debit. Scoped behind its own
+// permission so admins can hand out "fill freight later" without granting full edit.
+router.patch('/:id/freight', requirePermission('update_truck_trip_freight'), async (req, res) => {
+  try {
+    const existing = await getOne(`SELECT * FROM truck_trips WHERE id=$1`, [req.params.id]);
+    if (!existing) return res.status(404).json({ error: 'Trip not found' });
+
+    const freightRate = Number(req.body.freight_rate);
+    if (!Number.isFinite(freightRate) || freightRate < 0) {
+      return res.status(400).json({ error: 'freight_rate must be a non-negative number' });
+    }
+    // Quantity is optional — fall back to whatever the trip already had.
+    const quantity = req.body.quantity !== undefined && req.body.quantity !== null && req.body.quantity !== ''
+      ? Number(req.body.quantity)
+      : Number(existing.quantity) || 0;
+    if (!Number.isFinite(quantity) || quantity < 0) {
+      return res.status(400).json({ error: 'quantity must be a non-negative number' });
+    }
+
+    // Recompute the freight-derived totals, keeping every other cost as-is.
+    const total_freight = quantity * freightRate;
+    const diesel_amount = Number(existing.diesel_amount) || 0;
+    const net_freight = total_freight
+      - (Number(existing.loading_charge) || 0)
+      - (Number(existing.unloading_charge) || 0)
+      - (Number(existing.toll_expense) || 0)
+      - diesel_amount
+      - (Number(existing.driver_payment) || 0)
+      - (Number(existing.transporter_commission) || 0)
+      - (Number(existing.miscellaneous) || 0);
+    const net_profit = net_freight;
+
+    // Pre-flight wallet check — old freight debit on this trip will be replaced.
+    const oldFreight = Number(existing.total_freight) || 0;
+    if (total_freight > 0) {
+      const wb = await walletBalance();
+      const effective = wb + oldFreight;
+      if (effective < total_freight) {
+        return res.status(400).json({ error: `Wallet balance (₹${effective.toFixed(2)}) is less than the new total freight (₹${total_freight.toFixed(2)}). Top up the wallet first.` });
+      }
+    }
+
+    const row = await getOne(
+      `UPDATE truck_trips
+         SET freight_rate=$1, quantity=$2, total_freight=$3, net_freight=$4, net_profit=$5
+       WHERE id=$6 RETURNING *`,
+      [freightRate, quantity, total_freight, net_freight, net_profit, req.params.id]
+    );
+
+    await syncWalletDebitForSource(
+      'truck_trip', row.id, total_freight, row.date, `Freight for trip #${row.id}`,
+    );
+
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
