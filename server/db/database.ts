@@ -366,6 +366,21 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_assets_mode ON assets(mode)`);
 
     await client.query(`
+      CREATE TABLE IF NOT EXISTS asset_topups (
+        id SERIAL PRIMARY KEY,
+        asset_id INTEGER NOT NULL REFERENCES assets(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL CHECK(amount > 0),
+        mode TEXT CHECK(mode IN ('bank','cash')) DEFAULT 'bank',
+        bank_name TEXT,
+        cash_handler TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_asset_topups_asset ON asset_topups(asset_id)`);
+
+    await client.query(`
       CREATE TABLE IF NOT EXISTS bank_transfers (
         id SERIAL PRIMARY KEY,
         date TEXT NOT NULL,

@@ -94,7 +94,10 @@ router.get('/summary', async (_req, res) => {
           COALESCE(SUM(amount) FILTER (WHERE mode='cash' AND cash_handler IS NULL),0) as cash_orphan,
           COALESCE(SUM(amount) FILTER (WHERE mode='bank'),0) as bank,
           COALESCE(SUM(amount),0) as total
-        FROM assets
+        FROM (
+          SELECT amount, mode, cash_handler FROM assets
+          UNION ALL SELECT amount, mode, cash_handler FROM asset_topups
+        ) combined
       `),
       getOne(`
         SELECT
@@ -128,6 +131,7 @@ router.get('/summary', async (_req, res) => {
           UNION ALL SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
           UNION ALL SELECT bank_name, amount FROM assets WHERE mode='bank'
+          UNION ALL SELECT bank_name, amount FROM asset_topups WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM party_loans WHERE mode='bank' AND type='disbursement'
           UNION ALL SELECT bank_name, amount FROM loan_repayments WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM wallet_transactions WHERE mode='bank' AND type='credit'
@@ -329,6 +333,11 @@ router.get('/banks/:name/transactions', async (req, res) => {
         SELECT date, COALESCE('Asset — '||name,'Asset purchase'), type, 'asset', id, 0, amount
         FROM assets
         WHERE mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT t.date, 'Asset top-up — '||a.name, a.type, 'asset_topup', t.id, 0, t.amount
+        FROM asset_topups t JOIN assets a ON a.id = t.asset_id
+        WHERE t.mode='bank' AND TRIM(LOWER(COALESCE(t.bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
         SELECT date, 'Transfer in', 'From '||from_bank, 'bank_transfer', id, amount, 0

@@ -202,10 +202,16 @@ export const api = {
     balance: (id: number) => request<{ balance: number }>(`/fastags/${id}/balance`),
   },
   assets: {
-    list: () => request<{ id: number; date: string; name: string; type: string | null; amount: number; mode: 'bank' | 'cash'; bank_name: string | null; cash_handler: string | null; remarks: string | null }[]>('/assets'),
+    list: () => request<{ id: number; date: string; name: string; type: string | null; amount: number; mode: 'bank' | 'cash'; bank_name: string | null; cash_handler: string | null; remarks: string | null; topups_total: number; topups_count: number }[]>('/assets'),
     create: (data: { date: string; name: string; type?: string | null; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>('/assets', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: { date: string; name: string; type?: string | null; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>(`/assets/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/assets/${id}`, { method: 'DELETE' }),
+    topups: {
+      list: (assetId: number) => request<{ id: number; asset_id: number; date: string; amount: number; mode: 'bank' | 'cash'; bank_name: string | null; cash_handler: string | null; remarks: string | null }[]>(`/assets/${assetId}/topups`),
+      create: (assetId: number, data: { date: string; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>(`/assets/${assetId}/topups`, { method: 'POST', body: JSON.stringify(data) }),
+      update: (assetId: number, topupId: number, data: { date: string; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) => request<any>(`/assets/${assetId}/topups/${topupId}`, { method: 'PUT', body: JSON.stringify(data) }),
+      delete: (assetId: number, topupId: number) => request<any>(`/assets/${assetId}/topups/${topupId}`, { method: 'DELETE' }),
+    },
   },
   dealers: {
     list: () => request<any[]>('/dealers'),
