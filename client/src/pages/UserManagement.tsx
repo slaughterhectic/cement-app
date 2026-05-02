@@ -21,7 +21,6 @@ const ALL_PERMISSIONS = [
   { key: 'delete_capital_banks', label: 'Delete Bank Accounts', group: 'Delete' },
   { key: 'delete_loans', label: 'Delete Loans', group: 'Delete' },
   { key: 'manage_transport_rates', label: 'Manage Transport Rates (GPS, Bilty, Handling)', group: 'Other' },
-  { key: 'update_truck_trip_freight', label: 'Update Trip Freight (TruckBook)', group: 'Other' },
   { key: 'download', label: 'Download / Export', group: 'Other' },
 ];
 

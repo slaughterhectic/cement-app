@@ -1,7 +1,6 @@
 import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
 import { friendlyError } from '../lib/userError';
-import { requirePermission } from '../middleware/auth';
 import {
   walletBalance, fastagBalance,
   syncWalletDebitForSource, syncFastagDebitForSource,
@@ -223,9 +222,9 @@ router.put('/:id', async (req, res) => {
 });
 
 // PATCH /truck-trips/:id/freight — update only the freight rate (and optionally the
-// quantity) on an existing trip and re-sync the wallet debit. Scoped behind its own
-// permission so admins can hand out "fill freight later" without granting full edit.
-router.patch('/:id/freight', requirePermission('update_truck_trip_freight'), async (req, res) => {
+// quantity) on an existing trip and re-sync the wallet debit. Open to any authed user
+// since logging the freight rate later is part of every TruckBook user's regular flow.
+router.patch('/:id/freight', async (req, res) => {
   try {
     const existing = await getOne(`SELECT * FROM truck_trips WHERE id=$1`, [req.params.id]);
     if (!existing) return res.status(404).json({ error: 'Trip not found' });

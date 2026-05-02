@@ -92,11 +92,6 @@ function computeLive(form: typeof emptyForm) {
 export default function TripLog() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
-  const hasPermission = useAuthStore((s) => s.hasPermission);
-  // Admin always can. Non-admin needs the explicit permission to use the inline freight
-  // updater — deliberately decoupled from the full edit modal so admins can hand out a
-  // narrow "fill freight later" capability without opening up the rest of the trip.
-  const canUpdateFreight = isAdmin() || hasPermission('update_truck_trip_freight');
   const [rows, setRows] = useState<TripRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
   const [drivers, setDrivers] = useState<Driver[]>([]);
@@ -400,16 +395,14 @@ export default function TripLog() {
                       ) : (
                         <div className="flex items-center justify-end gap-2">
                           <span className="text-heading/40">—</span>
-                          {canUpdateFreight && (
-                            <button
-                              type="button"
-                              onClick={() => openFreight(row)}
-                              className="inline-flex items-center gap-1 rounded-md border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 text-[11px] font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50"
-                              title="Set freight rate"
-                            >
-                              <IndianRupee className="h-3 w-3" /> Set
-                            </button>
-                          )}
+                          <button
+                            type="button"
+                            onClick={() => openFreight(row)}
+                            className="inline-flex items-center gap-1 rounded-md border border-orange-300 dark:border-orange-700 bg-orange-50 dark:bg-orange-900/30 px-2 py-0.5 text-[11px] font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/50"
+                            title="Set freight rate"
+                          >
+                            <IndianRupee className="h-3 w-3" /> Set
+                          </button>
                         </div>
                       )}
                     </td>
@@ -418,7 +411,7 @@ export default function TripLog() {
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
-                        {canUpdateFreight && Number(row.freight_rate) > 0 && (
+                        {Number(row.freight_rate) > 0 && (
                           <button type="button" onClick={() => openFreight(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-600 dark:text-orange-400 transition-colors" title="Update freight rate">
                             <IndianRupee className="h-4 w-4" />
                           </button>
