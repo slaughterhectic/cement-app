@@ -359,8 +359,28 @@ export const api = {
       request<{ total: number; gstr1_filed: number; gstr1_mismatch: number; gstr3b_filed: number; gstr3b_mismatch: number; itc_claimed: number; itc_reconciled: number; itc_disputed: number }>(
         `/rl/invoices/compliance-summary${period ? `?period=${encodeURIComponent(period)}` : ''}`
       ),
+    billingSummary: (company: 'acc' | 'jk', month?: string) => {
+      const params = new URLSearchParams({ company });
+      if (month) params.set('month', month);
+      return request<{ company: 'acc' | 'jk'; month: string | null; trip_acc_total: number; invoiced: number; received: number; tds: number; pending_to_invoice: number; pending_payment: number }>(
+        `/rl/invoices/billing-summary?${params.toString()}`
+      );
+    },
     patchCompliance: (id: number, data: any) =>
       request<any>(`/rl/invoices/${id}/compliance`, { method: 'PATCH', body: JSON.stringify(data) }),
+  },
+  rlDieselParties: {
+    list: () => request<any[]>('/rl/diesel-parties'),
+    create: (data: { name: string; phone?: string | null; opening_balance?: number; remarks?: string | null }) =>
+      request<any>('/rl/diesel-parties', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/diesel-parties/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/diesel-parties/${id}`, { method: 'DELETE' }),
+    transactions: (id: number) => request<any[]>(`/rl/diesel-parties/${id}/transactions`),
+    credit: (id: number, data: { date: string; amount: number; mode: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) =>
+      request<any>(`/rl/diesel-parties/${id}/credit`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteTxn: (id: number, txId: number) =>
+      request<any>(`/rl/diesel-parties/${id}/transactions/${txId}`, { method: 'DELETE' }),
+    balance: (id: number) => request<{ balance: number }>(`/rl/diesel-parties/${id}/balance`),
   },
   rlPartners: {
     list: () => request<any[]>('/rl/partners'),

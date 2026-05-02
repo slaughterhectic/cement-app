@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
 import { getAllSettingsMap } from './settings';
+import { syncDieselDebitForSource, deleteDieselForSource } from '../lib/walletSync';
 
 const router = Router();
 
@@ -86,7 +87,7 @@ function normalizeDeliveryStatus(v: any): string {
 // GET /rl/trips — list with optional filters
 router.get('/', async (req, res) => {
   try {
-    const { truck_owner_id, month } = req.query as Record<string, string>;
+    const { truck_owner_id, month, company } = req.query as Record<string, string>;
     const conditions: string[] = [];
     const params: any[] = [];
     let idx = 1;
@@ -99,13 +100,19 @@ router.get('/', async (req, res) => {
       conditions.push(`t.date LIKE $${idx++}`);
       params.push(`${month}%`);
     }
+    if (company === 'acc' || company === 'jk') {
+      conditions.push(`t.company = $${idx++}`);
+      params.push(company);
+    }
 
     const where = conditions.length ? `WHERE ${conditions.join(' AND ')}` : '';
 
     const rows = await getAll(
-      `SELECT t.*, o.truck_number, o.owner_name, o.driver_name
+      `SELECT t.*, o.truck_number, o.owner_name, o.driver_name,
+              dp.name AS diesel_party_name
        FROM rl_trips t
        JOIN rl_truck_owners o ON t.truck_owner_id = o.id
+       LEFT JOIN rl_diesel_parties dp ON dp.id = t.diesel_party_id
        ${where}
        ORDER BY t.date DESC, t.id DESC`,
       params
@@ -148,12 +155,15 @@ router.post('/', async (req, res) => {
       dch_type, material_type, qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
       petrol_slip_number, epod_bill_number, difference_rate, remarks,
       eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
-      delivery_status, delivered_at,
+      delivery_status, delivered_at, diesel_party_id, company,
     } = req.body;
 
     if (!date) return res.status(400).json({ error: 'Date is required' });
     if (!truck_owner_id) return res.status(400).json({ error: 'Truck owner is required' });
     if (!party_name?.trim()) return res.status(400).json({ error: 'Party name is required' });
+
+    const tripCompany = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
+    if (tripCompany !== 'acc' && tripCompany !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
     // Non-admin past/future-date entries route through the TransportBook approval queue
     const today = new Date().toISOString().split('T')[0];
@@ -178,14 +188,17 @@ router.post('/', async (req, res) => {
       if (!Number.isFinite(resolvedCommissionPct)) resolvedCommissionPct = 6.29;
     }
 
+    const dieselPartyIdNum = diesel_party_id ? Number(diesel_party_id) : null;
+    const dieselAdvanceNum = Number(diesel_advance) || 0;
+
     const row = await getOne(
       `INSERT INTO rl_trips
         (date, builty_number, do_number, truck_owner_id, party_name, location, dch_type, material_type,
          qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
          petrol_slip_number, epod_bill_number, difference_rate, remarks,
          eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
-         delivery_status, delivered_at)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)
+         delivery_status, delivered_at, diesel_party_id, company)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
        RETURNING *`,
       [
         date,
@@ -199,7 +212,7 @@ router.post('/', async (req, res) => {
         Number(qty) || 0,
         Number(acc_freight_rate) || 0,
         resolvedCommissionPct,
-        Number(diesel_advance) || 0,
+        dieselAdvanceNum,
         Number(cash_advance) || 0,
         petrol_slip_number?.trim() || null,
         epod_bill_number?.trim() || null,
@@ -210,7 +223,14 @@ router.post('/', async (req, res) => {
         eway_bill_valid_until || null,
         normalizeDeliveryStatus(delivery_status),
         delivered_at || null,
+        dieselPartyIdNum,
+        tripCompany,
       ]
+    );
+
+    await syncDieselDebitForSource(
+      'rl_trip', row.id, dieselPartyIdNum, dieselAdvanceNum, date,
+      builty_number?.trim() ? `Trip ${builty_number.trim()}` : `Trip #${row.id}`,
     );
 
     const settings = await loadSettings();
@@ -226,12 +246,18 @@ router.put('/:id', async (req, res) => {
       dch_type, material_type, qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
       petrol_slip_number, epod_bill_number, difference_rate, remarks,
       eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
-      delivery_status, delivered_at,
+      delivery_status, delivered_at, diesel_party_id, company,
     } = req.body;
 
     if (!date) return res.status(400).json({ error: 'Date is required' });
     if (!truck_owner_id) return res.status(400).json({ error: 'Truck owner is required' });
     if (!party_name?.trim()) return res.status(400).json({ error: 'Party name is required' });
+
+    const tripCompany = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
+    if (tripCompany !== 'acc' && tripCompany !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
+
+    const dieselPartyIdNum = diesel_party_id ? Number(diesel_party_id) : null;
+    const dieselAdvanceNum = Number(diesel_advance) || 0;
 
     const row = await getOne(
       `UPDATE rl_trips SET
@@ -240,8 +266,8 @@ router.put('/:id', async (req, res) => {
         diesel_advance=$12, cash_advance=$13, petrol_slip_number=$14, epod_bill_number=$15,
         difference_rate=$16, remarks=$17,
         eway_bill_number=$18, eway_bill_generated_at=$19, eway_bill_valid_until=$20,
-        delivery_status=$21, delivered_at=$22
-       WHERE id=$23 RETURNING *`,
+        delivery_status=$21, delivered_at=$22, diesel_party_id=$23, company=$24
+       WHERE id=$25 RETURNING *`,
       [
         date,
         builty_number?.trim() || null,
@@ -254,7 +280,7 @@ router.put('/:id', async (req, res) => {
         Number(qty) || 0,
         Number(acc_freight_rate) || 0,
         Number(commission_pct) ?? 6.29,
-        Number(diesel_advance) || 0,
+        dieselAdvanceNum,
         Number(cash_advance) || 0,
         petrol_slip_number?.trim() || null,
         epod_bill_number?.trim() || null,
@@ -265,10 +291,18 @@ router.put('/:id', async (req, res) => {
         eway_bill_valid_until || null,
         normalizeDeliveryStatus(delivery_status),
         delivered_at || null,
+        dieselPartyIdNum,
+        tripCompany,
         req.params.id,
       ]
     );
     if (!row) return res.status(404).json({ error: 'Trip not found' });
+
+    await syncDieselDebitForSource(
+      'rl_trip', row.id, dieselPartyIdNum, dieselAdvanceNum, date,
+      builty_number?.trim() ? `Trip ${builty_number.trim()}` : `Trip #${row.id}`,
+    );
+
     const settings = await loadSettings();
     res.json(computeTrip(row, settings));
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
@@ -277,6 +311,7 @@ router.put('/:id', async (req, res) => {
 // DELETE /rl/trips/:id
 router.delete('/:id', async (req, res) => {
   try {
+    await deleteDieselForSource('rl_trip', Number(req.params.id));
     await query('DELETE FROM rl_trips WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }

@@ -82,3 +82,47 @@ export async function deleteFastagForSource(sourceTable: string, sourceId: numbe
     [sourceTable, sourceId]
   );
 }
+
+/** Diesel party balance = opening + credits − debits. */
+export async function dieselPartyBalance(dieselPartyId: number): Promise<number> {
+  const r = await getOne(`
+    SELECT (
+      COALESCE((SELECT opening_balance FROM rl_diesel_parties WHERE id=$1), 0)
+      + COALESCE((SELECT SUM(CASE WHEN type='credit' THEN amount ELSE -amount END) FROM rl_diesel_transactions WHERE diesel_party_id=$1), 0)
+    )::float AS bal
+  `, [dieselPartyId]);
+  return Number(r?.bal ?? 0);
+}
+
+/**
+ * Drop existing diesel rows for a (source_table, source_id) and, if a diesel party id and
+ * amount are provided, insert a fresh debit. Used by rl_trips so a trip's diesel advance
+ * shows up on the chosen pump's ledger.
+ */
+export async function syncDieselDebitForSource(
+  sourceTable: string,
+  sourceId: number,
+  dieselPartyId: number | null,
+  amount: number,
+  date: string,
+  remarks: string | null,
+): Promise<void> {
+  await query(
+    `DELETE FROM rl_diesel_transactions WHERE source_table=$1 AND source_id=$2`,
+    [sourceTable, sourceId]
+  );
+  if (dieselPartyId && amount > 0) {
+    await query(
+      `INSERT INTO rl_diesel_transactions (diesel_party_id, date, type, amount, source_table, source_id, remarks)
+       VALUES ($1,$2,'debit',$3,$4,$5,$6)`,
+      [dieselPartyId, date, amount, sourceTable, sourceId, remarks]
+    );
+  }
+}
+
+export async function deleteDieselForSource(sourceTable: string, sourceId: number): Promise<void> {
+  await query(
+    `DELETE FROM rl_diesel_transactions WHERE source_table=$1 AND source_id=$2`,
+    [sourceTable, sourceId]
+  );
+}

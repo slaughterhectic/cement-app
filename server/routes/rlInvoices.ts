@@ -35,6 +35,61 @@ router.get('/', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
+// GET /rl/invoices/billing-summary?company=acc|jk[&month=YYYY-MM]
+// Auto-shifts trip freight totals into the billing view: each company only sees its own
+// trips (rl_trips.company), and as invoices are raised "Yet to bill" shrinks toward zero.
+router.get('/billing-summary', async (req, res) => {
+  try {
+    const company = (typeof req.query.company === 'string' ? req.query.company.trim().toLowerCase() : '') || 'acc';
+    if (company !== 'acc' && company !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
+    const month = typeof req.query.month === 'string' && req.query.month.trim() ? req.query.month.trim() : null;
+
+    const tripParams: any[] = [company];
+    let tripWhere = `WHERE company = $1`;
+    if (month) {
+      tripParams.push(`${month}%`);
+      tripWhere += ` AND date LIKE $${tripParams.length}`;
+    }
+
+    const tripRow = await getOne(
+      `SELECT COALESCE(SUM(qty * acc_freight_rate), 0)::float AS total
+         FROM rl_trips ${tripWhere}`,
+      tripParams
+    );
+
+    const invoiceParams: any[] = [company];
+    let invoiceWhere = `WHERE company = $1`;
+    if (month) {
+      invoiceParams.push(`${month}%`);
+      invoiceWhere += ` AND COALESCE(invoice_date,'') LIKE $${invoiceParams.length}`;
+    }
+    const invoiceRow = await getOne(
+      `SELECT
+         COALESCE(SUM(invoice_amount), 0)::float  AS invoiced,
+         COALESCE(SUM(received_amount), 0)::float AS received,
+         COALESCE(SUM(tds_amount), 0)::float      AS tds
+       FROM rl_invoices ${invoiceWhere}`,
+      invoiceParams
+    );
+
+    const tripAccTotal = Number(tripRow?.total) || 0;
+    const invoiced = Number(invoiceRow?.invoiced) || 0;
+    const received = Number(invoiceRow?.received) || 0;
+    const tds = Number(invoiceRow?.tds) || 0;
+
+    res.json({
+      company,
+      month,
+      trip_acc_total: tripAccTotal,
+      invoiced,
+      received,
+      tds,
+      pending_to_invoice: Math.max(0, tripAccTotal - invoiced),
+      pending_payment: Math.max(0, invoiced - received),
+    });
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
 // GET /rl/invoices/compliance-summary — aggregate counts for dashboard
 router.get('/compliance-summary', async (req, res) => {
   try {

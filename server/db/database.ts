@@ -800,6 +800,46 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_fastag_txn_source ON fastag_transactions(source_table, source_id)`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS fastag_id INTEGER REFERENCES fastags(id)`);
 
+    // TransportBook Diesel parties — diesel is purchased from one or more pumps; each
+    // pump keeps its own ledger so the team can see how much is outstanding per supplier.
+    // Pattern mirrors fastags: opening_balance + bank/cash credits − trip diesel_advance debits.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_diesel_parties (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        phone TEXT,
+        opening_balance REAL NOT NULL DEFAULT 0,
+        is_active INTEGER NOT NULL DEFAULT 1,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_diesel_transactions (
+        id SERIAL PRIMARY KEY,
+        diesel_party_id INTEGER NOT NULL REFERENCES rl_diesel_parties(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        type TEXT NOT NULL CHECK (type IN ('credit','debit')),
+        amount REAL NOT NULL CHECK (amount > 0),
+        mode TEXT CHECK (mode IN ('bank','cash')),
+        bank_name TEXT,
+        cash_handler TEXT,
+        source_table TEXT NOT NULL DEFAULT 'manual',
+        source_id INTEGER,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_diesel_txn_party ON rl_diesel_transactions(diesel_party_id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_diesel_txn_source ON rl_diesel_transactions(source_table, source_id)`);
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS diesel_party_id INTEGER REFERENCES rl_diesel_parties(id)`);
+
+    // Trips bill either ACC or JK — used by /rl/invoices/billing-summary so each company
+    // sees only its own auto-shifted freight receivable. Existing rows default to 'acc'.
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS company TEXT NOT NULL DEFAULT 'acc'`);
+    await client.query(`ALTER TABLE rl_trips DROP CONSTRAINT IF EXISTS rl_trips_company_check`);
+    await client.query(`ALTER TABLE rl_trips ADD CONSTRAINT rl_trips_company_check CHECK (company IN ('acc','jk'))`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

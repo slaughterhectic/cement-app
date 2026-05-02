@@ -9,6 +9,7 @@ interface DashboardStats {
   tripsThisMonth: number;
   totalTrucks: number;
   pendingInvoiceAmount: number;
+  pendingToBill: number;
   doneInvoiceAmount: number;
   partnerSummary: Array<{ name: string; balance: number }>;
 }
@@ -102,10 +103,22 @@ export default function TransportDashboard() {
         api.rlTrips.ewayAlerts(),
         api.rlInvoices.complianceSummary(),
       ]);
+      // Billing summary is best-effort — if the new /billing-summary endpoint isn't on
+      // the backend yet (pre-redeploy), keep the dashboard usable with zeros.
+      const [accSummary, jkSummary] = await Promise.all([
+        api.rlInvoices.billingSummary('acc').catch(() => ({ pending_to_invoice: 0 })),
+        api.rlInvoices.billingSummary('jk').catch(() => ({ pending_to_invoice: 0 })),
+      ]);
 
-      const pendingInvoiceAmount = invoices
+      // "Pending Invoice Amount" combines the receivable that's already invoiced but unpaid
+      // with the trip freight that hasn't been billed yet — both are money ACC/JK still owe us.
+      // The previous version only looked at raised invoices, so 0 invoices = ₹0 pending even
+      // when ₹37L+ of freight was sitting in Trip Log.
+      const pendingPartialReceivable = invoices
         .filter((i: any) => i.status === 'pending' || i.status === 'partial')
         .reduce((s: number, i: any) => s + (Number(i.invoice_amount) - Number(i.received_amount)), 0);
+      const pendingToBill = (accSummary.pending_to_invoice || 0) + (jkSummary.pending_to_invoice || 0);
+      const pendingInvoiceAmount = pendingPartialReceivable + pendingToBill;
       const doneInvoiceAmount = invoices
         .filter((i: any) => i.status === 'done')
         .reduce((s: number, i: any) => s + Number(i.invoice_amount), 0);
@@ -114,6 +127,7 @@ export default function TransportDashboard() {
         tripsThisMonth: trips.length,
         totalTrucks: owners.length,
         pendingInvoiceAmount,
+        pendingToBill,
         doneInvoiceAmount,
         partnerSummary: partners.map((p: any) => ({ name: p.name, balance: Number(p.balance) })),
       });
@@ -197,7 +211,7 @@ export default function TransportDashboard() {
         <StatCard
           label="Pending Invoice Amount"
           value={formatINR(stats.pendingInvoiceAmount)}
-          sub="from ACC"
+          sub={stats.pendingToBill > 0 ? `incl. ${formatINR(stats.pendingToBill)} yet to bill` : 'from ACC + JK'}
           icon={Clock}
           color="bg-amber-50 dark:bg-amber-900/30 text-amber-600 dark:text-amber-400"
         />
@@ -410,15 +424,19 @@ export default function TransportDashboard() {
           </div>
           <div className="space-y-3">
             <div className="flex justify-between items-center">
+              <span className="text-sm text-heading/70">Yet to Bill (from Trip Log)</span>
+              <span className="text-sm font-semibold text-indigo-600 dark:text-indigo-400">{formatINR(stats.pendingToBill)}</span>
+            </div>
+            <div className="flex justify-between items-center">
               <span className="text-sm text-heading/70">Pending / Partial</span>
-              <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{formatINR(stats.pendingInvoiceAmount)}</span>
+              <span className="text-sm font-semibold text-amber-600 dark:text-amber-400">{formatINR(stats.pendingInvoiceAmount - stats.pendingToBill)}</span>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-sm text-heading/70">Received (Done)</span>
               <span className="text-sm font-semibold text-green-600 dark:text-green-400">{formatINR(stats.doneInvoiceAmount)}</span>
             </div>
             <div className="border-t border-card-border pt-2 flex justify-between items-center">
-              <span className="text-sm font-medium text-heading/80">Total Invoiced</span>
+              <span className="text-sm font-medium text-heading/80">Total Receivable</span>
               <span className="text-sm font-bold text-heading">{formatINR(stats.pendingInvoiceAmount + stats.doneInvoiceAmount)}</span>
             </div>
           </div>

@@ -62,6 +62,7 @@ export default function TransportInvoices() {
   const [editing, setEditing] = useState<InvoiceRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+  const [billing, setBilling] = useState<{ trip_acc_total: number; invoiced: number; pending_to_invoice: number } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -72,6 +73,18 @@ export default function TransportInvoices() {
       addToast(e instanceof Error ? e.message : 'Failed to load invoices', 'error');
     } finally {
       setLoading(false);
+    }
+    // Receivable strip is best-effort — if /billing-summary or the rl_trips.company column
+    // isn't deployed yet on the backend, just hide the strip instead of breaking the page.
+    try {
+      const summary = await api.rlInvoices.billingSummary(company);
+      setBilling({
+        trip_acc_total: summary.trip_acc_total,
+        invoiced: summary.invoiced,
+        pending_to_invoice: summary.pending_to_invoice,
+      });
+    } catch (_) {
+      setBilling(null);
     }
   }, [addToast, company]);
 
@@ -197,6 +210,28 @@ export default function TransportInvoices() {
           Add Invoice
         </button>
       </div>
+
+      {/* Receivable Strip — auto-shifted from Trip Log so the team can see what's still
+          to be billed (per company) before the invoice is even raised. */}
+      {billing && (
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+          <div className={`card p-4 text-center ${company === 'jk' ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800'}`}>
+            <p className={`text-xs font-medium uppercase tracking-wider ${company === 'jk' ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>Trip {company.toUpperCase()} Receivable</p>
+            <p className="text-xl font-bold text-heading">{formatINR(billing.trip_acc_total)}</p>
+            <p className="text-[10px] text-heading/50 mt-0.5">from Trip Log ({company.toUpperCase()} trips)</p>
+          </div>
+          <div className="card p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-center">
+            <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider">Already Invoiced</p>
+            <p className="text-xl font-bold text-heading">{formatINR(billing.invoiced)}</p>
+            <p className="text-[10px] text-heading/50 mt-0.5">across {rows.length} bill{rows.length === 1 ? '' : 's'}</p>
+          </div>
+          <div className="card p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-center">
+            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium uppercase tracking-wider">Yet to Bill</p>
+            <p className="text-xl font-bold text-heading">{formatINR(billing.pending_to_invoice)}</p>
+            <p className="text-[10px] text-heading/50 mt-0.5">trip total − invoiced</p>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {rows.length > 0 && (

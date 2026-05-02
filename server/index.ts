@@ -38,6 +38,7 @@ import rlOwnerAdvancesRouter from './routes/rlOwnerAdvances';
 import rlTripsRouter from './routes/rlTrips';
 import rlInvoicesRouter from './routes/rlInvoices';
 import rlPartnersRouter from './routes/rlPartners';
+import rlDieselPartiesRouter from './routes/rlDieselParties';
 import settingsRouter from './routes/settings';
 import { backfillGpsRent } from './lib/gpsRent';
 
@@ -94,6 +95,7 @@ app.use('/api/rl/owner-advances', rlOwnerAdvancesRouter);
 app.use('/api/rl/trips', rlTripsRouter);
 app.use('/api/rl/invoices', rlInvoicesRouter);
 app.use('/api/rl/partners', rlPartnersRouter);
+app.use('/api/rl/diesel-parties', rlDieselPartiesRouter);
 app.use('/api/settings', settingsRouter);
 
 // Godown CRUD

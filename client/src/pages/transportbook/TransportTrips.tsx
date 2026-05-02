@@ -40,6 +40,14 @@ interface TripRow {
   delivered_at: string | null;
   eway_status: 'delivered' | 'expired' | 'risk' | 'warning' | 'ok' | 'none';
   eway_hours_left: number | null;
+  diesel_party_id: number | null;
+  diesel_party_name: string | null;
+  company: 'acc' | 'jk';
+}
+
+interface DieselPartyOption {
+  id: number;
+  name: string;
 }
 
 interface OwnerOption {
@@ -62,6 +70,7 @@ const emptyForm = {
   acc_freight_rate: '',
   commission_pct: '6.29',
   diesel_advance: '',
+  diesel_party_id: '',
   cash_advance: '',
   petrol_slip_number: '',
   epod_bill_number: '',
@@ -72,6 +81,7 @@ const emptyForm = {
   eway_bill_valid_until: '',
   delivery_status: 'pending' as 'pending' | 'in_transit' | 'delivered',
   delivered_at: '',
+  company: 'acc' as 'acc' | 'jk',
 };
 
 const DCH_TYPES = ['IT', 'DC', 'DE', 'IS'];
@@ -297,13 +307,18 @@ export default function TransportTrips() {
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const [rows, setRows] = useState<TripRow[]>([]);
   const [owners, setOwners] = useState<OwnerOption[]>([]);
+  const [dieselParties, setDieselParties] = useState<DieselPartyOption[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<TripRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [filterOwner, setFilterOwner] = useState('');
-  const [filterMonth, setFilterMonth] = useState('');
+  // Default to current YYYY-MM so the page opens scoped to this month, not all trips ever.
+  const [filterMonth, setFilterMonth] = useState(() => {
+    const d = new Date();
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  });
   const [filterEwayAtRisk, setFilterEwayAtRisk] = useState(false);
   const [rates, setRates] = useState<RateSettings>(DEFAULT_RATES);
 
@@ -329,8 +344,16 @@ export default function TransportTrips() {
     } catch (_) {}
   }, []);
 
+  const loadDieselParties = useCallback(async () => {
+    try {
+      const data = await api.rlDieselParties.list();
+      setDieselParties((data as any[]).filter((d) => d.is_active).map((d) => ({ id: d.id, name: d.name })));
+    } catch (_) {}
+  }, []);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadOwners(); }, [loadOwners]);
+  useEffect(() => { loadDieselParties(); }, [loadDieselParties]);
   useEffect(() => {
     api.settings.list()
       .then((s) => setRates({
@@ -358,6 +381,7 @@ export default function TransportTrips() {
       acc_freight_rate: String(row.acc_freight_rate || ''),
       commission_pct: String(row.commission_pct ?? 6.29),
       diesel_advance: String(row.diesel_advance || ''),
+      diesel_party_id: row.diesel_party_id ? String(row.diesel_party_id) : '',
       cash_advance: String(row.cash_advance || ''),
       petrol_slip_number: row.petrol_slip_number || '',
       epod_bill_number: row.epod_bill_number || '',
@@ -368,6 +392,7 @@ export default function TransportTrips() {
       eway_bill_valid_until: row.eway_bill_valid_until ? row.eway_bill_valid_until.slice(0, 16) : '',
       delivery_status: (row.delivery_status || 'pending') as 'pending' | 'in_transit' | 'delivered',
       delivered_at: row.delivered_at ? row.delivered_at.slice(0, 16) : '',
+      company: (row.company === 'jk' ? 'jk' : 'acc') as 'acc' | 'jk',
     });
     setModalOpen(true);
   };
@@ -376,6 +401,10 @@ export default function TransportTrips() {
     e.preventDefault();
     if (!form.truck_owner_id) { addToast('Select a truck owner', 'error'); return; }
     if (!form.party_name.trim()) { addToast('Party name is required', 'error'); return; }
+    if (n(form.diesel_advance) > 0 && !form.diesel_party_id) {
+      addToast('Pick the diesel pump for this advance so it lands on the right ledger', 'error');
+      return;
+    }
     setSaving(true);
     try {
       const payload = {
@@ -391,6 +420,7 @@ export default function TransportTrips() {
         acc_freight_rate: n(form.acc_freight_rate),
         commission_pct: n(form.commission_pct) || 6.29,
         diesel_advance: n(form.diesel_advance),
+        diesel_party_id: form.diesel_party_id ? Number(form.diesel_party_id) : null,
         cash_advance: n(form.cash_advance),
         petrol_slip_number: form.petrol_slip_number || null,
         epod_bill_number: form.epod_bill_number || null,
@@ -401,6 +431,7 @@ export default function TransportTrips() {
         eway_bill_valid_until: form.eway_bill_valid_until ? new Date(form.eway_bill_valid_until).toISOString() : null,
         delivery_status: form.delivery_status,
         delivered_at: form.delivered_at ? new Date(form.delivered_at).toISOString() : null,
+        company: form.company,
       };
       if (editing) {
         await api.rlTrips.update(editing.id, payload);
@@ -584,7 +615,14 @@ export default function TransportTrips() {
                     <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-3 py-2.5 text-heading/70 text-xs">{row.builty_number || '—'}</td>
                     <td className="px-3 py-2.5 font-medium text-indigo-600 dark:text-indigo-400">{row.truck_number}</td>
-                    <td className="px-3 py-2.5 text-heading/80">{row.party_name}</td>
+                    <td className="px-3 py-2.5 text-heading/80">
+                      <div className="flex flex-col gap-0.5">
+                        <span>{row.party_name}</span>
+                        <span className={`inline-flex w-fit items-center rounded-full px-1.5 py-0.5 text-[10px] font-semibold uppercase tracking-wider ${row.company === 'jk' ? 'bg-emerald-100 dark:bg-emerald-900/40 text-emerald-700 dark:text-emerald-300' : 'bg-indigo-100 dark:bg-indigo-900/40 text-indigo-700 dark:text-indigo-300'}`}>
+                          {row.company === 'jk' ? 'JK' : 'ACC'}
+                        </span>
+                      </div>
+                    </td>
                     <td className="px-3 py-2.5">
                       {row.dch_type ? (
                         <span className="rounded-full bg-indigo-100 dark:bg-indigo-900/40 px-2 py-0.5 text-xs font-medium text-indigo-700 dark:text-indigo-300">{row.dch_type}</span>
@@ -662,6 +700,28 @@ export default function TransportTrips() {
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Trip Info</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                      <div className="sm:col-span-2">
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Bill To *</label>
+                        <div className="inline-flex w-full rounded-lg border border-card-border bg-card p-1 text-sm">
+                          <button
+                            type="button"
+                            onClick={() => setForm((p) => ({ ...p, company: 'acc' }))}
+                            className={`flex-1 rounded-md px-3 py-1.5 font-medium ${form.company === 'acc' ? 'bg-indigo-500 text-white shadow-sm' : 'text-heading/70 hover:bg-surface'}`}
+                          >
+                            ACC
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setForm((p) => ({ ...p, company: 'jk' }))}
+                            className={`flex-1 rounded-md px-3 py-1.5 font-medium ${form.company === 'jk' ? 'bg-emerald-500 text-white shadow-sm' : 'text-heading/70 hover:bg-surface'}`}
+                          >
+                            JK
+                          </button>
+                        </div>
+                        <p className="mt-1 text-[10px] text-heading/50">
+                          Trip freight auto-shifts into this company's billing as receivable.
+                        </p>
+                      </div>
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
                         <input type="date" className="input-field" value={form.date} onChange={f('date')} required />
@@ -758,6 +818,22 @@ export default function TransportTrips() {
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Advance (₹)</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_advance} onChange={f('diesel_advance')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">
+                          Diesel Pump {n(form.diesel_advance) > 0 && <span className="text-red-500">*</span>}
+                        </label>
+                        <select className="input-field" value={form.diesel_party_id} onChange={f('diesel_party_id')}>
+                          <option value="">— Select pump —</option>
+                          {dieselParties.map((d) => (
+                            <option key={d.id} value={d.id}>{d.name}</option>
+                          ))}
+                        </select>
+                        {dieselParties.length === 0 && (
+                          <p className="mt-1 text-[10px] text-amber-600 dark:text-amber-400">
+                            No diesel parties yet — add one from TransportBook → Diesel.
+                          </p>
+                        )}
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Cash Advance (₹)</label>
