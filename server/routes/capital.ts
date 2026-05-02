@@ -348,6 +348,17 @@ router.get('/banks/:name/transactions', async (req, res) => {
         SELECT date, 'Transfer out', 'To '||to_bank, 'bank_transfer', id, 0, amount
         FROM bank_transfers
         WHERE TRIM(LOWER(from_bank))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT date, 'Wallet top-up', COALESCE(remarks,'Wallet'), 'wallet_transaction', id, 0, amount
+        FROM wallet_transactions
+        WHERE type='credit' AND mode='bank' AND TRIM(LOWER(COALESCE(bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT ft.date, 'FastTag top-up — '||f.name, COALESCE(ft.remarks, f.name), 'fastag_transaction', ft.id, 0, ft.amount
+        FROM fastag_transactions ft
+        JOIN fastags f ON f.id = ft.fastag_id
+        WHERE ft.type='credit' AND TRIM(LOWER(COALESCE(ft.bank_name,'')))=TRIM(LOWER($1))
       ) x
       ORDER BY date DESC, source_id DESC
       LIMIT 500

@@ -23,6 +23,8 @@ async function bankBalance(bank: string): Promise<number> {
       - COALESCE((SELECT SUM(amount) FROM loan_repayments WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       - COALESCE((SELECT SUM(amount) FROM assets          WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       - COALESCE((SELECT SUM(amount) FROM asset_topups    WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM wallet_transactions WHERE type='credit' AND mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM fastag_transactions WHERE type='credit'                 AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       + COALESCE((SELECT SUM(amount) FROM bank_transfers WHERE LOWER(TRIM(to_bank))   = LOWER(TRIM($1))), 0)
       - COALESCE((SELECT SUM(amount) FROM bank_transfers WHERE LOWER(TRIM(from_bank)) = LOWER(TRIM($1))), 0)
     ) AS balance
