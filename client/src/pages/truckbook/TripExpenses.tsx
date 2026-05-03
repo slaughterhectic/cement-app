@@ -369,25 +369,27 @@ export default function TripExpenses() {
                   </div>
                 </div>
 
-                {/* Trip Diesel — what was filled as "Advance Diesel" in Trip Log shows here.
-                    Always posts to the chosen transporter's ledger; never debits the wallet. */}
+                {/* Trip Diesel — value mirrors Trip Log's Advance Diesel. The "from transporter"
+                    is set in Trip Log and only displayed here as info; not editable. */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Diesel</p>
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Trip Diesel Amount (₹)</label>
                       <input type="number" min="0" step="0.01" className="input-field" value={form.advance_diesel_amount} onChange={f('advance_diesel_amount')} placeholder="0" />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">From Transporter {n(form.advance_diesel_amount) > 0 ? '*' : ''}</label>
-                      <select className="input-field" value={form.diesel_from_id} onChange={(e) => setForm((p) => ({ ...p, diesel_from_id: e.target.value }))}>
-                        <option value="">{n(form.advance_diesel_amount) > 0 ? 'Select transporter' : 'No trip diesel'}</option>
-                        {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
-                      </select>
+                    <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs">
+                      <span className="text-heading/60">From Transporter (set in Trip Log): </span>
+                      <span className="font-semibold text-orange-700 dark:text-orange-300">
+                        {form.diesel_from_id
+                          ? transporters.find((t) => String(t.id) === form.diesel_from_id)?.name || '—'
+                          : 'Not set'}
+                      </span>
+                      {n(form.advance_diesel_amount) > 0 && !form.diesel_from_id && (
+                        <p className="mt-1 text-amber-700 dark:text-amber-300">⚠ Pick the transporter in Trip Log to credit their ledger.</p>
+                      )}
                       {n(form.advance_diesel_amount) > 0 && form.diesel_from_id && (
-                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                          {formatINR(n(form.advance_diesel_amount))} → {transporters.find((t) => String(t.id) === form.diesel_from_id)?.name || '—'}'s ledger
-                        </p>
+                        <p className="mt-1 text-orange-700 dark:text-orange-300">{formatINR(n(form.advance_diesel_amount))} → ledger</p>
                       )}
                     </div>
                   </div>
