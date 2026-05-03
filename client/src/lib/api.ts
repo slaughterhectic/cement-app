@@ -282,6 +282,14 @@ export const api = {
     update: (id: number, data: any) => request<any>(`/truck-trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     updateFreight: (id: number, data: { freight_rate: number; quantity?: number }) =>
       request<any>(`/truck-trips/${id}/freight`, { method: 'PATCH', body: JSON.stringify(data) }),
+    updateExpense: (id: number, data: {
+      loading_charge: number;
+      unloading_charge: number;
+      diesel_litres: number;
+      diesel_rate: number;
+      driver_payment: number;
+      miscellaneous: number;
+    }) => request<any>(`/truck-trips/${id}/expense`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-trips/${id}`, { method: 'DELETE' }),
   },
   driverPayments: {

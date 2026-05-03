@@ -27,6 +27,7 @@ import { useAuthStore } from './lib/store';
 import TruckDashboard from './pages/truckbook/TruckDashboard';
 import Trucks from './pages/truckbook/Trucks';
 import TripLog from './pages/truckbook/TripLog';
+import TripExpenses from './pages/truckbook/TripExpenses';
 import DriverLedger from './pages/truckbook/DriverLedger';
 import TruckExpenses from './pages/truckbook/TruckExpenses';
 import Wallet from './pages/truckbook/Wallet';
@@ -142,6 +143,7 @@ export default function App() {
           <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><BookGuard permission="view_truckbook_dashboard" fallback="/truckbook/trucks"><TruckDashboard /></BookGuard></BookGuard>} />
           <Route path="/truckbook/trucks" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Trucks /></BookGuard>} />
           <Route path="/truckbook/trips" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripLog /></BookGuard>} />
+          <Route path="/truckbook/trip-expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripExpenses /></BookGuard>} />
           <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />
           <Route path="/truckbook/expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TruckExpenses /></BookGuard>} />
           <Route path="/truckbook/transporters" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Transporters /></BookGuard>} />

@@ -19,27 +19,20 @@ interface TripRow {
   net_profit: number;
   total_freight: number;
   diesel_amount: number;
-  driver_payment: number;
   truck_id: number;
   driver_id: number | null;
   transporter_id: number | null;
   diesel_from_id: number | null;
   billed_party: string | null;
   freight_rate: number;
-  loading_charge: number;
-  unloading_charge: number;
-  advance_litres: number;
-  advance_rate: number;
   advance_deduction: number;
   toll_expense: number;
-  diesel_litres: number;
-  diesel_rate: number;
   transporter_commission: number;
-  miscellaneous: number;
   odometer_start: number | null;
   odometer_end: number | null;
   total_km: number;
   remarks: string | null;
+  expense_completed: boolean;
 }
 
 interface Truck { id: number; truck_number: string; }
@@ -58,16 +51,9 @@ const emptyForm = {
   billed_party: '',
   billed_destination: '',
   freight_rate: '',
-  advance_litres: '',
-  advance_rate: '',
+  advance_diesel_amount: '',
   toll_expense: '',
-  loading_charge: '',
-  unloading_charge: '',
-  diesel_litres: '',
-  diesel_rate: '',
-  driver_payment: '',
   transporter_commission: '',
-  miscellaneous: '',
   odometer_start: '',
   odometer_end: '',
   remarks: '',
@@ -77,16 +63,13 @@ const emptyForm = {
 function n(v: string) { return Number(v) || 0; }
 
 function computeLive(form: typeof emptyForm) {
-  const advance_deduction      = n(form.advance_litres) * n(form.advance_rate);
-  const diesel_amount          = n(form.diesel_litres) * n(form.diesel_rate);
-  const total_freight          = n(form.quantity) * n(form.freight_rate);
-  const net_profit             = total_freight
-    - n(form.loading_charge) - n(form.unloading_charge)
-    - n(form.toll_expense) - diesel_amount
-    - n(form.driver_payment) - n(form.transporter_commission) - n(form.miscellaneous);
+  const advance_deduction = n(form.advance_diesel_amount);
+  const total_freight     = n(form.quantity) * n(form.freight_rate);
+  // Net Freight = freight side only — trip expenses are filed separately and live in Trip Expenses.
+  const net_freight       = total_freight - n(form.toll_expense) - n(form.transporter_commission) - advance_deduction;
   const total_km = form.odometer_end && form.odometer_start
     ? n(form.odometer_end) - n(form.odometer_start) : 0;
-  return { advance_deduction, diesel_amount, total_freight, net_profit, total_km };
+  return { advance_deduction, total_freight, net_freight, total_km };
 }
 
 export default function TripLog() {
@@ -102,7 +85,6 @@ export default function TripLog() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [fastags, setFastags] = useState<{ id: number; name: string; balance: number; is_active: number }[]>([]);
-  const [walletBal, setWalletBal] = useState<number>(0);
   const [filterTruck, setFilterTruck] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [freightTarget, setFreightTarget] = useState<TripRow | null>(null);
@@ -126,19 +108,17 @@ export default function TripLog() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, d, tp, f, w] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list(), api.fastags.list(), api.wallet.summary()]);
+      const [t, d, tp, f] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list(), api.fastags.list()]);
       setTrucks(t);
       setDrivers(d);
       setTransporters(tp);
       setFastags(f as any[]);
-      setWalletBal(Number(w.balance) || 0);
     } catch (_) {}
   }, []);
 
-  // Refresh wallet balance whenever the modal opens — picks up any top-ups since last load.
+  // Refresh FastTag balances whenever the modal opens — picks up top-ups since last load.
   useEffect(() => {
     if (!modalOpen) return;
-    api.wallet.summary().then((s) => setWalletBal(Number(s.balance) || 0)).catch(() => {});
     api.fastags.list().then((f) => setFastags(f as any[])).catch(() => {});
   }, [modalOpen]);
 
@@ -161,16 +141,9 @@ export default function TripLog() {
       billed_party: row.billed_party || '',
       billed_destination: row.billed_destination || '',
       freight_rate: String(row.freight_rate || ''),
-      advance_litres: String(row.advance_litres || ''),
-      advance_rate: String(row.advance_rate || ''),
+      advance_diesel_amount: String(row.advance_deduction || ''),
       toll_expense: String(row.toll_expense || ''),
-      loading_charge: String(row.loading_charge || ''),
-      unloading_charge: String(row.unloading_charge || ''),
-      diesel_litres: String(row.diesel_litres || ''),
-      diesel_rate: String(row.diesel_rate || ''),
-      driver_payment: String(row.driver_payment || ''),
       transporter_commission: String(row.transporter_commission || ''),
-      miscellaneous: String(row.miscellaneous || ''),
       odometer_start: row.odometer_start ? String(row.odometer_start) : '',
       odometer_end: row.odometer_end ? String(row.odometer_end) : '',
       remarks: row.remarks || '',
@@ -195,16 +168,9 @@ export default function TripLog() {
         billed_party: form.billed_party || null,
         billed_destination: form.billed_destination || null,
         freight_rate: n(form.freight_rate),
-        advance_litres: n(form.advance_litres),
-        advance_rate: n(form.advance_rate),
+        advance_diesel_amount: n(form.advance_diesel_amount),
         toll_expense: n(form.toll_expense),
-        loading_charge: n(form.loading_charge),
-        unloading_charge: n(form.unloading_charge),
-        diesel_litres: n(form.diesel_litres),
-        diesel_rate: n(form.diesel_rate),
-        driver_payment: n(form.driver_payment),
         transporter_commission: n(form.transporter_commission),
-        miscellaneous: n(form.miscellaneous),
         odometer_start: form.odometer_start ? n(form.odometer_start) : null,
         odometer_end: form.odometer_end ? n(form.odometer_end) : null,
         remarks: form.remarks || null,
@@ -365,15 +331,16 @@ export default function TripLog() {
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Route</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Total Freight</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Profit</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Expenses</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
+                <tr><td colSpan={10} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : rows.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="px-4 py-12 text-center">
+                  <td colSpan={10} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No trips found</p>
                     <button type="button" onClick={openAdd} className="text-orange-600 dark:text-orange-400 hover:underline text-sm font-medium">Log first trip</button>
                   </td>
@@ -408,6 +375,17 @@ export default function TripLog() {
                     </td>
                     <td className={`px-4 py-3 text-right font-semibold ${Number(row.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(Number(row.net_profit))}
+                    </td>
+                    <td className="px-4 py-3">
+                      {row.expense_completed ? (
+                        <span className="inline-flex items-center rounded-full bg-green-50 dark:bg-green-900/30 px-2 py-0.5 text-[11px] font-medium text-green-700 dark:text-green-300">
+                          Filed
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center rounded-full bg-amber-50 dark:bg-amber-900/30 px-2 py-0.5 text-[11px] font-medium text-amber-700 dark:text-amber-300">
+                          Pending
+                        </span>
+                      )}
                     </td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
@@ -595,14 +573,10 @@ export default function TripLog() {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Diesel (Ltrs) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_litres} onChange={f('advance_litres')} placeholder="0" required />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Diesel Amount (₹) *</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_diesel_amount} onChange={f('advance_diesel_amount')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Rate (₹/L) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_rate} onChange={f('advance_rate')} placeholder="0" required />
-                      </div>
-                      <div className="col-span-2">
                         <label className="block text-xs font-medium text-heading/70 mb-1">Diesel From (Transporter) *</label>
                         <select className="input-field" value={form.diesel_from_id} onChange={f('diesel_from_id')} required>
                           <option value="">Select transporter who provided diesel</option>
@@ -642,42 +616,7 @@ export default function TripLog() {
                     </div>
                   </div>
 
-                  {/* 4. Trip Costs */}
-                  <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Costs</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Loading Charge (₹) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Unloading Charge (₹) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Litres *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Rate (₹/L) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" required />
-                      </div>
-                      <div className="col-span-2 rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs flex flex-wrap gap-3">
-                        <span><span className="text-heading/60">Trip Diesel: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.diesel_amount)}</span></span>
-                        <span><span className="text-heading/60">Adv Diesel: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.advance_deduction)}</span></span>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* 5. Odometer & Remarks */}
+                  {/* 4. Odometer & Remarks */}
                   <div>
                     <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer & Remarks</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -702,64 +641,46 @@ export default function TripLog() {
                     </div>
                   </div>
 
-                  {/* Live Summary */}
+                  {/* Live Summary — freight side only. Trip expenses are filed in the Trip Expenses tab. */}
                   <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Summary</p>
-                    <div className="grid grid-cols-3 gap-3 text-sm">
+                    <div className="grid grid-cols-2 gap-3 text-sm">
                       <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Total Freight</p>
                         <p className="font-bold">{formatINR(live.total_freight)}</p>
                       </div>
                       <div className="bg-card/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">Loading + Unloading</p>
-                        <p className="font-bold">−{formatINR(n(form.loading_charge) + n(form.unloading_charge))}</p>
-                      </div>
-                      <div className="bg-card/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">Trip Diesel</p>
-                        <p className="font-bold">−{formatINR(live.diesel_amount)}</p>
-                      </div>
-                      <div className="bg-card/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">Adv Diesel (Ledger)</p>
-                        <p className="font-bold text-yellow-200">{formatINR(live.advance_deduction)}</p>
-                      </div>
-                      <div className="bg-card/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">Driver + Misc</p>
-                        <p className="font-bold">−{formatINR(n(form.driver_payment) + n(form.miscellaneous))}</p>
-                      </div>
-                      <div className="bg-card/10 rounded-lg p-2">
                         <p className="text-xs opacity-70">Toll + Commission</p>
                         <p className="font-bold">−{formatINR(n(form.toll_expense) + n(form.transporter_commission))}</p>
                       </div>
+                      <div className="bg-card/10 rounded-lg p-2 col-span-2">
+                        <p className="text-xs opacity-70">Adv Diesel (Transporter Ledger)</p>
+                        <p className="font-bold text-yellow-200">−{formatINR(live.advance_deduction)}</p>
+                      </div>
                     </div>
                     <div className="mt-3 pt-3 border-t border-white/20 flex items-center justify-between">
-                      <span className="text-sm font-medium">Net Profit</span>
-                      <span className={`text-xl font-bold ${live.net_profit >= 0 ? 'text-green-200' : 'text-red-200'}`}>
-                        {formatINR(live.net_profit)}
+                      <span className="text-sm font-medium">Net Freight</span>
+                      <span className={`text-xl font-bold ${live.net_freight >= 0 ? 'text-green-200' : 'text-red-200'}`}>
+                        {formatINR(live.net_freight)}
                       </span>
                     </div>
+                    <p className="mt-2 text-[11px] opacity-80">Trip expenses (loading, unloading, diesel, driver, misc) are filed in the Trip Expenses tab and debit the wallet there.</p>
                   </div>
 
                 </div>
 
                 {(() => {
-                  // Effective wallet balance gates Save: editing the same trip can re-use its
-                  // own existing freight debit, so add it back before comparing.
-                  const oldFreight = editing ? Number(editing.total_freight) || 0 : 0;
-                  const effectiveWallet = walletBal + oldFreight;
-                  const tripFreight = live.total_freight;
-                  const walletShort = tripFreight > 0 && effectiveWallet < tripFreight;
+                  // Trip Log only debits the FastTag (toll). Wallet is untouched here —
+                  // expenses are filed and gated in the Trip Expenses tab.
                   const selectedFastag = fastags.find((ft) => String(ft.id) === form.fastag_id);
                   const oldToll = editing && (editing as any).fastag_id === selectedFastag?.id ? Number(editing.toll_expense) || 0 : 0;
                   const fastagShort = !!selectedFastag && n(form.toll_expense) > 0 && (selectedFastag.balance + oldToll) < n(form.toll_expense);
                   const tollNeedsTag = n(form.toll_expense) > 0 && !form.fastag_id;
-                  const blockSave = walletShort || fastagShort || tollNeedsTag;
+                  const blockSave = fastagShort || tollNeedsTag;
                   return (
                     <>
-                      {(walletShort || fastagShort || tollNeedsTag) && (
+                      {(fastagShort || tollNeedsTag) && (
                         <div className="border-t border-amber-300 bg-amber-50 dark:bg-amber-900/30 px-5 py-3 text-xs text-amber-800 dark:text-amber-200">
-                          {walletShort && (
-                            <div>⚠ Wallet has only <strong>{formatINR(effectiveWallet)}</strong> — trip freight is <strong>{formatINR(tripFreight)}</strong>. Top up the Wallet before saving.</div>
-                          )}
                           {tollNeedsTag && (
                             <div>⚠ Toll is {formatINR(n(form.toll_expense))} but no FastTag is selected. Pick one to deduct from.</div>
                           )}
@@ -770,8 +691,7 @@ export default function TripLog() {
                       )}
                       <div className="flex items-center justify-between gap-3 border-t border-card-border px-5 py-4">
                         <span className="text-xs text-heading/60">
-                          Wallet: <strong className={walletShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(effectiveWallet)}</strong>
-                          {selectedFastag && <> · {selectedFastag.name}: <strong className={fastagShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(selectedFastag.balance + oldToll)}</strong></>}
+                          {selectedFastag && <>{selectedFastag.name}: <strong className={fastagShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(selectedFastag.balance + oldToll)}</strong></>}
                         </span>
                         <div className="flex items-center gap-3">
                           <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
@@ -780,7 +700,7 @@ export default function TripLog() {
                           <button
                             type="submit"
                             disabled={saving || blockSave}
-                            title={blockSave ? 'Insufficient wallet or FastTag balance' : undefined}
+                            title={blockSave ? 'FastTag short or unselected' : undefined}
                             className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
                           >
                             {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}

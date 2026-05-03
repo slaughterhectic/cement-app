@@ -226,38 +226,37 @@ router.post('/:id/approve', async (req, res) => {
       // Replay the full computeTripFields → INSERT flow that the live POST does.
       const { computeTripFields } = await import('./truckTrips');
       const c = computeTripFields(d);
+      // Trip Log freight-side replay only — costs/wallet stay zero, expense_completed=false
+      // so the trip surfaces in the Trip Expenses tab for follow-up.
       result = await getOne(
         `INSERT INTO truck_trips (
           date, truck_id, driver_id, material_name, quantity,
           load_from, billed_party, billed_destination,
           transporter_id, diesel_from_id, transporter_commission,
-          freight_rate, loading_charge, unloading_charge,
-          advance_litres, advance_rate, advance_deduction,
-          toll_expense, diesel_litres, diesel_rate, diesel_amount,
-          driver_payment, miscellaneous,
+          freight_rate, advance_deduction,
+          toll_expense,
           odometer_start, odometer_end, total_km,
-          total_freight, net_freight, net_profit, remarks
+          total_freight, net_freight, net_profit, remarks,
+          expense_completed
         ) VALUES (
           $1,$2,$3,$4,$5,
           $6,$7,$8,
           $9,$10,$11,
-          $12,$13,$14,
+          $12,$13,
+          $14,
           $15,$16,$17,
           $18,$19,$20,$21,
-          $22,$23,
-          $24,$25,$26,
-          $27,$28,$29,$30
+          $22
         ) RETURNING *`,
         [
           d.date, d.truck_id, d.driver_id || null, d.material_name || null, c.quantity,
           d.load_from || null, d.billed_party || null, d.billed_destination || null,
           d.transporter_id || null, d.diesel_from_id || null, c.transporter_commission,
-          c.freight_rate, c.loading_charge, c.unloading_charge,
-          c.advance_litres, c.advance_rate, c.advance_deduction,
-          c.toll_expense, c.diesel_litres, c.diesel_rate, c.diesel_amount,
-          c.driver_payment, c.miscellaneous,
+          c.freight_rate, c.advance_deduction,
+          c.toll_expense,
           c.odometer_start, c.odometer_end, c.total_km,
           c.total_freight, c.net_freight, c.net_profit, d.remarks || null,
+          false,
         ]
       );
     } else if (pending.entry_type === 'truck_expense') {

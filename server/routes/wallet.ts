@@ -34,7 +34,7 @@ router.get('/transactions', async (_req, res) => {
     const rows = await getAll(`
       SELECT wt.*, tt.truck_id, t.truck_number
       FROM wallet_transactions wt
-      LEFT JOIN truck_trips tt ON wt.source_table='truck_trip' AND tt.id = wt.source_id
+      LEFT JOIN truck_trips tt ON wt.source_table='truck_trip_expense' AND tt.id = wt.source_id
       LEFT JOIN trucks t ON t.id = tt.truck_id
       ORDER BY wt.date DESC, wt.id DESC
     `);

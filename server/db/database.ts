@@ -223,8 +223,6 @@ export async function initializeDatabase() {
         freight_rate REAL DEFAULT 0,
         loading_charge REAL DEFAULT 0,
         unloading_charge REAL DEFAULT 0,
-        advance_litres REAL DEFAULT 0,
-        advance_rate REAL DEFAULT 0,
         advance_deduction REAL DEFAULT 0,
         toll_expense REAL DEFAULT 0,
         diesel_litres REAL DEFAULT 0,
@@ -239,6 +237,7 @@ export async function initializeDatabase() {
         total_freight REAL DEFAULT 0,
         net_freight REAL DEFAULT 0,
         net_profit REAL DEFAULT 0,
+        expense_completed BOOLEAN DEFAULT FALSE,
         remarks TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
@@ -291,6 +290,16 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_id INTEGER REFERENCES transporters(id);`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS diesel_from_id INTEGER REFERENCES transporters(id);`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS transporter_commission REAL DEFAULT 0;`);
+    // advance diesel collapsed from (litres × rate) into a single amount stored in advance_deduction
+    await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS advance_litres;`);
+    await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS advance_rate;`);
+    // Trip Expenses split: trips can be logged without costs, then expensed later.
+    // Existing rows already have costs filled in, so backfill them as completed.
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS expense_completed BOOLEAN DEFAULT FALSE;`);
+    await client.query(`UPDATE truck_trips SET expense_completed = TRUE WHERE expense_completed IS NOT TRUE AND (loading_charge>0 OR unloading_charge>0 OR diesel_amount>0 OR driver_payment>0 OR miscellaneous>0);`);
+    // Freight is income, not a wallet outflow — drop legacy debits keyed by source_table='truck_trip'.
+    // New cost-side debits use source_table='truck_trip_expense'.
+    await client.query(`DELETE FROM wallet_transactions WHERE source_table='truck_trip';`);
     // transporter_payments new columns
     await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
     // driver_payments new columns
