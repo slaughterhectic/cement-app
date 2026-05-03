@@ -22,9 +22,9 @@ interface TripRow {
   fastag_id: number | null;
   loading_charge: number;
   unloading_charge: number;
-  diesel_litres: number;
-  diesel_rate: number;
   diesel_amount: number;
+  additional_diesel_amount: number;
+  additional_diesel_from_id: number | null;
   driver_payment: number;
   miscellaneous: number;
   odometer_start: number | null;
@@ -34,13 +34,15 @@ interface TripRow {
 }
 
 interface Truck { id: number; truck_number: string; }
+interface Transporter { id: number; name: string }
 interface Fastag { id: number; name: string; balance: number; is_active: number }
 
 const emptyForm = {
   loading_charge: '',
   unloading_charge: '',
-  diesel_litres: '',
-  diesel_rate: '',
+  trip_diesel_amount: '',
+  additional_diesel_amount: '',
+  additional_diesel_from_id: '',
   driver_payment: '',
   miscellaneous: '',
   toll_expense: '',
@@ -55,6 +57,7 @@ export default function TripExpenses() {
   const addToast = useToastStore((s) => s.addToast);
   const [rows, setRows] = useState<TripRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [transporters, setTransporters] = useState<Transporter[]>([]);
   const [fastags, setFastags] = useState<Fastag[]>([]);
   const [loading, setLoading] = useState(true);
   const [walletBal, setWalletBal] = useState<number>(0);
@@ -80,10 +83,11 @@ export default function TripExpenses() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, w, ft] = await Promise.all([api.trucks.list(), api.wallet.summary(), api.fastags.list()]);
+      const [t, w, ft, tp] = await Promise.all([api.trucks.list(), api.wallet.summary(), api.fastags.list(), api.transporters.list()]);
       setTrucks(t);
       setWalletBal(Number(w.balance) || 0);
       setFastags(ft as Fastag[]);
+      setTransporters(tp as Transporter[]);
     } catch (_) {}
   }, []);
 
@@ -107,8 +111,9 @@ export default function TripExpenses() {
     setForm({
       loading_charge: String(row.loading_charge || ''),
       unloading_charge: String(row.unloading_charge || ''),
-      diesel_litres: String(row.diesel_litres || ''),
-      diesel_rate: String(row.diesel_rate || ''),
+      trip_diesel_amount: String(row.diesel_amount || ''),
+      additional_diesel_amount: String(row.additional_diesel_amount || ''),
+      additional_diesel_from_id: row.additional_diesel_from_id ? String(row.additional_diesel_from_id) : '',
       driver_payment: String(row.driver_payment || ''),
       miscellaneous: String(row.miscellaneous || ''),
       toll_expense: String(row.toll_expense || ''),
@@ -119,13 +124,15 @@ export default function TripExpenses() {
   };
 
   const live = useMemo(() => {
-    const diesel_amount = n(form.diesel_litres) * n(form.diesel_rate);
-    // Wallet covers everything except toll. Toll comes off the FastTag.
+    const diesel_amount = n(form.trip_diesel_amount);
+    const additional_diesel_amount = n(form.additional_diesel_amount);
+    // Wallet covers loading + unloading + trip diesel + driver + misc.
+    // Toll → FastTag. Additional diesel → transporter ledger. Neither touches the wallet.
     const trip_expense = n(form.loading_charge) + n(form.unloading_charge)
       + diesel_amount + n(form.driver_payment) + n(form.miscellaneous);
     const total_km = form.odometer_start && form.odometer_end
       ? n(form.odometer_end) - n(form.odometer_start) : 0;
-    return { diesel_amount, trip_expense, total_km };
+    return { diesel_amount, additional_diesel_amount, trip_expense, total_km };
   }, [form]);
 
   const save = async () => {
@@ -135,8 +142,9 @@ export default function TripExpenses() {
       await api.truckTrips.updateExpense(target.id, {
         loading_charge: n(form.loading_charge),
         unloading_charge: n(form.unloading_charge),
-        diesel_litres: n(form.diesel_litres),
-        diesel_rate: n(form.diesel_rate),
+        trip_diesel_amount: n(form.trip_diesel_amount),
+        additional_diesel_amount: n(form.additional_diesel_amount),
+        additional_diesel_from_id: form.additional_diesel_from_id ? Number(form.additional_diesel_from_id) : null,
         driver_payment: n(form.driver_payment),
         miscellaneous: n(form.miscellaneous),
         toll_expense: n(form.toll_expense),
@@ -338,12 +346,8 @@ export default function TripExpenses() {
                       <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Litres</label>
-                      <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Rate (₹/L)</label>
-                      <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" />
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Trip Diesel Amount (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.trip_diesel_amount} onChange={f('trip_diesel_amount')} placeholder="0" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹)</label>
@@ -352,6 +356,28 @@ export default function TripExpenses() {
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹)</label>
                       <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
+                    </div>
+                  </div>
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Additional Diesel (Transporter-funded)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Additional Diesel Amount (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.additional_diesel_amount} onChange={f('additional_diesel_amount')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">From Transporter {n(form.additional_diesel_amount) > 0 ? '*' : ''}</label>
+                      <select className="input-field" value={form.additional_diesel_from_id} onChange={(e) => setForm((p) => ({ ...p, additional_diesel_from_id: e.target.value }))}>
+                        <option value="">{n(form.additional_diesel_amount) > 0 ? 'Select transporter' : 'Not applicable'}</option>
+                        {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+                      </select>
+                      {n(form.additional_diesel_amount) > 0 && form.additional_diesel_from_id && (
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                          {formatINR(n(form.additional_diesel_amount))} → {transporters.find((t) => String(t.id) === form.additional_diesel_from_id)?.name || '—'}'s ledger
+                        </p>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -393,14 +419,15 @@ export default function TripExpenses() {
                 </div>
 
                 <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs flex flex-wrap gap-3">
-                  <span><span className="text-heading/60">Trip Diesel: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.diesel_amount)}</span></span>
                   <span><span className="text-heading/60">Wallet Outflow: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.trip_expense)}</span></span>
                   <span><span className="text-heading/60">Toll (FastTag): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(n(form.toll_expense))}</span></span>
+                  <span><span className="text-heading/60">Additional Diesel (Ledger): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.additional_diesel_amount)}</span></span>
                   {(() => {
                     const projected = Number(target.total_freight)
                       - Number(target.transporter_commission || 0)
                       - Number(target.advance_deduction || 0)
                       - n(form.toll_expense)
+                      - live.additional_diesel_amount
                       - live.trip_expense;
                     return (
                       <span><span className="text-heading/60">Projected Net Profit: </span><span className={`font-semibold ${projected >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(projected)}</span></span>
@@ -409,7 +436,7 @@ export default function TripExpenses() {
                 </div>
 
                 <p className="text-[11px] text-heading/60">
-                  Driver payment also feeds the driver's ledger as earned. Toll comes off the FastTag — never the wallet.
+                  Driver payment feeds the driver's ledger as earned. Toll comes off the FastTag, additional diesel posts to the transporter's ledger — neither touches the wallet.
                 </p>
               </div>
 

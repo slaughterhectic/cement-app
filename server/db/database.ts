@@ -225,8 +225,6 @@ export async function initializeDatabase() {
         unloading_charge REAL DEFAULT 0,
         advance_deduction REAL DEFAULT 0,
         toll_expense REAL DEFAULT 0,
-        diesel_litres REAL DEFAULT 0,
-        diesel_rate REAL DEFAULT 0,
         diesel_amount REAL DEFAULT 0,
         diesel_from TEXT,
         driver_payment REAL DEFAULT 0,
@@ -300,6 +298,13 @@ export async function initializeDatabase() {
     // Freight is income, not a wallet outflow — drop legacy debits keyed by source_table='truck_trip'.
     // New cost-side debits use source_table='truck_trip_expense'.
     await client.query(`DELETE FROM wallet_transactions WHERE source_table='truck_trip';`);
+    // Trip diesel collapsed from (litres × rate) into a single amount stored in diesel_amount.
+    // Optional additional diesel can be sourced from a transporter and posts to that ledger
+    // instead of debiting the wallet — same pattern as advance_deduction + diesel_from_id.
+    await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS diesel_litres;`);
+    await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS diesel_rate;`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS additional_diesel_amount REAL DEFAULT 0;`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS additional_diesel_from_id INTEGER REFERENCES transporters(id);`);
     // transporter_payments new columns
     await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
     // driver_payments new columns

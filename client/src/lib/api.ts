@@ -285,8 +285,9 @@ export const api = {
     updateExpense: (id: number, data: {
       loading_charge: number;
       unloading_charge: number;
-      diesel_litres: number;
-      diesel_rate: number;
+      trip_diesel_amount: number;
+      additional_diesel_amount: number;
+      additional_diesel_from_id: number | null;
       driver_payment: number;
       miscellaneous: number;
       toll_expense: number;

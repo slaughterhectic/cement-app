@@ -12,6 +12,7 @@ router.get('/', async (_req, res) => {
       SELECT t.*,
         COALESCE((SELECT SUM(transporter_commission) FROM truck_trips WHERE transporter_id=t.id),0) as total_commission,
         COALESCE((SELECT SUM(advance_deduction) FROM truck_trips WHERE diesel_from_id=t.id),0) as total_advance_diesel,
+        COALESCE((SELECT SUM(additional_diesel_amount) FROM truck_trips WHERE additional_diesel_from_id=t.id),0) as total_additional_diesel,
         COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE transporter_id=t.id AND COALESCE(payment_type,'paid')='paid'),0) as total_paid,
         COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE transporter_id=t.id AND payment_type='received'),0) as total_received,
         COALESCE((SELECT COUNT(*) FROM truck_trips WHERE transporter_id=t.id),0) as trip_count
@@ -21,10 +22,11 @@ router.get('/', async (_req, res) => {
       ...r,
       total_commission: Number(r.total_commission),
       total_advance_diesel: Number(r.total_advance_diesel),
+      total_additional_diesel: Number(r.total_additional_diesel),
       total_paid: Number(r.total_paid),
       total_received: Number(r.total_received),
       trip_count: Number(r.trip_count),
-      outstanding: Number(r.total_commission) + Number(r.total_advance_diesel) - Number(r.total_paid) - Number(r.total_received),
+      outstanding: Number(r.total_commission) + Number(r.total_advance_diesel) + Number(r.total_additional_diesel) - Number(r.total_paid) - Number(r.total_received),
     })));
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
@@ -44,13 +46,22 @@ router.get('/:id/ledger', async (req, res) => {
       WHERE tt.transporter_id=$1 AND tt.transporter_commission > 0
     `, [req.params.id]);
 
-    // Advance diesel entries — trips where this transporter provided diesel
+    // Advance diesel entries — trips where this transporter provided diesel up front
     const dieselEntries = await getAll(`
       SELECT tt.date, 'advance_diesel' as entry_type, tt.advance_deduction as amount,
         t.truck_number, tt.load_from, tt.billed_destination, tt.material_name, tt.id as trip_id,
         NULL as mode, NULL as bank_name, NULL as remarks
       FROM truck_trips tt JOIN trucks t ON tt.truck_id=t.id
       WHERE tt.diesel_from_id=$1 AND tt.advance_deduction > 0
+    `, [req.params.id]);
+
+    // Additional diesel entries — trips where this transporter provided extra diesel mid-trip
+    const additionalDieselEntries = await getAll(`
+      SELECT tt.date, 'additional_diesel' as entry_type, tt.additional_diesel_amount as amount,
+        t.truck_number, tt.load_from, tt.billed_destination, tt.material_name, tt.id as trip_id,
+        NULL as mode, NULL as bank_name, NULL as remarks
+      FROM truck_trips tt JOIN trucks t ON tt.truck_id=t.id
+      WHERE tt.additional_diesel_from_id=$1 AND tt.additional_diesel_amount > 0
     `, [req.params.id]);
 
     // Payment entries
@@ -63,7 +74,7 @@ router.get('/:id/ledger', async (req, res) => {
     `, [req.params.id]);
 
     // Merge all and sort by date asc, then compute running balance
-    const all = [...commEntries, ...dieselEntries, ...paymentEntries]
+    const all = [...commEntries, ...dieselEntries, ...additionalDieselEntries, ...paymentEntries]
       .sort((a: any, b: any) => a.date.localeCompare(b.date) || a.trip_id - b.trip_id);
 
     let balance = 0;
@@ -80,7 +91,8 @@ router.get('/:id/ledger', async (req, res) => {
 
     const totalEarned =
       commEntries.reduce((s: number, r: any) => s + Number(r.amount), 0) +
-      dieselEntries.reduce((s: number, r: any) => s + Number(r.amount), 0);
+      dieselEntries.reduce((s: number, r: any) => s + Number(r.amount), 0) +
+      additionalDieselEntries.reduce((s: number, r: any) => s + Number(r.amount), 0);
     const totalPaid = paymentEntries
       .filter((r: any) => (r.payment_type || 'paid') === 'paid')
       .reduce((s: number, r: any) => s + Number(r.amount), 0);
@@ -122,7 +134,7 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     const used = await getOne(
-      'SELECT 1 FROM truck_trips WHERE transporter_id=$1 OR diesel_from_id=$1 LIMIT 1',
+      'SELECT 1 FROM truck_trips WHERE transporter_id=$1 OR diesel_from_id=$1 OR additional_diesel_from_id=$1 LIMIT 1',
       [req.params.id]
     );
     if (used) return res.status(400).json({ error: 'Transporter has trips and cannot be deleted' });
