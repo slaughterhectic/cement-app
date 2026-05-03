@@ -16,7 +16,10 @@ interface TripRow {
   total_freight: number;
   net_freight: number;
   net_profit: number;
+  transporter_commission: number;
+  advance_deduction: number;
   toll_expense: number;
+  fastag_id: number | null;
   loading_charge: number;
   unloading_charge: number;
   diesel_litres: number;
@@ -24,10 +27,14 @@ interface TripRow {
   diesel_amount: number;
   driver_payment: number;
   miscellaneous: number;
+  odometer_start: number | null;
+  odometer_end: number | null;
+  total_km: number;
   expense_completed: boolean;
 }
 
 interface Truck { id: number; truck_number: string; }
+interface Fastag { id: number; name: string; balance: number; is_active: number }
 
 const emptyForm = {
   loading_charge: '',
@@ -36,6 +43,10 @@ const emptyForm = {
   diesel_rate: '',
   driver_payment: '',
   miscellaneous: '',
+  toll_expense: '',
+  fastag_id: '',
+  odometer_start: '',
+  odometer_end: '',
 };
 
 function n(v: string) { return Number(v) || 0; }
@@ -44,6 +55,7 @@ export default function TripExpenses() {
   const addToast = useToastStore((s) => s.addToast);
   const [rows, setRows] = useState<TripRow[]>([]);
   const [trucks, setTrucks] = useState<Truck[]>([]);
+  const [fastags, setFastags] = useState<Fastag[]>([]);
   const [loading, setLoading] = useState(true);
   const [walletBal, setWalletBal] = useState<number>(0);
   const [filterTruck, setFilterTruck] = useState('');
@@ -68,19 +80,21 @@ export default function TripExpenses() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, w] = await Promise.all([api.trucks.list(), api.wallet.summary()]);
+      const [t, w, ft] = await Promise.all([api.trucks.list(), api.wallet.summary(), api.fastags.list()]);
       setTrucks(t);
       setWalletBal(Number(w.balance) || 0);
+      setFastags(ft as Fastag[]);
     } catch (_) {}
   }, []);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadMeta(); }, [loadMeta]);
 
-  // Re-fetch wallet whenever the modal opens — top-ups may have happened.
+  // Re-fetch wallet & FastTag balances whenever the modal opens — top-ups may have happened.
   useEffect(() => {
     if (!target) return;
     api.wallet.summary().then((s) => setWalletBal(Number(s.balance) || 0)).catch(() => {});
+    api.fastags.list().then((ft) => setFastags(ft as Fastag[])).catch(() => {});
   }, [target]);
 
   const filtered = useMemo(() => {
@@ -97,14 +111,21 @@ export default function TripExpenses() {
       diesel_rate: String(row.diesel_rate || ''),
       driver_payment: String(row.driver_payment || ''),
       miscellaneous: String(row.miscellaneous || ''),
+      toll_expense: String(row.toll_expense || ''),
+      fastag_id: row.fastag_id ? String(row.fastag_id) : '',
+      odometer_start: row.odometer_start != null ? String(row.odometer_start) : '',
+      odometer_end: row.odometer_end != null ? String(row.odometer_end) : '',
     });
   };
 
   const live = useMemo(() => {
     const diesel_amount = n(form.diesel_litres) * n(form.diesel_rate);
+    // Wallet covers everything except toll. Toll comes off the FastTag.
     const trip_expense = n(form.loading_charge) + n(form.unloading_charge)
       + diesel_amount + n(form.driver_payment) + n(form.miscellaneous);
-    return { diesel_amount, trip_expense };
+    const total_km = form.odometer_start && form.odometer_end
+      ? n(form.odometer_end) - n(form.odometer_start) : 0;
+    return { diesel_amount, trip_expense, total_km };
   }, [form]);
 
   const save = async () => {
@@ -118,11 +139,16 @@ export default function TripExpenses() {
         diesel_rate: n(form.diesel_rate),
         driver_payment: n(form.driver_payment),
         miscellaneous: n(form.miscellaneous),
+        toll_expense: n(form.toll_expense),
+        fastag_id: form.fastag_id ? Number(form.fastag_id) : null,
+        odometer_start: form.odometer_start ? n(form.odometer_start) : null,
+        odometer_end: form.odometer_end ? n(form.odometer_end) : null,
       });
       addToast('Trip expenses filed', 'success');
       setTarget(null);
       load();
       api.wallet.summary().then((s) => setWalletBal(Number(s.balance) || 0)).catch(() => {});
+      api.fastags.list().then((ft) => setFastags(ft as Fastag[])).catch(() => {});
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Save failed', 'error');
     } finally { setSaving(false); }
@@ -299,70 +325,138 @@ export default function TripExpenses() {
                 </button>
               </div>
 
-              <div className="p-5 flex flex-col gap-4">
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Loading Charge (₹)</label>
-                    <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" />
+              <div className="p-5 flex flex-col gap-5">
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Wallet-funded Expenses</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Loading Charge (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Unloading Charge (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Litres</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Rate (₹/L)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Unloading Charge (₹)</label>
-                    <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Toll (FastTag-funded)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Toll Expense (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Toll FastTag {n(form.toll_expense) > 0 ? '*' : ''}</label>
+                      <select className="input-field" value={form.fastag_id} onChange={(e) => setForm((p) => ({ ...p, fastag_id: e.target.value }))}>
+                        <option value="">{n(form.toll_expense) > 0 ? 'Select FastTag' : 'No toll'}</option>
+                        {fastags.filter((ft) => ft.is_active === 1 || String(ft.id) === form.fastag_id).map((ft) => (
+                          <option key={ft.id} value={ft.id}>{ft.name} — {formatINR(ft.balance)}</option>
+                        ))}
+                      </select>
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Litres</label>
-                    <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_litres} onChange={f('diesel_litres')} placeholder="0" />
+                </div>
+
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Odometer Start (km)</label>
+                      <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Odometer End (km)</label>
+                      <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" />
+                    </div>
                   </div>
-                  <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Rate (₹/L)</label>
-                    <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_rate} onChange={f('diesel_rate')} placeholder="0" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹)</label>
-                    <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" />
-                  </div>
-                  <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹)</label>
-                    <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
-                  </div>
+                  {live.total_km > 0 && (
+                    <p className="mt-2 text-xs text-heading/60">Distance: <strong className="text-orange-700 dark:text-orange-300">{live.total_km} km</strong></p>
+                  )}
                 </div>
 
                 <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs flex flex-wrap gap-3">
                   <span><span className="text-heading/60">Trip Diesel: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.diesel_amount)}</span></span>
-                  <span><span className="text-heading/60">Total Expense: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.trip_expense)}</span></span>
-                  <span><span className="text-heading/60">Projected Net Profit: </span><span className={`font-semibold ${Number(target.net_freight) - live.trip_expense >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(Number(target.net_freight) - live.trip_expense)}</span></span>
+                  <span><span className="text-heading/60">Wallet Outflow: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.trip_expense)}</span></span>
+                  <span><span className="text-heading/60">Toll (FastTag): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(n(form.toll_expense))}</span></span>
+                  {(() => {
+                    const projected = Number(target.total_freight)
+                      - Number(target.transporter_commission || 0)
+                      - Number(target.advance_deduction || 0)
+                      - n(form.toll_expense)
+                      - live.trip_expense;
+                    return (
+                      <span><span className="text-heading/60">Projected Net Profit: </span><span className={`font-semibold ${projected >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(projected)}</span></span>
+                    );
+                  })()}
                 </div>
 
                 <p className="text-[11px] text-heading/60">
-                  Driver payment also feeds the driver's ledger as earned. Toll &amp; advance diesel are not part of trip expenses — they were settled on the trip itself.
+                  Driver payment also feeds the driver's ledger as earned. Toll comes off the FastTag — never the wallet.
                 </p>
               </div>
 
-              {walletShort && (
-                <div className="border-t border-amber-300 bg-amber-50 dark:bg-amber-900/30 px-5 py-3 text-xs text-amber-800 dark:text-amber-200">
-                  ⚠ Wallet has only <strong>{formatINR(effectiveWallet)}</strong> — trip expense is <strong>{formatINR(live.trip_expense)}</strong>. Top up the Wallet before saving.
-                </div>
-              )}
-
-              <div className="flex items-center justify-between gap-3 border-t border-card-border px-5 py-4">
-                <span className="text-xs text-heading/60">
-                  Wallet: <strong className={walletShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(effectiveWallet)}</strong>
-                </span>
-                <div className="flex items-center gap-3">
-                  <button type="button" onClick={() => setTarget(null)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">
-                    Cancel
-                  </button>
-                  <button
-                    type="button"
-                    onClick={save}
-                    disabled={saving || walletShort}
-                    title={walletShort ? 'Insufficient wallet balance' : undefined}
-                    className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
-                  >
-                    {saving ? 'Saving…' : target.expense_completed ? 'Update Expense' : 'File Expense'}
-                  </button>
-                </div>
-              </div>
+              {(() => {
+                const selectedFastag = fastags.find((ft) => String(ft.id) === form.fastag_id);
+                const oldToll = target && Number(target.fastag_id) === selectedFastag?.id ? Number(target.toll_expense) || 0 : 0;
+                const fastagShort = !!selectedFastag && n(form.toll_expense) > 0 && (selectedFastag.balance + oldToll) < n(form.toll_expense);
+                const tollNeedsTag = n(form.toll_expense) > 0 && !form.fastag_id;
+                const blockSave = walletShort || fastagShort || tollNeedsTag;
+                return (
+                  <>
+                    {(walletShort || fastagShort || tollNeedsTag) && (
+                      <div className="border-t border-amber-300 bg-amber-50 dark:bg-amber-900/30 px-5 py-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
+                        {walletShort && (
+                          <div>⚠ Wallet has only <strong>{formatINR(effectiveWallet)}</strong> — wallet outflow is <strong>{formatINR(live.trip_expense)}</strong>. Top up the Wallet before saving.</div>
+                        )}
+                        {tollNeedsTag && (
+                          <div>⚠ Toll is {formatINR(n(form.toll_expense))} but no FastTag is selected. Pick one to deduct from.</div>
+                        )}
+                        {fastagShort && selectedFastag && (
+                          <div>⚠ {selectedFastag.name} has only <strong>{formatINR(selectedFastag.balance + oldToll)}</strong> — toll is <strong>{formatINR(n(form.toll_expense))}</strong>. Top up the FastTag or pick a different one.</div>
+                        )}
+                      </div>
+                    )}
+                    <div className="flex items-center justify-between gap-3 border-t border-card-border px-5 py-4">
+                      <span className="text-xs text-heading/60">
+                        Wallet: <strong className={walletShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(effectiveWallet)}</strong>
+                        {selectedFastag && <> · {selectedFastag.name}: <strong className={fastagShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(selectedFastag.balance + oldToll)}</strong></>}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <button type="button" onClick={() => setTarget(null)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">
+                          Cancel
+                        </button>
+                        <button
+                          type="button"
+                          onClick={save}
+                          disabled={saving || blockSave}
+                          title={blockSave ? 'Wallet or FastTag short' : undefined}
+                          className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed"
+                        >
+                          {saving ? 'Saving…' : target.expense_completed ? 'Update Expense' : 'File Expense'}
+                        </button>
+                      </div>
+                    </div>
+                  </>
+                );
+              })()}
             </div>
           </div>
         </div>

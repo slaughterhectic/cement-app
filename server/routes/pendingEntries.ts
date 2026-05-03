@@ -234,8 +234,6 @@ router.post('/:id/approve', async (req, res) => {
           load_from, billed_party, billed_destination,
           transporter_id, diesel_from_id, transporter_commission,
           freight_rate, advance_deduction,
-          toll_expense,
-          odometer_start, odometer_end, total_km,
           total_freight, net_freight, net_profit, remarks,
           expense_completed
         ) VALUES (
@@ -243,18 +241,14 @@ router.post('/:id/approve', async (req, res) => {
           $6,$7,$8,
           $9,$10,$11,
           $12,$13,
-          $14,
-          $15,$16,$17,
-          $18,$19,$20,$21,
-          $22
+          $14,$15,$16,$17,
+          $18
         ) RETURNING *`,
         [
           d.date, d.truck_id, d.driver_id || null, d.material_name || null, c.quantity,
           d.load_from || null, d.billed_party || null, d.billed_destination || null,
           d.transporter_id || null, d.diesel_from_id || null, c.transporter_commission,
           c.freight_rate, c.advance_deduction,
-          c.toll_expense,
-          c.odometer_start, c.odometer_end, c.total_km,
           c.total_freight, c.net_freight, c.net_profit, d.remarks || null,
           false,
         ]

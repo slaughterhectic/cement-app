@@ -52,12 +52,8 @@ const emptyForm = {
   billed_destination: '',
   freight_rate: '',
   advance_diesel_amount: '',
-  toll_expense: '',
   transporter_commission: '',
-  odometer_start: '',
-  odometer_end: '',
   remarks: '',
-  fastag_id: '',
 };
 
 function n(v: string) { return Number(v) || 0; }
@@ -65,11 +61,9 @@ function n(v: string) { return Number(v) || 0; }
 function computeLive(form: typeof emptyForm) {
   const advance_deduction = n(form.advance_diesel_amount);
   const total_freight     = n(form.quantity) * n(form.freight_rate);
-  // Net Freight = freight side only — trip expenses are filed separately and live in Trip Expenses.
-  const net_freight       = total_freight - n(form.toll_expense) - n(form.transporter_commission) - advance_deduction;
-  const total_km = form.odometer_end && form.odometer_start
-    ? n(form.odometer_end) - n(form.odometer_start) : 0;
-  return { advance_deduction, total_freight, net_freight, total_km };
+  // Net Freight = freight side only — toll, odometer and trip expenses live in Trip Expenses.
+  const net_freight       = total_freight - n(form.transporter_commission) - advance_deduction;
+  return { advance_deduction, total_freight, net_freight };
 }
 
 export default function TripLog() {
@@ -84,7 +78,6 @@ export default function TripLog() {
   const [editing, setEditing] = useState<TripRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [fastags, setFastags] = useState<{ id: number; name: string; balance: number; is_active: number }[]>([]);
   const [filterTruck, setFilterTruck] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
   const [freightTarget, setFreightTarget] = useState<TripRow | null>(null);
@@ -108,19 +101,12 @@ export default function TripLog() {
 
   const loadMeta = useCallback(async () => {
     try {
-      const [t, d, tp, f] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list(), api.fastags.list()]);
+      const [t, d, tp] = await Promise.all([api.trucks.list(), api.drivers.list(), api.transporters.list()]);
       setTrucks(t);
       setDrivers(d);
       setTransporters(tp);
-      setFastags(f as any[]);
     } catch (_) {}
   }, []);
-
-  // Refresh FastTag balances whenever the modal opens — picks up top-ups since last load.
-  useEffect(() => {
-    if (!modalOpen) return;
-    api.fastags.list().then((f) => setFastags(f as any[])).catch(() => {});
-  }, [modalOpen]);
 
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadMeta(); }, [loadMeta]);
@@ -142,12 +128,8 @@ export default function TripLog() {
       billed_destination: row.billed_destination || '',
       freight_rate: String(row.freight_rate || ''),
       advance_diesel_amount: String(row.advance_deduction || ''),
-      toll_expense: String(row.toll_expense || ''),
       transporter_commission: String(row.transporter_commission || ''),
-      odometer_start: row.odometer_start ? String(row.odometer_start) : '',
-      odometer_end: row.odometer_end ? String(row.odometer_end) : '',
       remarks: row.remarks || '',
-      fastag_id: (row as any).fastag_id ? String((row as any).fastag_id) : '',
     });
     setModalOpen(true);
   };
@@ -169,12 +151,8 @@ export default function TripLog() {
         billed_destination: form.billed_destination || null,
         freight_rate: n(form.freight_rate),
         advance_diesel_amount: n(form.advance_diesel_amount),
-        toll_expense: n(form.toll_expense),
         transporter_commission: n(form.transporter_commission),
-        odometer_start: form.odometer_start ? n(form.odometer_start) : null,
-        odometer_end: form.odometer_end ? n(form.odometer_end) : null,
         remarks: form.remarks || null,
-        fastag_id: form.fastag_id ? Number(form.fastag_id) : null,
       };
       if (editing) { await api.truckTrips.update(editing.id, payload); addToast('Trip updated', 'success'); }
       else { await api.truckTrips.create(payload); addToast('Trip added', 'success'); }
@@ -589,59 +567,19 @@ export default function TripLog() {
                         )}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Toll Expense (₹) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.toll_expense} onChange={f('toll_expense')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Toll FastTag {n(form.toll_expense) > 0 ? '*' : ''}</label>
-                        <select className="input-field" value={form.fastag_id} onChange={f('fastag_id')}>
-                          <option value="">{n(form.toll_expense) > 0 ? 'Select FastTag' : 'No toll'}</option>
-                          {fastags.filter((ft) => ft.is_active === 1 || String(ft.id) === form.fastag_id).map((ft) => (
-                            <option key={ft.id} value={ft.id}>{ft.name} — {formatINR(ft.balance)}</option>
-                          ))}
-                        </select>
-                        {form.fastag_id && n(form.toll_expense) > 0 && (() => {
-                          const sel = fastags.find((ft) => String(ft.id) === form.fastag_id);
-                          if (!sel) return null;
-                          const effective = sel.balance + (editing && (editing as any).fastag_id === sel.id ? Number((editing as any).toll_expense) || 0 : 0);
-                          return effective < n(form.toll_expense) ? (
-                            <p className="mt-1 text-xs text-red-600 dark:text-red-400">FastTag has only {formatINR(effective)} — top up before saving.</p>
-                          ) : null;
-                        })()}
-                      </div>
-                      <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Transporter Commission (₹) *</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.transporter_commission} onChange={f('transporter_commission')} placeholder="0" required />
                       </div>
                     </div>
                   </div>
 
-                  {/* 4. Odometer & Remarks */}
+                  {/* 4. Remarks */}
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer & Remarks</p>
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Odometer Start (km) *</label>
-                        <input type="number" min="0" className="input-field" value={form.odometer_start} onChange={f('odometer_start')} placeholder="0" required />
-                      </div>
-                      <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Odometer End (km) *</label>
-                        <input type="number" min="0" className="input-field" value={form.odometer_end} onChange={f('odometer_end')} placeholder="0" required />
-                      </div>
-                      {live.total_km > 0 && (
-                        <div className="col-span-2 rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs">
-                          <span className="text-heading/60">Distance: </span>
-                          <span className="font-semibold text-orange-700 dark:text-orange-300">{live.total_km} km</span>
-                        </div>
-                      )}
-                      <div className="col-span-2">
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
-                        <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
-                      </div>
-                    </div>
+                    <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
+                    <textarea className="input-field resize-none" rows={2} value={form.remarks} onChange={f('remarks')} placeholder="Optional notes" />
                   </div>
 
-                  {/* Live Summary — freight side only. Trip expenses are filed in the Trip Expenses tab. */}
+                  {/* Live Summary — freight side only. Toll, odometer & trip expenses are filed in the Trip Expenses tab. */}
                   <div className="rounded-xl bg-gradient-to-r from-orange-500 to-orange-600 p-4 text-white">
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Summary</p>
                     <div className="grid grid-cols-2 gap-3 text-sm">
@@ -650,8 +588,8 @@ export default function TripLog() {
                         <p className="font-bold">{formatINR(live.total_freight)}</p>
                       </div>
                       <div className="bg-card/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">Toll + Commission</p>
-                        <p className="font-bold">−{formatINR(n(form.toll_expense) + n(form.transporter_commission))}</p>
+                        <p className="text-xs opacity-70">Transporter Commission</p>
+                        <p className="font-bold">−{formatINR(n(form.transporter_commission))}</p>
                       </div>
                       <div className="bg-card/10 rounded-lg p-2 col-span-2">
                         <p className="text-xs opacity-70">Adv Diesel (Transporter Ledger)</p>
@@ -664,52 +602,23 @@ export default function TripLog() {
                         {formatINR(live.net_freight)}
                       </span>
                     </div>
-                    <p className="mt-2 text-[11px] opacity-80">Trip expenses (loading, unloading, diesel, driver, misc) are filed in the Trip Expenses tab and debit the wallet there.</p>
+                    <p className="mt-2 text-[11px] opacity-80">Toll (FastTag), odometer and trip expenses (loading, unloading, diesel, driver, misc — wallet) are filed in the Trip Expenses tab.</p>
                   </div>
 
                 </div>
 
-                {(() => {
-                  // Trip Log only debits the FastTag (toll). Wallet is untouched here —
-                  // expenses are filed and gated in the Trip Expenses tab.
-                  const selectedFastag = fastags.find((ft) => String(ft.id) === form.fastag_id);
-                  const oldToll = editing && (editing as any).fastag_id === selectedFastag?.id ? Number(editing.toll_expense) || 0 : 0;
-                  const fastagShort = !!selectedFastag && n(form.toll_expense) > 0 && (selectedFastag.balance + oldToll) < n(form.toll_expense);
-                  const tollNeedsTag = n(form.toll_expense) > 0 && !form.fastag_id;
-                  const blockSave = fastagShort || tollNeedsTag;
-                  return (
-                    <>
-                      {(fastagShort || tollNeedsTag) && (
-                        <div className="border-t border-amber-300 bg-amber-50 dark:bg-amber-900/30 px-5 py-3 text-xs text-amber-800 dark:text-amber-200">
-                          {tollNeedsTag && (
-                            <div>⚠ Toll is {formatINR(n(form.toll_expense))} but no FastTag is selected. Pick one to deduct from.</div>
-                          )}
-                          {fastagShort && selectedFastag && (
-                            <div>⚠ {selectedFastag.name} has only <strong>{formatINR(selectedFastag.balance + oldToll)}</strong> — toll is <strong>{formatINR(n(form.toll_expense))}</strong>. Top up the FastTag or pick a different one.</div>
-                          )}
-                        </div>
-                      )}
-                      <div className="flex items-center justify-between gap-3 border-t border-card-border px-5 py-4">
-                        <span className="text-xs text-heading/60">
-                          {selectedFastag && <>{selectedFastag.name}: <strong className={fastagShort ? 'text-amber-700 dark:text-amber-300' : 'text-heading'}>{formatINR(selectedFastag.balance + oldToll)}</strong></>}
-                        </span>
-                        <div className="flex items-center gap-3">
-                          <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
-                            Cancel
-                          </button>
-                          <button
-                            type="submit"
-                            disabled={saving || blockSave}
-                            title={blockSave ? 'FastTag short or unselected' : undefined}
-                            className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
-                          >
-                            {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}
-                          </button>
-                        </div>
-                      </div>
-                    </>
-                  );
-                })()}
+                <div className="flex items-center justify-end gap-3 border-t border-card-border px-5 py-4">
+                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={saving}
+                    className="rounded-lg bg-orange-500 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-orange-600 disabled:opacity-60 disabled:cursor-not-allowed transition-colors"
+                  >
+                    {saving ? 'Saving…' : editing ? 'Update Trip' : 'Add Trip'}
+                  </button>
+                </div>
               </form>
             </div>
           </div>

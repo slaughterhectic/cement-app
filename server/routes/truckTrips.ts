@@ -94,56 +94,35 @@ router.post('/', async (req, res) => {
       return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
     }
 
+    // Trip Log captures the freight side only — toll, odometer and trip costs are filed
+    // via the Trip Expenses tab. Wallet and FastTag are untouched here.
     const c = computeTripFields(req.body);
-    const fastagId = req.body.fastag_id ? Number(req.body.fastag_id) : null;
-
-    // Trip Log captures the freight side only — wallet is untouched here.
-    // FastTag toll is debited because the toll is paid by the FastTag during the trip itself.
-    if (fastagId && c.toll_expense > 0) {
-      const fb = await fastagBalance(fastagId);
-      if (fb < c.toll_expense) {
-        return res.status(400).json({ error: `Selected FastTag balance (₹${fb.toFixed(2)}) is less than the trip's toll (₹${c.toll_expense.toFixed(2)}). Top up the FastTag before saving.` });
-      }
-    }
 
     const row = await getOne(
       `INSERT INTO truck_trips (
         date, truck_id, driver_id, material_name, quantity,
         load_from, billed_party, billed_destination,
         transporter_id, diesel_from_id, transporter_commission,
-        freight_rate, loading_charge, unloading_charge,
-        advance_deduction,
-        toll_expense, diesel_litres, diesel_rate, diesel_amount,
-        driver_payment, miscellaneous,
-        odometer_start, odometer_end, total_km,
-        total_freight, net_freight, net_profit, remarks, fastag_id,
+        freight_rate, advance_deduction,
+        total_freight, net_freight, net_profit, remarks,
         expense_completed
       ) VALUES (
         $1,$2,$3,$4,$5,
         $6,$7,$8,
         $9,$10,$11,
-        $12,$13,$14,
-        $15,
-        $16,$17,$18,$19,
-        $20,$21,
-        $22,$23,$24,
-        $25,$26,$27,$28,$29,
-        $30
+        $12,$13,
+        $14,$15,$16,$17,
+        $18
       ) RETURNING *`,
       [
         date, truck_id, driver_id || null, material_name || null, c.quantity,
         load_from || null, billed_party || null, billed_destination || null,
         transporter_id || null, diesel_from_id || null, c.transporter_commission,
-        c.freight_rate, c.loading_charge, c.unloading_charge,
-        c.advance_deduction,
-        c.toll_expense, c.diesel_litres, c.diesel_rate, c.diesel_amount,
-        c.driver_payment, c.miscellaneous,
-        c.odometer_start, c.odometer_end, c.total_km,
-        c.total_freight, c.net_freight, c.net_profit, remarks || null, fastagId,
+        c.freight_rate, c.advance_deduction,
+        c.total_freight, c.net_freight, c.net_profit, remarks || null,
         false,
       ]
     );
-    await syncFastagDebitForSource('truck_trip', row.id, fastagId, c.toll_expense, date, `Toll for trip #${row.id}`);
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
@@ -155,13 +134,11 @@ router.put('/:id', async (req, res) => {
       date, truck_id, driver_id, material_name, load_from, billed_party,
       billed_destination, transporter_id, diesel_from_id, remarks,
     } = req.body;
-    const fastagId = req.body.fastag_id ? Number(req.body.fastag_id) : null;
-
-    // Editing the freight side preserves whatever cost-side fields the trip already has,
-    // so the recompute reuses existing loading/unloading/diesel/driver/misc.
+    // Editing the freight side preserves the cost-side fields (toll, odometer, expenses)
+    // that were filed via the Trip Expenses tab.
     const existing = await getOne(
       `SELECT loading_charge, unloading_charge, diesel_litres, diesel_rate,
-              driver_payment, miscellaneous, toll_expense, fastag_id, expense_completed
+              driver_payment, miscellaneous, toll_expense
        FROM truck_trips WHERE id=$1`,
       [req.params.id]
     );
@@ -175,17 +152,8 @@ router.put('/:id', async (req, res) => {
       diesel_rate: existing.diesel_rate,
       driver_payment: existing.driver_payment,
       miscellaneous: existing.miscellaneous,
+      toll_expense: existing.toll_expense,
     });
-
-    const oldToll = Number(existing.toll_expense) || 0;
-    const oldFastag = existing.fastag_id ? Number(existing.fastag_id) : null;
-    if (fastagId && c.toll_expense > 0) {
-      const fb = await fastagBalance(fastagId);
-      const effective = fb + (oldFastag === fastagId ? oldToll : 0);
-      if (effective < c.toll_expense) {
-        return res.status(400).json({ error: `Selected FastTag balance (₹${effective.toFixed(2)}) is less than the trip's toll (₹${c.toll_expense.toFixed(2)}).` });
-      }
-    }
 
     const row = await getOne(
       `UPDATE truck_trips SET
@@ -193,23 +161,18 @@ router.put('/:id', async (req, res) => {
         load_from=$6, billed_party=$7, billed_destination=$8,
         transporter_id=$9, diesel_from_id=$10, transporter_commission=$11,
         freight_rate=$12, advance_deduction=$13,
-        toll_expense=$14,
-        odometer_start=$15, odometer_end=$16, total_km=$17,
-        total_freight=$18, net_freight=$19, net_profit=$20, remarks=$21, fastag_id=$23
-      WHERE id=$22 RETURNING *`,
+        total_freight=$14, net_freight=$15, net_profit=$16, remarks=$17
+      WHERE id=$18 RETURNING *`,
       [
         date, truck_id, driver_id || null, material_name || null, c.quantity,
         load_from || null, billed_party || null, billed_destination || null,
         transporter_id || null, diesel_from_id || null, c.transporter_commission,
         c.freight_rate, c.advance_deduction,
-        c.toll_expense,
-        c.odometer_start, c.odometer_end, c.total_km,
         c.total_freight, c.net_freight, c.net_profit, remarks || null,
-        req.params.id, fastagId,
+        req.params.id,
       ]
     );
     if (!row) return res.status(404).json({ error: 'Trip not found' });
-    await syncFastagDebitForSource('truck_trip', row.id, fastagId, c.toll_expense, date, `Toll for trip #${row.id}`);
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
@@ -272,18 +235,40 @@ router.patch('/:id/expense', async (req, res) => {
     const diesel_rate      = Number(req.body.diesel_rate)      || 0;
     const driver_payment   = Number(req.body.driver_payment)   || 0;
     const miscellaneous    = Number(req.body.miscellaneous)    || 0;
+    const toll_expense     = Number(req.body.toll_expense)     || 0;
+    const fastagId         = req.body.fastag_id ? Number(req.body.fastag_id) : null;
+    const odometer_start   = req.body.odometer_start !== undefined && req.body.odometer_start !== null && req.body.odometer_start !== ''
+      ? Number(req.body.odometer_start) : null;
+    const odometer_end     = req.body.odometer_end !== undefined && req.body.odometer_end !== null && req.body.odometer_end !== ''
+      ? Number(req.body.odometer_end) : null;
+    const total_km         = (odometer_start !== null && odometer_end !== null) ? odometer_end - odometer_start : 0;
     const diesel_amount    = diesel_litres * diesel_rate;
+    // Wallet covers loading + unloading + diesel + driver + misc. Toll never debits the wallet —
+    // it's deducted from the selected FastTag instead.
     const trip_expense     = loading_charge + unloading_charge + diesel_amount + driver_payment + miscellaneous;
 
     const total_freight = Number(existing.total_freight) || 0;
-    const toll_expense = Number(existing.toll_expense) || 0;
     const transporter_commission = Number(existing.transporter_commission) || 0;
     const advance_deduction = Number(existing.advance_deduction) || 0;
     const net_freight = total_freight - toll_expense - transporter_commission - advance_deduction;
     const net_profit = net_freight - loading_charge - unloading_charge - diesel_amount - driver_payment - miscellaneous;
 
-    // Pre-flight: wallet must cover the expense delta. The trip's own existing
-    // expense debit is going to be replaced, so add it back to the effective balance.
+    // FastTag pre-flight (toll comes off the FastTag, not the wallet). Editing this trip's
+    // own existing toll on the same tag is reusable, so add it back when computing effective.
+    if (fastagId && toll_expense > 0) {
+      const fb = await fastagBalance(fastagId);
+      const oldFastag = existing.fastag_id ? Number(existing.fastag_id) : null;
+      const oldToll = Number(existing.toll_expense) || 0;
+      const effective = fb + (oldFastag === fastagId ? oldToll : 0);
+      if (effective < toll_expense) {
+        return res.status(400).json({ error: `Selected FastTag balance (₹${effective.toFixed(2)}) is less than the trip's toll (₹${toll_expense.toFixed(2)}). Top up the FastTag before saving.` });
+      }
+    }
+    if (toll_expense > 0 && !fastagId) {
+      return res.status(400).json({ error: 'Pick a FastTag to deduct the toll from.' });
+    }
+
+    // Wallet pre-flight: only the wallet-funded expenses count (toll excluded).
     const oldExpense = (Number(existing.loading_charge) || 0)
       + (Number(existing.unloading_charge) || 0)
       + (Number(existing.diesel_amount) || 0)
@@ -302,15 +287,23 @@ router.patch('/:id/expense', async (req, res) => {
          loading_charge=$1, unloading_charge=$2,
          diesel_litres=$3, diesel_rate=$4, diesel_amount=$5,
          driver_payment=$6, miscellaneous=$7,
-         net_freight=$8, net_profit=$9,
+         toll_expense=$8, fastag_id=$9,
+         odometer_start=$10, odometer_end=$11, total_km=$12,
+         net_freight=$13, net_profit=$14,
          expense_completed=TRUE
-       WHERE id=$10 RETURNING *`,
+       WHERE id=$15 RETURNING *`,
       [loading_charge, unloading_charge, diesel_litres, diesel_rate, diesel_amount,
-       driver_payment, miscellaneous, net_freight, net_profit, req.params.id]
+       driver_payment, miscellaneous,
+       toll_expense, fastagId,
+       odometer_start, odometer_end, total_km,
+       net_freight, net_profit, req.params.id]
     );
 
     await syncWalletDebitForSource(
       'truck_trip_expense', row.id, trip_expense, row.date, `Expenses for trip #${row.id}`,
+    );
+    await syncFastagDebitForSource(
+      'truck_trip', row.id, fastagId, toll_expense, row.date, `Toll for trip #${row.id}`,
     );
 
     res.json(row);

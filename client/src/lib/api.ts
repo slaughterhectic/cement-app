@@ -289,6 +289,10 @@ export const api = {
       diesel_rate: number;
       driver_payment: number;
       miscellaneous: number;
+      toll_expense: number;
+      fastag_id: number | null;
+      odometer_start: number | null;
+      odometer_end: number | null;
     }) => request<any>(`/truck-trips/${id}/expense`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-trips/${id}`, { method: 'DELETE' }),
   },
