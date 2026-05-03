@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, X, Building2, TrendingUp, TrendingDown } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
@@ -14,6 +14,7 @@ interface TransporterRow {
   total_advance_diesel: number;
   total_trip_diesel: number;
   total_paid: number;
+  total_received: number;
   outstanding: number;
   has_gst: boolean;
 }
@@ -72,6 +73,11 @@ export default function Transporters() {
   const [modalOpen, setModalOpen] = useState(false);
   const [tForm, setTForm] = useState({ name: '', phone: '', has_gst: false });
   const [tSaving, setTSaving] = useState(false);
+
+  // Filter + sort state for the transporters list
+  const [searchQuery, setSearchQuery] = useState('');
+  const [gstFilter, setGstFilter] = useState<'all' | 'gst' | 'no-gst'>('all');
+  const [sortBy, setSortBy] = useState<'outstanding_desc' | 'outstanding_asc' | 'commission_desc' | 'trip_diesel_desc' | 'advance_diesel_desc' | 'trips_desc' | 'name_asc'>('outstanding_desc');
 
   const loadList = useCallback(async () => {
     setLoadingList(true);
@@ -182,6 +188,44 @@ export default function Transporters() {
     }
   };
 
+  const filteredTransporters = useMemo(() => {
+    const q = searchQuery.trim().toLowerCase();
+    const list = transporters.filter((t) => {
+      if (q && !t.name.toLowerCase().includes(q) && !(t.phone || '').toLowerCase().includes(q)) return false;
+      if (gstFilter === 'gst' && !t.has_gst) return false;
+      if (gstFilter === 'no-gst' && t.has_gst) return false;
+      return true;
+    });
+    const sorted = [...list];
+    sorted.sort((a, b) => {
+      switch (sortBy) {
+        case 'outstanding_desc': return (b.outstanding ?? 0) - (a.outstanding ?? 0);
+        case 'outstanding_asc':  return (a.outstanding ?? 0) - (b.outstanding ?? 0);
+        case 'commission_desc':  return (b.total_commission ?? 0) - (a.total_commission ?? 0);
+        case 'trip_diesel_desc': return (b.total_trip_diesel ?? 0) - (a.total_trip_diesel ?? 0);
+        case 'advance_diesel_desc': return (b.total_advance_diesel ?? 0) - (a.total_advance_diesel ?? 0);
+        case 'trips_desc':       return (b.trip_count ?? 0) - (a.trip_count ?? 0);
+        case 'name_asc':         return a.name.localeCompare(b.name);
+        default: return 0;
+      }
+    });
+    return sorted;
+  }, [transporters, searchQuery, gstFilter, sortBy]);
+
+  // Aggregate totals across the filtered list — drives the overall KPI strip.
+  const aggregates = useMemo(() => filteredTransporters.reduce((acc, t) => ({
+    receivable: acc.receivable + (Number(t.total_commission) || 0)
+                              + (Number(t.total_advance_diesel) || 0)
+                              + (Number(t.total_trip_diesel) || 0),
+    paid: acc.paid + (Number(t.total_paid) || 0),
+    received: acc.received + (Number(t.total_received) || 0),
+    outstanding: acc.outstanding + (Number(t.outstanding) || 0),
+    commission: acc.commission + (Number(t.total_commission) || 0),
+    advance: acc.advance + (Number(t.total_advance_diesel) || 0),
+    tripDiesel: acc.tripDiesel + (Number(t.total_trip_diesel) || 0),
+    trips: acc.trips + (Number(t.trip_count) || 0),
+  }), { receivable: 0, paid: 0, received: 0, outstanding: 0, commission: 0, advance: 0, tripDiesel: 0, trips: 0 }), [filteredTransporters]);
+
   const ENTRY_LABELS: Record<string, { label: string; color: string }> = {
     commission: { label: 'Commission', color: 'text-blue-600 dark:text-blue-400' },
     advance_diesel: { label: 'Trip Diesel', color: 'text-orange-600 dark:text-orange-400' },
@@ -206,6 +250,77 @@ export default function Transporters() {
         </button>
       </div>
 
+      {/* Overall KPI strip — aggregates across the filtered list. */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3">
+        <div className="card p-3 text-center bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+          <p className="text-[10px] text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider">Receivable</p>
+          <p className="text-base font-bold text-heading">{formatINR(aggregates.receivable)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-[10px] text-heading/60 font-medium uppercase tracking-wider">Commission</p>
+          <p className="text-base font-bold text-heading">{formatINR(aggregates.commission)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-[10px] text-heading/60 font-medium uppercase tracking-wider">Trip Diesel</p>
+          <p className="text-base font-bold text-heading">{formatINR(aggregates.tripDiesel)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-[10px] text-heading/60 font-medium uppercase tracking-wider">Adv Diesel</p>
+          <p className="text-base font-bold text-heading">{formatINR(aggregates.advance)}</p>
+        </div>
+        <div className="card p-3 text-center bg-orange-50 dark:bg-orange-900/30 border-orange-200 dark:border-orange-800">
+          <p className="text-[10px] text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Paid Out</p>
+          <p className="text-base font-bold text-heading">{formatINR(aggregates.paid)}</p>
+        </div>
+        <div className="card p-3 text-center bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800">
+          <p className="text-[10px] text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Received</p>
+          <p className="text-base font-bold text-heading">{formatINR(aggregates.received)}</p>
+        </div>
+        <div className={`card p-3 text-center ${aggregates.outstanding > 0 ? 'bg-red-50 dark:bg-red-900/30 border-red-200 dark:border-red-800' : 'bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800'}`}>
+          <p className={`text-[10px] font-medium uppercase tracking-wider ${aggregates.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>Outstanding</p>
+          <p className={`text-base font-bold ${aggregates.outstanding > 0 ? 'text-red-600 dark:text-red-400' : 'text-green-600 dark:text-green-400'}`}>{formatINR(aggregates.outstanding)}</p>
+        </div>
+      </div>
+
+      {/* Filter bar */}
+      <div className="card flex flex-wrap items-center gap-3 p-3">
+        <input
+          type="text"
+          className="input-field py-1.5 text-sm flex-1 min-w-[160px]"
+          placeholder="Search by name or phone…"
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+        />
+        <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-sm">
+          {(['all', 'gst', 'no-gst'] as const).map((v) => (
+            <button
+              key={v}
+              type="button"
+              onClick={() => setGstFilter(v)}
+              className={`px-3 py-1 rounded-md font-medium capitalize transition-colors ${
+                gstFilter === v ? 'bg-orange-500 text-white' : 'text-heading/70 hover:bg-card-border/40'
+              }`}
+            >
+              {v === 'all' ? 'All' : v === 'gst' ? 'GST' : 'No GST'}
+            </button>
+          ))}
+        </div>
+        <select
+          className="input-field py-1.5 text-sm"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value as typeof sortBy)}
+        >
+          <option value="outstanding_desc">Sort: Outstanding ↓</option>
+          <option value="outstanding_asc">Sort: Outstanding ↑</option>
+          <option value="commission_desc">Sort: Commission ↓</option>
+          <option value="trip_diesel_desc">Sort: Trip Diesel ↓</option>
+          <option value="advance_diesel_desc">Sort: Adv Diesel ↓</option>
+          <option value="trips_desc">Sort: Trips ↓</option>
+          <option value="name_asc">Sort: Name A–Z</option>
+        </select>
+        <span className="text-xs text-heading/60">{filteredTransporters.length} of {transporters.length}</span>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-[280px_1fr] gap-6 items-start">
         {/* Left: list */}
         <div className="card p-0 overflow-hidden">
@@ -214,11 +329,11 @@ export default function Transporters() {
           </div>
           {loadingList ? (
             <div className="p-6 text-center text-heading/50 text-sm">Loading…</div>
-          ) : transporters.length === 0 ? (
-            <div className="p-6 text-center text-heading/50 text-sm">No transporters yet</div>
+          ) : filteredTransporters.length === 0 ? (
+            <div className="p-6 text-center text-heading/50 text-sm">{transporters.length === 0 ? 'No transporters yet' : 'No transporters match the filters'}</div>
           ) : (
             <div className="divide-y divide-card-border">
-              {transporters.map((t) => (
+              {filteredTransporters.map((t) => (
                 <div
                   key={t.id}
                   onClick={() => setSelectedId(t.id === selectedId ? null : t.id)}
