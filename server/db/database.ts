@@ -171,6 +171,7 @@ export async function initializeDatabase() {
         name TEXT NOT NULL,
         phone TEXT,
         is_active INTEGER DEFAULT 1,
+        has_gst BOOLEAN DEFAULT FALSE,
         created_at TIMESTAMPTZ DEFAULT NOW()
       );
       CREATE TABLE IF NOT EXISTS transporter_payments (
@@ -305,6 +306,9 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS diesel_litres;`);
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS diesel_rate;`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS trip_diesel_from_id INTEGER REFERENCES transporters(id);`);
+    // GST: transporters can be GST-registered. When they are, the trip's freight gets +18% on top.
+    await client.query(`ALTER TABLE transporters ADD COLUMN IF NOT EXISTS has_gst BOOLEAN DEFAULT FALSE;`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS gst_amount REAL DEFAULT 0;`);
     // Earlier "additional diesel" columns are folded into the unified trip diesel pair.
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_amount;`);
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_from_id;`);

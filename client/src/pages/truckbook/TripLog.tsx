@@ -37,7 +37,7 @@ interface TripRow {
 
 interface Truck { id: number; truck_number: string; }
 interface Driver { id: number; name: string; }
-interface Transporter { id: number; name: string; }
+interface Transporter { id: number; name: string; has_gst?: boolean; }
 
 const emptyForm = {
   date: new Date().toISOString().split('T')[0],
@@ -58,12 +58,14 @@ const emptyForm = {
 
 function n(v: string) { return Number(v) || 0; }
 
-function computeLive(form: typeof emptyForm) {
+function computeLive(form: typeof emptyForm, hasGst: boolean) {
   const advance_deduction = n(form.advance_diesel_amount);
-  const total_freight     = n(form.quantity) * n(form.freight_rate);
+  const base_freight      = n(form.quantity) * n(form.freight_rate);
+  const gst_amount        = hasGst ? base_freight * 0.18 : 0;
+  const total_freight     = base_freight + gst_amount;
   // Net Freight = freight side only — toll, odometer and trip expenses live in Trip Expenses.
   const net_freight       = total_freight - n(form.transporter_commission) - advance_deduction;
-  return { advance_deduction, total_freight, net_freight };
+  return { advance_deduction, base_freight, gst_amount, total_freight, net_freight };
 }
 
 export default function TripLog() {
@@ -84,7 +86,9 @@ export default function TripLog() {
   const [freightForm, setFreightForm] = useState({ freight_rate: '', quantity: '' });
   const [savingFreight, setSavingFreight] = useState(false);
 
-  const live = computeLive(form);
+  const selectedTransporter = transporters.find((t) => String(t.id) === form.transporter_id);
+  const hasGst = !!selectedTransporter?.has_gst;
+  const live = computeLive(form, hasGst);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -502,8 +506,11 @@ export default function TripLog() {
                         <label className="block text-xs font-medium text-heading/70 mb-1">Transporter *</label>
                         <select className="input-field" value={form.transporter_id} onChange={f('transporter_id')} required>
                           <option value="">Select transporter</option>
-                          {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+                          {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}{t.has_gst ? ' (GST)' : ''}</option>)}
                         </select>
+                        {hasGst && (
+                          <p className="text-[11px] text-blue-600 dark:text-blue-400 mt-1">+18% GST will be added to freight</p>
+                        )}
                       </div>
                     </div>
                   </div>
@@ -546,8 +553,13 @@ export default function TripLog() {
                       <div className="flex items-end">
                         <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs w-full">
                           <span className="text-heading/60">Total Freight </span>
-                          <span className="text-orange-600 dark:text-orange-400 text-[10px]">({n(form.quantity)} × {n(form.freight_rate)})</span>
+                          <span className="text-orange-600 dark:text-orange-400 text-[10px]">({n(form.quantity)} × {n(form.freight_rate)}{hasGst ? ' + 18% GST' : ''})</span>
                           <p className="font-bold text-orange-700 dark:text-orange-300 text-sm mt-0.5">{formatINR(live.total_freight)}</p>
+                          {hasGst && live.base_freight > 0 && (
+                            <p className="text-[10px] text-heading/60 mt-0.5">
+                              Base {formatINR(live.base_freight)} + GST {formatINR(live.gst_amount)}
+                            </p>
+                          )}
                         </div>
                       </div>
                       <div>

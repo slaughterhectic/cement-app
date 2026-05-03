@@ -225,7 +225,10 @@ router.post('/:id/approve', async (req, res) => {
       const d = data;
       // Replay the full computeTripFields → INSERT flow that the live POST does.
       const { computeTripFields } = await import('./truckTrips');
-      const c = computeTripFields(d);
+      const gstRow = d.transporter_id
+        ? await getOne('SELECT has_gst FROM transporters WHERE id=$1', [d.transporter_id])
+        : null;
+      const c = computeTripFields({ ...d, has_gst: !!gstRow?.has_gst });
       // Trip Log freight-side replay only — costs/wallet stay zero, expense_completed=false
       // so the trip surfaces in the Trip Expenses tab for follow-up.
       result = await getOne(
@@ -234,22 +237,22 @@ router.post('/:id/approve', async (req, res) => {
           load_from, billed_party, billed_destination,
           transporter_id, diesel_from_id, transporter_commission,
           freight_rate, advance_deduction,
-          total_freight, net_freight, net_profit, remarks,
+          gst_amount, total_freight, net_freight, net_profit, remarks,
           expense_completed
         ) VALUES (
           $1,$2,$3,$4,$5,
           $6,$7,$8,
           $9,$10,$11,
           $12,$13,
-          $14,$15,$16,$17,
-          $18
+          $14,$15,$16,$17,$18,
+          $19
         ) RETURNING *`,
         [
           d.date, d.truck_id, d.driver_id || null, d.material_name || null, c.quantity,
           d.load_from || null, d.billed_party || null, d.billed_destination || null,
           d.transporter_id || null, d.diesel_from_id || null, c.transporter_commission,
           c.freight_rate, c.advance_deduction,
-          c.total_freight, c.net_freight, c.net_profit, d.remarks || null,
+          c.gst_amount, c.total_freight, c.net_freight, c.net_profit, d.remarks || null,
           false,
         ]
       );

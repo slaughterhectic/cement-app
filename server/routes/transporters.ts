@@ -107,11 +107,11 @@ router.get('/:id/ledger', async (req, res) => {
 // POST /transporters
 router.post('/', async (req, res) => {
   try {
-    const { name, phone } = req.body;
+    const { name, phone, has_gst } = req.body;
     if (!name?.trim()) return res.status(400).json({ error: 'Name is required' });
     const row = await getOne(
-      'INSERT INTO transporters (name, phone) VALUES ($1,$2) RETURNING *',
-      [name.trim(), phone?.trim() || null]
+      'INSERT INTO transporters (name, phone, has_gst) VALUES ($1,$2,$3) RETURNING *',
+      [name.trim(), phone?.trim() || null, !!has_gst]
     );
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
@@ -120,10 +120,10 @@ router.post('/', async (req, res) => {
 // PUT /transporters/:id
 router.put('/:id', async (req, res) => {
   try {
-    const { name, phone } = req.body;
+    const { name, phone, has_gst } = req.body;
     const row = await getOne(
-      'UPDATE transporters SET name=$1, phone=$2 WHERE id=$3 RETURNING *',
-      [name.trim(), phone?.trim() || null, req.params.id]
+      'UPDATE transporters SET name=$1, phone=$2, has_gst=$3 WHERE id=$4 RETURNING *',
+      [name.trim(), phone?.trim() || null, !!has_gst, req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Transporter not found' });
     res.json(row);

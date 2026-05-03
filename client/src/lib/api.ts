@@ -262,7 +262,7 @@ export const api = {
   },
   transporters: {
     list: () => request<any[]>('/transporters'),
-    create: (data: { name: string; phone?: string }) =>
+    create: (data: { name: string; phone?: string; has_gst?: boolean }) =>
       request<any>('/transporters', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) =>
       request<any>(`/transporters/${id}`, { method: 'PUT', body: JSON.stringify(data) }),

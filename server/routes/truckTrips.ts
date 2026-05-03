@@ -23,7 +23,11 @@ export function computeTripFields(body: any) {
   const odometer_start       = body.odometer_start ? Number(body.odometer_start) : null;
   const odometer_end         = body.odometer_end   ? Number(body.odometer_end)   : null;
 
-  const total_freight        = quantity * freight_rate;
+  const base_freight         = quantity * freight_rate;
+  // GST: when the trip's transporter is GST-registered, +18% is added on top of the base freight.
+  const has_gst              = !!body.has_gst;
+  const gst_amount           = has_gst ? base_freight * 0.18 : 0;
+  const total_freight        = base_freight + gst_amount;
   // Net Freight = freight side only (income net of freight-side liabilities).
   // Toll, transporter commission and advance diesel are obligations created by the trip itself.
   const net_freight          = total_freight - toll_expense - transporter_commission - advance_deduction;
@@ -40,8 +44,14 @@ export function computeTripFields(body: any) {
     toll_expense, diesel_amount,
     driver_payment, transporter_commission, miscellaneous,
     odometer_start, odometer_end, total_km,
-    total_freight, net_freight, net_profit,
+    gst_amount, total_freight, net_freight, net_profit,
   };
+}
+
+async function transporterHasGst(transporter_id: any): Promise<boolean> {
+  if (!transporter_id) return false;
+  const row = await getOne('SELECT has_gst FROM transporters WHERE id=$1', [transporter_id]);
+  return !!row?.has_gst;
 }
 
 // GET /truck-trips
@@ -95,7 +105,8 @@ router.post('/', async (req, res) => {
 
     // Trip Log captures the freight side only — toll, odometer and trip costs are filed
     // via the Trip Expenses tab. Wallet and FastTag are untouched here.
-    const c = computeTripFields(req.body);
+    const has_gst = await transporterHasGst(transporter_id);
+    const c = computeTripFields({ ...req.body, has_gst });
 
     const row = await getOne(
       `INSERT INTO truck_trips (
@@ -103,22 +114,22 @@ router.post('/', async (req, res) => {
         load_from, billed_party, billed_destination,
         transporter_id, diesel_from_id, transporter_commission,
         freight_rate, advance_deduction,
-        total_freight, net_freight, net_profit, remarks,
+        gst_amount, total_freight, net_freight, net_profit, remarks,
         expense_completed
       ) VALUES (
         $1,$2,$3,$4,$5,
         $6,$7,$8,
         $9,$10,$11,
         $12,$13,
-        $14,$15,$16,$17,
-        $18
+        $14,$15,$16,$17,$18,
+        $19
       ) RETURNING *`,
       [
         date, truck_id, driver_id || null, material_name || null, c.quantity,
         load_from || null, billed_party || null, billed_destination || null,
         transporter_id || null, diesel_from_id || null, c.transporter_commission,
         c.freight_rate, c.advance_deduction,
-        c.total_freight, c.net_freight, c.net_profit, remarks || null,
+        c.gst_amount, c.total_freight, c.net_freight, c.net_profit, remarks || null,
         false,
       ]
     );
@@ -143,8 +154,10 @@ router.put('/:id', async (req, res) => {
     );
     if (!existing) return res.status(404).json({ error: 'Trip not found' });
 
+    const has_gst = await transporterHasGst(transporter_id);
     const c = computeTripFields({
       ...req.body,
+      has_gst,
       loading_charge: existing.loading_charge,
       unloading_charge: existing.unloading_charge,
       trip_diesel_amount: existing.diesel_amount,
@@ -159,14 +172,14 @@ router.put('/:id', async (req, res) => {
         load_from=$6, billed_party=$7, billed_destination=$8,
         transporter_id=$9, diesel_from_id=$10, transporter_commission=$11,
         freight_rate=$12, advance_deduction=$13,
-        total_freight=$14, net_freight=$15, net_profit=$16, remarks=$17
-      WHERE id=$18 RETURNING *`,
+        gst_amount=$14, total_freight=$15, net_freight=$16, net_profit=$17, remarks=$18
+      WHERE id=$19 RETURNING *`,
       [
         date, truck_id, driver_id || null, material_name || null, c.quantity,
         load_from || null, billed_party || null, billed_destination || null,
         transporter_id || null, diesel_from_id || null, c.transporter_commission,
         c.freight_rate, c.advance_deduction,
-        c.total_freight, c.net_freight, c.net_profit, remarks || null,
+        c.gst_amount, c.total_freight, c.net_freight, c.net_profit, remarks || null,
         req.params.id,
       ]
     );
@@ -197,7 +210,11 @@ router.patch('/:id/freight', async (req, res) => {
 
     // Freight is income, not a wallet outflow — recompute net_freight (freight side) and
     // net_profit (after the trip's recorded expenses) without touching the wallet.
-    const total_freight = quantity * freightRate;
+    // GST: respect the trip's transporter has_gst flag.
+    const has_gst = await transporterHasGst(existing.transporter_id);
+    const base_freight = quantity * freightRate;
+    const gst_amount = has_gst ? base_freight * 0.18 : 0;
+    const total_freight = base_freight + gst_amount;
     const toll_expense = Number(existing.toll_expense) || 0;
     const transporter_commission = Number(existing.transporter_commission) || 0;
     const advance_deduction = Number(existing.advance_deduction) || 0;
@@ -211,9 +228,9 @@ router.patch('/:id/freight', async (req, res) => {
 
     const row = await getOne(
       `UPDATE truck_trips
-         SET freight_rate=$1, quantity=$2, total_freight=$3, net_freight=$4, net_profit=$5
-       WHERE id=$6 RETURNING *`,
-      [freightRate, quantity, total_freight, net_freight, net_profit, req.params.id]
+         SET freight_rate=$1, quantity=$2, gst_amount=$3, total_freight=$4, net_freight=$5, net_profit=$6
+       WHERE id=$7 RETURNING *`,
+      [freightRate, quantity, gst_amount, total_freight, net_freight, net_profit, req.params.id]
     );
 
     res.json(row);
