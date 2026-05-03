@@ -23,8 +23,8 @@ interface TripRow {
   loading_charge: number;
   unloading_charge: number;
   diesel_amount: number;
-  additional_diesel_amount: number;
-  additional_diesel_from_id: number | null;
+  trip_diesel_from_id: number | null;
+  diesel_from_id: number | null;
   driver_payment: number;
   miscellaneous: number;
   odometer_start: number | null;
@@ -41,14 +41,15 @@ const emptyForm = {
   loading_charge: '',
   unloading_charge: '',
   trip_diesel_amount: '',
-  additional_diesel_amount: '',
-  additional_diesel_from_id: '',
+  trip_diesel_from_id: '',
   driver_payment: '',
   miscellaneous: '',
   toll_expense: '',
   fastag_id: '',
   odometer_start: '',
   odometer_end: '',
+  advance_diesel_amount: '',
+  diesel_from_id: '',
 };
 
 function n(v: string) { return Number(v) || 0; }
@@ -112,45 +113,52 @@ export default function TripExpenses() {
       loading_charge: String(row.loading_charge || ''),
       unloading_charge: String(row.unloading_charge || ''),
       trip_diesel_amount: String(row.diesel_amount || ''),
-      additional_diesel_amount: String(row.additional_diesel_amount || ''),
-      additional_diesel_from_id: row.additional_diesel_from_id ? String(row.additional_diesel_from_id) : '',
+      trip_diesel_from_id: row.trip_diesel_from_id ? String(row.trip_diesel_from_id) : '',
       driver_payment: String(row.driver_payment || ''),
       miscellaneous: String(row.miscellaneous || ''),
       toll_expense: String(row.toll_expense || ''),
       fastag_id: row.fastag_id ? String(row.fastag_id) : '',
       odometer_start: row.odometer_start != null ? String(row.odometer_start) : '',
       odometer_end: row.odometer_end != null ? String(row.odometer_end) : '',
+      advance_diesel_amount: String(row.advance_deduction || ''),
+      diesel_from_id: row.diesel_from_id ? String(row.diesel_from_id) : '',
     });
   };
 
   const live = useMemo(() => {
     const diesel_amount = n(form.trip_diesel_amount);
-    const additional_diesel_amount = n(form.additional_diesel_amount);
-    // Wallet covers loading + unloading + trip diesel + driver + misc.
-    // Toll → FastTag. Additional diesel → transporter ledger. Neither touches the wallet.
-    const trip_expense = n(form.loading_charge) + n(form.unloading_charge)
-      + diesel_amount + n(form.driver_payment) + n(form.miscellaneous);
+    const tripDieselFromTransporter = !!form.trip_diesel_from_id;
+    // Wallet covers loading + unloading + driver + misc + (trip diesel only if no transporter funded it).
+    // Toll → FastTag. Trip diesel from transporter → that transporter's ledger.
+    const wallet_expense = n(form.loading_charge) + n(form.unloading_charge)
+      + n(form.driver_payment) + n(form.miscellaneous)
+      + (tripDieselFromTransporter ? 0 : diesel_amount);
     const total_km = form.odometer_start && form.odometer_end
       ? n(form.odometer_end) - n(form.odometer_start) : 0;
-    return { diesel_amount, additional_diesel_amount, trip_expense, total_km };
+    return { diesel_amount, tripDieselFromTransporter, wallet_expense, total_km };
   }, [form]);
 
   const save = async () => {
     if (!target) return;
+    if (n(form.advance_diesel_amount) > 0 && !form.diesel_from_id) {
+      addToast('Pick the transporter who provided the advance diesel', 'error');
+      return;
+    }
     setSaving(true);
     try {
       await api.truckTrips.updateExpense(target.id, {
         loading_charge: n(form.loading_charge),
         unloading_charge: n(form.unloading_charge),
         trip_diesel_amount: n(form.trip_diesel_amount),
-        additional_diesel_amount: n(form.additional_diesel_amount),
-        additional_diesel_from_id: form.additional_diesel_from_id ? Number(form.additional_diesel_from_id) : null,
+        trip_diesel_from_id: form.trip_diesel_from_id ? Number(form.trip_diesel_from_id) : null,
         driver_payment: n(form.driver_payment),
         miscellaneous: n(form.miscellaneous),
         toll_expense: n(form.toll_expense),
         fastag_id: form.fastag_id ? Number(form.fastag_id) : null,
         odometer_start: form.odometer_start ? n(form.odometer_start) : null,
         odometer_end: form.odometer_end ? n(form.odometer_end) : null,
+        advance_diesel_amount: n(form.advance_diesel_amount),
+        diesel_from_id: form.diesel_from_id ? Number(form.diesel_from_id) : null,
       });
       addToast('Trip expenses filed', 'success');
       setTarget(null);
@@ -174,10 +182,15 @@ export default function TripExpenses() {
     pending: acc.pending + (r.expense_completed ? 0 : 1),
   }), { quantity: 0, total_freight: 0, total_fuel: 0, total_toll: 0, net_profit: 0, pending: 0 });
 
-  const oldExpense = target ? Number(target.loading_charge) + Number(target.unloading_charge)
-    + Number(target.diesel_amount) + Number(target.driver_payment) + Number(target.miscellaneous) : 0;
-  const effectiveWallet = walletBal + (target?.expense_completed ? oldExpense : 0);
-  const walletShort = !!target && live.trip_expense > 0 && effectiveWallet < live.trip_expense;
+  // Mirror the server: the trip's previously charged wallet slice excludes diesel when
+  // the existing row had a transporter funding it.
+  const oldWalletExpense = target
+    ? Number(target.loading_charge) + Number(target.unloading_charge)
+      + Number(target.driver_payment) + Number(target.miscellaneous)
+      + (target.trip_diesel_from_id ? 0 : Number(target.diesel_amount))
+    : 0;
+  const effectiveWallet = walletBal + (target?.expense_completed ? oldWalletExpense : 0);
+  const walletShort = !!target && live.wallet_expense > 0 && effectiveWallet < live.wallet_expense;
 
   return (
     <div className="flex flex-col gap-6">
@@ -335,7 +348,7 @@ export default function TripExpenses() {
 
               <div className="p-5 flex flex-col gap-5">
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Wallet-funded Expenses</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Expenses</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Loading Charge (₹)</label>
@@ -344,10 +357,6 @@ export default function TripExpenses() {
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Unloading Charge (₹)</label>
                       <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
-                    </div>
-                    <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">Trip Diesel Amount (₹)</label>
-                      <input type="number" min="0" step="0.01" className="input-field" value={form.trip_diesel_amount} onChange={f('trip_diesel_amount')} placeholder="0" />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹)</label>
@@ -360,22 +369,49 @@ export default function TripExpenses() {
                   </div>
                 </div>
 
+                {/* Trip diesel mirrors advance diesel: amount + optional From Transporter.
+                    If a transporter is set, the cost posts to their ledger; otherwise the wallet pays. */}
                 <div>
-                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Additional Diesel (Transporter-funded)</p>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Diesel</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">Additional Diesel Amount (₹)</label>
-                      <input type="number" min="0" step="0.01" className="input-field" value={form.additional_diesel_amount} onChange={f('additional_diesel_amount')} placeholder="0" />
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Trip Diesel Amount (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.trip_diesel_amount} onChange={f('trip_diesel_amount')} placeholder="0" />
                     </div>
                     <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">From Transporter {n(form.additional_diesel_amount) > 0 ? '*' : ''}</label>
-                      <select className="input-field" value={form.additional_diesel_from_id} onChange={(e) => setForm((p) => ({ ...p, additional_diesel_from_id: e.target.value }))}>
-                        <option value="">{n(form.additional_diesel_amount) > 0 ? 'Select transporter' : 'Not applicable'}</option>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">From Transporter (optional)</label>
+                      <select className="input-field" value={form.trip_diesel_from_id} onChange={(e) => setForm((p) => ({ ...p, trip_diesel_from_id: e.target.value }))}>
+                        <option value="">Wallet-funded</option>
                         {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                       </select>
-                      {n(form.additional_diesel_amount) > 0 && form.additional_diesel_from_id && (
+                      {n(form.trip_diesel_amount) > 0 && (
                         <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
-                          {formatINR(n(form.additional_diesel_amount))} → {transporters.find((t) => String(t.id) === form.additional_diesel_from_id)?.name || '—'}'s ledger
+                          {form.trip_diesel_from_id
+                            ? `${formatINR(n(form.trip_diesel_amount))} → ${transporters.find((t) => String(t.id) === form.trip_diesel_from_id)?.name || '—'}'s ledger`
+                            : `${formatINR(n(form.trip_diesel_amount))} debits the wallet`}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Advance Diesel can also be edited here if it wasn't filled in Trip Log. */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Advance Diesel (optional)</p>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Advance Diesel Amount (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.advance_diesel_amount} onChange={f('advance_diesel_amount')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">From Transporter {n(form.advance_diesel_amount) > 0 ? '*' : ''}</label>
+                      <select className="input-field" value={form.diesel_from_id} onChange={(e) => setForm((p) => ({ ...p, diesel_from_id: e.target.value }))}>
+                        <option value="">{n(form.advance_diesel_amount) > 0 ? 'Select transporter' : 'No advance diesel'}</option>
+                        {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
+                      </select>
+                      {n(form.advance_diesel_amount) > 0 && form.diesel_from_id && (
+                        <p className="text-xs text-orange-600 dark:text-orange-400 mt-1">
+                          {formatINR(n(form.advance_diesel_amount))} → {transporters.find((t) => String(t.id) === form.diesel_from_id)?.name || '—'}'s ledger
                         </p>
                       )}
                     </div>
@@ -419,16 +455,19 @@ export default function TripExpenses() {
                 </div>
 
                 <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs flex flex-wrap gap-3">
-                  <span><span className="text-heading/60">Wallet Outflow: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.trip_expense)}</span></span>
+                  <span><span className="text-heading/60">Wallet Outflow: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.wallet_expense)}</span></span>
                   <span><span className="text-heading/60">Toll (FastTag): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(n(form.toll_expense))}</span></span>
-                  <span><span className="text-heading/60">Additional Diesel (Ledger): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.additional_diesel_amount)}</span></span>
+                  {live.tripDieselFromTransporter && (
+                    <span><span className="text-heading/60">Trip Diesel (Ledger): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.diesel_amount)}</span></span>
+                  )}
                   {(() => {
+                    // Net Profit = total_freight − commission − advance − toll − all trip costs (loading/unloading/diesel/driver/misc).
                     const projected = Number(target.total_freight)
                       - Number(target.transporter_commission || 0)
-                      - Number(target.advance_deduction || 0)
+                      - n(form.advance_diesel_amount)
                       - n(form.toll_expense)
-                      - live.additional_diesel_amount
-                      - live.trip_expense;
+                      - n(form.loading_charge) - n(form.unloading_charge)
+                      - live.diesel_amount - n(form.driver_payment) - n(form.miscellaneous);
                     return (
                       <span><span className="text-heading/60">Projected Net Profit: </span><span className={`font-semibold ${projected >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(projected)}</span></span>
                     );
@@ -436,7 +475,7 @@ export default function TripExpenses() {
                 </div>
 
                 <p className="text-[11px] text-heading/60">
-                  Driver payment feeds the driver's ledger as earned. Toll comes off the FastTag, additional diesel posts to the transporter's ledger — neither touches the wallet.
+                  Driver payment feeds the driver's ledger as earned. Toll comes off the FastTag. Trip diesel posts to a transporter's ledger if one is picked, otherwise the wallet pays.
                 </p>
               </div>
 
@@ -451,7 +490,7 @@ export default function TripExpenses() {
                     {(walletShort || fastagShort || tollNeedsTag) && (
                       <div className="border-t border-amber-300 bg-amber-50 dark:bg-amber-900/30 px-5 py-3 text-xs text-amber-800 dark:text-amber-200 space-y-1">
                         {walletShort && (
-                          <div>⚠ Wallet has only <strong>{formatINR(effectiveWallet)}</strong> — wallet outflow is <strong>{formatINR(live.trip_expense)}</strong>. Top up the Wallet before saving.</div>
+                          <div>⚠ Wallet has only <strong>{formatINR(effectiveWallet)}</strong> — wallet outflow is <strong>{formatINR(live.wallet_expense)}</strong>. Top up the Wallet before saving.</div>
                         )}
                         {tollNeedsTag && (
                           <div>⚠ Toll is {formatINR(n(form.toll_expense))} but no FastTag is selected. Pick one to deduct from.</div>

@@ -551,13 +551,13 @@ export default function TripLog() {
                         </div>
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Diesel Amount (₹) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_diesel_amount} onChange={f('advance_diesel_amount')} placeholder="0" required />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Advance Diesel Amount (₹)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.advance_diesel_amount} onChange={f('advance_diesel_amount')} placeholder="0 — optional, can be filed later" />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel From (Transporter) *</label>
-                        <select className="input-field" value={form.diesel_from_id} onChange={f('diesel_from_id')} required>
-                          <option value="">Select transporter who provided diesel</option>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel From (Transporter) {live.advance_deduction > 0 ? '*' : ''}</label>
+                        <select className="input-field" value={form.diesel_from_id} onChange={f('diesel_from_id')} required={live.advance_deduction > 0}>
+                          <option value="">{live.advance_deduction > 0 ? 'Select transporter' : 'No advance diesel'}</option>
                           {transporters.map((t) => <option key={t.id} value={String(t.id)}>{t.name}</option>)}
                         </select>
                         {live.advance_deduction > 0 && (

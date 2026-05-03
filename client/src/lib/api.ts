@@ -286,14 +286,15 @@ export const api = {
       loading_charge: number;
       unloading_charge: number;
       trip_diesel_amount: number;
-      additional_diesel_amount: number;
-      additional_diesel_from_id: number | null;
+      trip_diesel_from_id: number | null;
       driver_payment: number;
       miscellaneous: number;
       toll_expense: number;
       fastag_id: number | null;
       odometer_start: number | null;
       odometer_end: number | null;
+      advance_diesel_amount?: number;
+      diesel_from_id?: number | null;
     }) => request<any>(`/truck-trips/${id}/expense`, { method: 'PATCH', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-trips/${id}`, { method: 'DELETE' }),
   },

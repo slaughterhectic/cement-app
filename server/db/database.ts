@@ -299,12 +299,32 @@ export async function initializeDatabase() {
     // New cost-side debits use source_table='truck_trip_expense'.
     await client.query(`DELETE FROM wallet_transactions WHERE source_table='truck_trip';`);
     // Trip diesel collapsed from (litres × rate) into a single amount stored in diesel_amount.
-    // Optional additional diesel can be sourced from a transporter and posts to that ledger
-    // instead of debiting the wallet — same pattern as advance_deduction + diesel_from_id.
+    // Trip diesel can optionally be sourced from a transporter (trip_diesel_from_id) — when set,
+    // the cost posts to that transporter's ledger instead of debiting the wallet, mirroring
+    // how advance_deduction + diesel_from_id works.
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS diesel_litres;`);
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS diesel_rate;`);
-    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS additional_diesel_amount REAL DEFAULT 0;`);
-    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS additional_diesel_from_id INTEGER REFERENCES transporters(id);`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS trip_diesel_from_id INTEGER REFERENCES transporters(id);`);
+    // Earlier "additional diesel" columns are folded into the unified trip diesel pair.
+    await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_amount;`);
+    await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_from_id;`);
+    // Backfill wallet debits for trips that were marked expense_completed via the earlier
+    // migration but never went through the new PATCH /:id/expense (so the wallet was never
+    // touched for them). Idempotent — only inserts where no truck_trip_expense row exists yet.
+    await client.query(`
+      INSERT INTO wallet_transactions (date, type, amount, source_table, source_id, remarks)
+      SELECT t.date, 'debit',
+             (t.loading_charge + t.unloading_charge + t.diesel_amount + t.driver_payment + t.miscellaneous),
+             'truck_trip_expense', t.id, 'Expenses for trip #' || t.id || ' (backfill)'
+      FROM truck_trips t
+      WHERE t.expense_completed
+        AND (t.loading_charge + t.unloading_charge + t.diesel_amount + t.driver_payment + t.miscellaneous) > 0
+        AND t.trip_diesel_from_id IS NULL
+        AND NOT EXISTS (
+          SELECT 1 FROM wallet_transactions w
+          WHERE w.source_table='truck_trip_expense' AND w.source_id=t.id
+        );
+    `);
     // transporter_payments new columns
     await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
     // driver_payments new columns

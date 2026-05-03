@@ -17,7 +17,6 @@ export function computeTripFields(body: any) {
   const advance_deduction    = Number(body.advance_diesel_amount) || 0;
   const toll_expense         = Number(body.toll_expense)          || 0;
   const diesel_amount        = Number(body.trip_diesel_amount)    || 0;
-  const additional_diesel_amount = Number(body.additional_diesel_amount) || 0;
   const driver_payment       = Number(body.driver_payment)        || 0;
   const transporter_commission = Number(body.transporter_commission) || 0;
   const miscellaneous        = Number(body.miscellaneous)         || 0;
@@ -26,10 +25,11 @@ export function computeTripFields(body: any) {
 
   const total_freight        = quantity * freight_rate;
   // Net Freight = freight side only (income net of freight-side liabilities).
-  // Toll, transporter commission, advance diesel and additional diesel are obligations
-  // created by the trip itself — additional diesel posts to a transporter ledger like advance.
-  const net_freight          = total_freight - toll_expense - transporter_commission - advance_deduction - additional_diesel_amount;
-  // Net Profit = net freight − wallet-funded trip expenses (loading/unloading/diesel/driver/misc).
+  // Toll, transporter commission and advance diesel are obligations created by the trip itself.
+  const net_freight          = total_freight - toll_expense - transporter_commission - advance_deduction;
+  // Net Profit = net freight − all trip expenses (loading + unloading + diesel + driver + misc).
+  // Trip diesel is always subtracted regardless of whether the wallet or a transporter funded it —
+  // it's the same real cost to the business; only the offsetting liability differs.
   const net_profit           = net_freight - loading_charge - unloading_charge - diesel_amount - driver_payment - miscellaneous;
   const total_km             = (odometer_end !== null && odometer_start !== null)
     ? odometer_end - odometer_start : 0;
@@ -37,7 +37,7 @@ export function computeTripFields(body: any) {
   return {
     quantity, freight_rate, loading_charge, unloading_charge,
     advance_deduction,
-    toll_expense, diesel_amount, additional_diesel_amount,
+    toll_expense, diesel_amount,
     driver_payment, transporter_commission, miscellaneous,
     odometer_start, odometer_end, total_km,
     total_freight, net_freight, net_profit,
@@ -136,7 +136,7 @@ router.put('/:id', async (req, res) => {
     // Editing the freight side preserves the cost-side fields (toll, diesel, expenses)
     // that were filed via the Trip Expenses tab.
     const existing = await getOne(
-      `SELECT loading_charge, unloading_charge, diesel_amount, additional_diesel_amount,
+      `SELECT loading_charge, unloading_charge, diesel_amount,
               driver_payment, miscellaneous, toll_expense
        FROM truck_trips WHERE id=$1`,
       [req.params.id]
@@ -148,7 +148,6 @@ router.put('/:id', async (req, res) => {
       loading_charge: existing.loading_charge,
       unloading_charge: existing.unloading_charge,
       trip_diesel_amount: existing.diesel_amount,
-      additional_diesel_amount: existing.additional_diesel_amount,
       driver_payment: existing.driver_payment,
       miscellaneous: existing.miscellaneous,
       toll_expense: existing.toll_expense,
@@ -202,13 +201,12 @@ router.patch('/:id/freight', async (req, res) => {
     const toll_expense = Number(existing.toll_expense) || 0;
     const transporter_commission = Number(existing.transporter_commission) || 0;
     const advance_deduction = Number(existing.advance_deduction) || 0;
-    const additional_diesel_amount = Number(existing.additional_diesel_amount) || 0;
     const loading_charge = Number(existing.loading_charge) || 0;
     const unloading_charge = Number(existing.unloading_charge) || 0;
     const diesel_amount = Number(existing.diesel_amount) || 0;
     const driver_payment = Number(existing.driver_payment) || 0;
     const miscellaneous = Number(existing.miscellaneous) || 0;
-    const net_freight = total_freight - toll_expense - transporter_commission - advance_deduction - additional_diesel_amount;
+    const net_freight = total_freight - toll_expense - transporter_commission - advance_deduction;
     const net_profit = net_freight - loading_charge - unloading_charge - diesel_amount - driver_payment - miscellaneous;
 
     const row = await getOne(
@@ -232,29 +230,37 @@ router.patch('/:id/expense', async (req, res) => {
     const loading_charge   = Number(req.body.loading_charge)   || 0;
     const unloading_charge = Number(req.body.unloading_charge) || 0;
     const diesel_amount    = Number(req.body.trip_diesel_amount) || 0;
-    const additional_diesel_amount = Number(req.body.additional_diesel_amount) || 0;
-    const additional_diesel_from_id = req.body.additional_diesel_from_id ? Number(req.body.additional_diesel_from_id) : null;
+    const tripDieselFromId = req.body.trip_diesel_from_id ? Number(req.body.trip_diesel_from_id) : null;
     const driver_payment   = Number(req.body.driver_payment)   || 0;
     const miscellaneous    = Number(req.body.miscellaneous)    || 0;
     const toll_expense     = Number(req.body.toll_expense)     || 0;
     const fastagId         = req.body.fastag_id ? Number(req.body.fastag_id) : null;
+    // Advance diesel can also be edited from this form (optional). Falls back to whatever
+    // the trip already had if the field isn't sent.
+    const advance_deduction = req.body.advance_diesel_amount !== undefined && req.body.advance_diesel_amount !== null && req.body.advance_diesel_amount !== ''
+      ? Number(req.body.advance_diesel_amount) : (Number(existing.advance_deduction) || 0);
+    const advanceFromId = req.body.diesel_from_id !== undefined
+      ? (req.body.diesel_from_id ? Number(req.body.diesel_from_id) : null)
+      : (existing.diesel_from_id ? Number(existing.diesel_from_id) : null);
     const odometer_start   = req.body.odometer_start !== undefined && req.body.odometer_start !== null && req.body.odometer_start !== ''
       ? Number(req.body.odometer_start) : null;
     const odometer_end     = req.body.odometer_end !== undefined && req.body.odometer_end !== null && req.body.odometer_end !== ''
       ? Number(req.body.odometer_end) : null;
     const total_km         = (odometer_start !== null && odometer_end !== null) ? odometer_end - odometer_start : 0;
-    // Wallet covers loading + unloading + trip diesel + driver + misc. Toll → FastTag.
-    // Additional diesel (if any) → the chosen transporter's ledger, never the wallet.
-    const trip_expense     = loading_charge + unloading_charge + diesel_amount + driver_payment + miscellaneous;
 
-    if (additional_diesel_amount > 0 && !additional_diesel_from_id) {
-      return res.status(400).json({ error: 'Pick the transporter who provided the additional diesel.' });
+    if (diesel_amount > 0 && tripDieselFromId === null && false) { /* wallet path is fine */ }
+    if (advance_deduction > 0 && !advanceFromId) {
+      return res.status(400).json({ error: 'Pick the transporter who provided the advance diesel.' });
     }
+
+    // Wallet covers loading + unloading + driver + misc + (trip diesel only if no transporter funded it).
+    // Toll → FastTag. Trip diesel from transporter → that transporter's ledger.
+    const wallet_expense = loading_charge + unloading_charge + driver_payment + miscellaneous
+      + (tripDieselFromId === null ? diesel_amount : 0);
 
     const total_freight = Number(existing.total_freight) || 0;
     const transporter_commission = Number(existing.transporter_commission) || 0;
-    const advance_deduction = Number(existing.advance_deduction) || 0;
-    const net_freight = total_freight - toll_expense - transporter_commission - advance_deduction - additional_diesel_amount;
+    const net_freight = total_freight - toll_expense - transporter_commission - advance_deduction;
     const net_profit = net_freight - loading_charge - unloading_charge - diesel_amount - driver_payment - miscellaneous;
 
     // FastTag pre-flight (toll comes off the FastTag, not the wallet). Editing this trip's
@@ -272,42 +278,44 @@ router.patch('/:id/expense', async (req, res) => {
       return res.status(400).json({ error: 'Pick a FastTag to deduct the toll from.' });
     }
 
-    // Wallet pre-flight: only the wallet-funded expenses count (toll excluded).
-    const oldExpense = (Number(existing.loading_charge) || 0)
+    // Wallet pre-flight: only the wallet-funded slice counts. We mirror what the previous
+    // expense filing actually charged the wallet (diesel only counts if it wasn't transporter-funded).
+    const oldTripDieselFromId = existing.trip_diesel_from_id ? Number(existing.trip_diesel_from_id) : null;
+    const oldWalletExpense = (Number(existing.loading_charge) || 0)
       + (Number(existing.unloading_charge) || 0)
-      + (Number(existing.diesel_amount) || 0)
       + (Number(existing.driver_payment) || 0)
-      + (Number(existing.miscellaneous) || 0);
-    if (trip_expense > 0) {
+      + (Number(existing.miscellaneous) || 0)
+      + (oldTripDieselFromId === null ? (Number(existing.diesel_amount) || 0) : 0);
+    if (wallet_expense > 0) {
       const wb = await walletBalance();
-      const effective = wb + (existing.expense_completed ? oldExpense : 0);
-      if (effective < trip_expense) {
-        return res.status(400).json({ error: `Wallet balance (₹${effective.toFixed(2)}) is less than the trip's expenses (₹${trip_expense.toFixed(2)}). Top up the wallet first.` });
+      const effective = wb + (existing.expense_completed ? oldWalletExpense : 0);
+      if (effective < wallet_expense) {
+        return res.status(400).json({ error: `Wallet balance (₹${effective.toFixed(2)}) is less than the wallet-funded expenses (₹${wallet_expense.toFixed(2)}). Top up the wallet first.` });
       }
     }
 
     const row = await getOne(
       `UPDATE truck_trips SET
          loading_charge=$1, unloading_charge=$2,
-         diesel_amount=$3,
-         additional_diesel_amount=$4, additional_diesel_from_id=$5,
-         driver_payment=$6, miscellaneous=$7,
-         toll_expense=$8, fastag_id=$9,
-         odometer_start=$10, odometer_end=$11, total_km=$12,
-         net_freight=$13, net_profit=$14,
+         diesel_amount=$3, trip_diesel_from_id=$4,
+         driver_payment=$5, miscellaneous=$6,
+         toll_expense=$7, fastag_id=$8,
+         odometer_start=$9, odometer_end=$10, total_km=$11,
+         advance_deduction=$12, diesel_from_id=$13,
+         net_freight=$14, net_profit=$15,
          expense_completed=TRUE
-       WHERE id=$15 RETURNING *`,
+       WHERE id=$16 RETURNING *`,
       [loading_charge, unloading_charge,
-       diesel_amount,
-       additional_diesel_amount, additional_diesel_from_id,
+       diesel_amount, tripDieselFromId,
        driver_payment, miscellaneous,
        toll_expense, fastagId,
        odometer_start, odometer_end, total_km,
+       advance_deduction, advanceFromId,
        net_freight, net_profit, req.params.id]
     );
 
     await syncWalletDebitForSource(
-      'truck_trip_expense', row.id, trip_expense, row.date, `Expenses for trip #${row.id}`,
+      'truck_trip_expense', row.id, wallet_expense, row.date, `Expenses for trip #${row.id}`,
     );
     await syncFastagDebitForSource(
       'truck_trip', row.id, fastagId, toll_expense, row.date, `Toll for trip #${row.id}`,

@@ -12,7 +12,7 @@ interface TransporterRow {
   trip_count: number;
   total_commission: number;
   total_advance_diesel: number;
-  total_additional_diesel: number;
+  total_trip_diesel: number;
   total_paid: number;
   outstanding: number;
 }
@@ -20,7 +20,7 @@ interface TransporterRow {
 interface LedgerEntry {
   id?: number;
   date: string;
-  entry_type: 'commission' | 'advance_diesel' | 'additional_diesel' | 'payment';
+  entry_type: 'commission' | 'advance_diesel' | 'trip_diesel' | 'payment';
   payment_type?: 'paid' | 'received';
   amount: number;
   truck_number: string | null;
@@ -174,7 +174,7 @@ export default function Transporters() {
   const ENTRY_LABELS: Record<string, { label: string; color: string }> = {
     commission: { label: 'Commission', color: 'text-blue-600 dark:text-blue-400' },
     advance_diesel: { label: 'Adv. Diesel', color: 'text-orange-600 dark:text-orange-400' },
-    additional_diesel: { label: 'Add. Diesel', color: 'text-amber-600 dark:text-amber-400' },
+    trip_diesel: { label: 'Trip Diesel', color: 'text-amber-600 dark:text-amber-400' },
     payment: { label: 'Payment', color: 'text-green-600 dark:text-green-400' },
   };
 
