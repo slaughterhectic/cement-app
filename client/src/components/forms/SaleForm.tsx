@@ -121,6 +121,12 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const invoiceNumber = watch('invoice_number');
   const billedQty = watch('billed_quantity');
   const billedRate = watch('billed_rate');
+  const sourceTruckNumber = watch('source_truck_number');
+
+  const selectedTruckBatch = useMemo(
+    () => truckBatches.find((tb) => tb.brand_id === Number(brandId) && tb.truck_number === sourceTruckNumber),
+    [truckBatches, brandId, sourceTruckNumber]
+  );
 
   const selectedParty = useMemo(() => parties.find((p) => p.id === Number(partyId)), [parties, partyId]);
   const isDealer = selectedParty?.type === 'dealer';
@@ -160,9 +166,12 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
 
   const effectiveMaxStock = useMemo(() => {
     if (!brandId || brandId === 0) return 0;
+    // When a source truck is chosen, the cap is that batch's available bags (plus the
+    // edit-row's own bags so editing the same trip doesn't fail the check).
+    if (selectedTruckBatch) return selectedTruckBatch.available_bags + editReleaseBags;
     const base = liveStock ?? 0;
     return base + editReleaseBags;
-  }, [brandId, liveStock, editReleaseBags]);
+  }, [brandId, liveStock, editReleaseBags, selectedTruckBatch]);
 
   const selectedBrandName = useMemo(
     () => allBrands.find((b) => b.id === Number(brandId))?.name ?? 'this brand',
@@ -258,6 +267,13 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
       if (rates.length === 1) setSelectedCostRate(Number(rates[0].landed_rate));
     }).catch(() => { setPurchaseRates([]); setRateStock(0); });
   }, [isOpen, brandId]);
+
+  // When the user picks a source truck, snap the purchase cost to that batch's landed rate.
+  useEffect(() => {
+    if (selectedTruckBatch) {
+      setSelectedCostRate(Math.round(Number(selectedTruckBatch.landed_rate) * 100) / 100);
+    }
+  }, [selectedTruckBatch]);
 
   useEffect(() => {
     if (!isOpen) return;
@@ -510,6 +526,12 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 <span className="text-sm text-heading/70">
                   {loadingStock || stocksForGodownLoading ? (
                     'Loading stock…'
+                  ) : selectedTruckBatch ? (
+                    <>
+                      Available:{' '}
+                      <span className="font-semibold text-brand-800">{effectiveMaxStock}</span> bags
+                      <span className="text-xs text-heading/50"> in {selectedTruckBatch.truck_number} (at ₹{Number(selectedTruckBatch.landed_rate).toFixed(0)}/bag)</span>
+                    </>
                   ) : (
                     <>
                       Available:{' '}
@@ -539,7 +561,14 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
 
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Purchase cost (₹ / bag) *</label>
-            {purchaseRates.length > 0 ? (
+            {selectedTruckBatch ? (
+              <input
+                type="text"
+                readOnly
+                className="input-field w-full bg-surface"
+                value={`₹${Number(selectedTruckBatch.landed_rate).toFixed(2)}/bag — from ${selectedTruckBatch.truck_number}`}
+              />
+            ) : purchaseRates.length > 0 ? (
               <select
                 className="input-field w-full"
                 disabled={lockFields}
@@ -567,7 +596,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 onChange={(e) => setSelectedCostRate(Number(e.target.value))}
               />
             )}
-            {selectedCostRate > 0 && (() => {
+            {selectedCostRate > 0 && !selectedTruckBatch && (() => {
               const selRate = purchaseRates.find((r) => Number(r.landed_rate) === selectedCostRate);
               return (
                 <p className="mt-1 text-xs text-heading/60">
@@ -575,6 +604,9 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 </p>
               );
             })()}
+            {selectedTruckBatch && (
+              <p className="mt-1 text-xs text-heading/60">Auto-filled from the selected truck batch.</p>
+            )}
           </div>
           <div>
             <label className="mb-1 block text-sm font-medium text-heading">Sale rate (₹ / bag) *</label>
