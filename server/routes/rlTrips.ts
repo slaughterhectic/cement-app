@@ -165,9 +165,8 @@ router.post('/', async (req, res) => {
     const tripCompany = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
     if (tripCompany !== 'acc' && tripCompany !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
-    // Non-admin past/future-date entries route through the TransportBook approval queue
-    const today = new Date().toISOString().split('T')[0];
-    if (req.user?.role !== 'admin' && date !== today) {
+    // All non-admin entries — present or past — go through the TransportBook approval queue.
+    if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)

@@ -85,9 +85,8 @@ router.post('/', async (req, res) => {
   const { date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction } = req.body;
   const dir = direction === 'pay' ? 'pay' : 'receive';
   try {
-    // Non-admin users entering a past/future date need admin approval
-    const today = new Date().toISOString().split('T')[0];
-    if (req.user?.role !== 'admin' && date !== today) {
+    // All non-admin entries — present or past — go through admin approval.
+    if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name)

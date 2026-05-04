@@ -33,9 +33,8 @@ router.post('/', async (req, res) => {
     );
     if (!owner) return res.status(400).json({ error: 'Owner not found' });
 
-    // Non-admin past/future-date entries go through admin approval
-    const today = new Date().toISOString().split('T')[0];
-    if (req.user?.role !== 'admin' && date !== today) {
+    // All non-admin entries — present or past — go through admin approval.
+    if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)

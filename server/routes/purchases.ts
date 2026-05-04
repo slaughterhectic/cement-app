@@ -43,9 +43,8 @@ router.get('/', async (req, res) => {
 router.post('/', async (req, res) => {
   const { date, supplier_id, brand_id, cement_type, bags, purchase_rate, freight_rate, godown_id, truck_number, source_location, invoice_number, remarks } = req.body;
   try {
-    // Non-admin users entering a past/future date need admin approval
-    const today = new Date().toISOString().split('T')[0];
-    if (req.user?.role !== 'admin' && date !== today) {
+    // All non-admin entries — present or past — go through admin approval.
+    if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name)

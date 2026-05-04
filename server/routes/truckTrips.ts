@@ -91,9 +91,8 @@ router.post('/', async (req, res) => {
     } = req.body;
     if (!date || !truck_id) return res.status(400).json({ error: 'date and truck_id are required' });
 
-    // Non-admin past/future-date entries route through the TruckBook approval queue
-    const today = new Date().toISOString().split('T')[0];
-    if (req.user?.role !== 'admin' && date !== today) {
+    // All non-admin entries — present or past — go through the TruckBook approval queue.
+    if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)

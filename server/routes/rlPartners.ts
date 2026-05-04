@@ -91,9 +91,8 @@ router.post('/:id/transactions', async (req: any, res) => {
     if (!type) return res.status(400).json({ error: 'Type is required' });
     if (!amount || Number(amount) <= 0) return res.status(400).json({ error: 'Amount must be positive' });
 
-    // Non-admin past/future-date entries go through admin approval
-    const today = new Date().toISOString().split('T')[0];
-    if (req.user?.role !== 'admin' && date !== today) {
+    // All non-admin entries — present or past — go through admin approval.
+    if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const payload = { ...req.body, partner_id: Number(req.params.id) };
       const pending = await getOne(
