@@ -4,6 +4,8 @@ export type LedgerPdfRow = {
   sno: string | number;
   date: string | null;
   particulars: string;
+  cement_type?: string | null;
+  destination?: string | null;
   qty: number;
   rate: number;
   debit: number;
@@ -92,6 +94,8 @@ function buildHtml(opts: LedgerPdfOptions): string {
           <td class="col-sno">${escapeHtml(r.sno)}</td>
           <td class="col-date">${r.date ? escapeHtml(formatDate(r.date)) : '—'}</td>
           <td class="col-particulars">${escapeHtml(r.particulars)}</td>
+          <td class="col-type">${r.cement_type ? escapeHtml(r.cement_type) : '—'}</td>
+          <td class="col-destination">${r.destination ? escapeHtml(r.destination) : '—'}</td>
           <td class="col-qty num">${r.qty > 0 ? escapeHtml(r.qty) : '—'}</td>
           <td class="col-rate num">${r.rate > 0 ? escapeHtml(formatINR(r.rate)) : '—'}</td>
           <td class="col-debit num">${r.debit > 0 ? escapeHtml(formatINR(r.debit)) : '—'}</td>
@@ -176,14 +180,16 @@ function buildHtml(opts: LedgerPdfOptions): string {
     }
     table.ledger td.num, table.ledger th.num { text-align: right; white-space: nowrap; }
     table.ledger th.num { text-align: right; }
-    .col-sno        { width: 5%; }
-    .col-date       { width: 9%; white-space: nowrap; }
-    .col-particulars{ width: 30%; }
-    .col-qty        { width: 7%; }
-    .col-rate       { width: 10%; }
-    .col-debit      { width: 12%; }
-    .col-credit     { width: 12%; }
-    .col-balance    { width: 15%; font-weight: 600; }
+    .col-sno        { width: 4%; }
+    .col-date       { width: 8%; white-space: nowrap; }
+    .col-particulars{ width: 22%; }
+    .col-type       { width: 8%; }
+    .col-destination{ width: 12%; }
+    .col-qty        { width: 6%; }
+    .col-rate       { width: 8%; }
+    .col-debit      { width: 10%; }
+    .col-credit     { width: 10%; }
+    .col-balance    { width: 12%; font-weight: 600; }
 
     tr.row-opening td { background: #fffbeb; font-weight: 600; }
     tr.row-even td    { background: #ffffff; }
@@ -262,6 +268,8 @@ function buildHtml(opts: LedgerPdfOptions): string {
           <th class="col-sno">S.No</th>
           <th class="col-date">Date</th>
           <th class="col-particulars">Particulars</th>
+          <th class="col-type">Type</th>
+          <th class="col-destination">Destination</th>
           <th class="col-qty num">Qty</th>
           <th class="col-rate num">Rate</th>
           <th class="col-debit num">${escapeHtml(debitLabel)}</th>
@@ -270,9 +278,9 @@ function buildHtml(opts: LedgerPdfOptions): string {
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || `<tr><td colspan="8" style="text-align:center; padding:24px; color:#6b7280;">No ledger entries.</td></tr>`}
+        ${rowsHtml || `<tr><td colspan="10" style="text-align:center; padding:24px; color:#6b7280;">No ledger entries.</td></tr>`}
         <tr class="totals-row">
-          <td colspan="5" style="text-align:right;">Totals</td>
+          <td colspan="7" style="text-align:right;">Totals</td>
           <td class="num">${escapeHtml(formatINR(totals.totalDebit))}</td>
           <td class="num">${escapeHtml(formatINR(totals.totalCredit))}</td>
           <td class="num">${escapeHtml(formatINR(totals.outstanding))}</td>

@@ -14,6 +14,8 @@ type LedgerEntry = {
   sno: number;
   date: string;
   particulars: string;
+  cement_type: string | null;
+  destination: string | null;
   qty: number;
   rate: number;
   debit: number;
@@ -39,6 +41,8 @@ export type LedgerTableRow = {
   sno: string | number;
   date: string | null;
   particulars: string;
+  cement_type: string | null;
+  destination: string | null;
   qty: number;
   rate: number;
   debit: number;
@@ -127,6 +131,8 @@ export default function PartyLedger() {
         sno: '—',
         date: null,
         particulars: `Opening Balance (${isDr ? 'Dr' : 'Cr'})`,
+        cement_type: null,
+        destination: null,
         qty: 0,
         rate: 0,
         debit: isDr ? openingBalance : 0,
@@ -142,6 +148,8 @@ export default function PartyLedger() {
         sno: e.sno,
         date: e.date,
         particulars: e.particulars,
+        cement_type: e.cement_type ?? null,
+        destination: e.destination ?? null,
         qty: Number(e.qty) || 0,
         rate: Number(e.rate) || 0,
         debit: Number(e.debit) || 0,
@@ -198,6 +206,22 @@ export default function PartyLedger() {
         },
       },
       { accessorKey: 'particulars', header: 'Particulars' },
+      {
+        accessorKey: 'cement_type',
+        header: 'Type',
+        cell: ({ getValue }) => {
+          const v = getValue() as string | null;
+          return v ? <span className="capitalize">{v}</span> : <span className="text-heading/40">—</span>;
+        },
+      },
+      {
+        accessorKey: 'destination',
+        header: 'Destination',
+        cell: ({ getValue }) => {
+          const v = getValue() as string | null;
+          return v ? v : <span className="text-heading/40">—</span>;
+        },
+      },
       {
         accessorKey: 'qty',
         header: 'Qty',
@@ -280,6 +304,8 @@ export default function PartyLedger() {
         sno: r.sno,
         date: r.date,
         particulars: r.particulars,
+        cement_type: r.cement_type,
+        destination: r.destination,
         qty: r.qty,
         rate: r.rate,
         debit: r.debit,

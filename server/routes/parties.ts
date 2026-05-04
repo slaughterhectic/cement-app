@@ -184,7 +184,8 @@ router.get('/:id/ledger', async (req, res) => {
       // Purchases = credit (they supplied goods, we owe them)
       const purchases = await getAll(`
         SELECT pu.date, cb.name as particulars, pu.bags as qty, pu.purchase_rate as rate,
-          0 as debit, pu.purchase_amount as credit, 'purchase' as entry_type, pu.id
+          0 as debit, pu.purchase_amount as credit, 'purchase' as entry_type, pu.id,
+          NULL::text as cement_type, NULL::text as destination
         FROM purchases pu
         LEFT JOIN cement_brands cb ON pu.brand_id = cb.id
         WHERE pu.supplier_id = $1
@@ -197,7 +198,8 @@ router.get('/:id/ledger', async (req, res) => {
             || CASE WHEN COALESCE(NULLIF(TRIM(s.source_truck_number), ''), '') <> '' THEN ' (' || s.source_truck_number || ')' ELSE '' END
           ) as particulars,
           s.bags as qty, s.sale_rate as rate,
-          s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
+          s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id,
+          s.cement_type, s.destination
         FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
         WHERE s.party_id = $1
       `, [party.id]);
@@ -214,7 +216,8 @@ router.get('/:id/ledger', async (req, res) => {
           0 as qty, 0 as rate,
           CASE WHEN p.direction = 'receive' THEN 0 ELSE p.amount END as debit,
           CASE WHEN p.direction = 'receive' THEN p.amount ELSE 0 END as credit,
-          'payment' as entry_type, p.id
+          'payment' as entry_type, p.id,
+          NULL::text as cement_type, NULL::text as destination
         FROM payments p WHERE p.party_id = $1
       `, [party.id]);
 
@@ -227,7 +230,8 @@ router.get('/:id/ledger', async (req, res) => {
             || CASE WHEN COALESCE(NULLIF(TRIM(s.source_truck_number), ''), '') <> '' THEN ' (' || s.source_truck_number || ')' ELSE '' END
           ) as particulars,
           s.bags as qty, s.sale_rate as rate,
-          s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
+          s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id,
+          s.cement_type, s.destination
         FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
         WHERE s.party_id = $1
       `, [party.id]);
@@ -244,7 +248,8 @@ router.get('/:id/ledger', async (req, res) => {
           0 as qty, 0 as rate,
           CASE WHEN p.direction = 'pay' THEN p.amount ELSE 0 END as debit,
           CASE WHEN p.direction = 'receive' OR p.direction IS NULL THEN p.amount ELSE 0 END as credit,
-          'payment' as entry_type, p.id
+          'payment' as entry_type, p.id,
+          NULL::text as cement_type, NULL::text as destination
         FROM payments p WHERE p.party_id = $1
       `, [party.id]);
 
@@ -255,7 +260,8 @@ router.get('/:id/ledger', async (req, res) => {
           0 as qty, 0 as rate,
           CASE WHEN pl.type='disbursement' THEN pl.amount ELSE 0 END as debit,
           CASE WHEN pl.type='repayment' THEN pl.amount ELSE 0 END as credit,
-          'party_loan' as entry_type, pl.id
+          'party_loan' as entry_type, pl.id,
+          NULL::text as cement_type, NULL::text as destination
         FROM party_loans pl WHERE pl.party_id = $1
       `, [party.id]);
 
