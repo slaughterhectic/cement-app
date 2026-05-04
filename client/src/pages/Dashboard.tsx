@@ -10,7 +10,7 @@ import { formatDate, formatINR, formatNumber } from '../lib/format';
 import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recharts';
 
 interface DashboardStats {
-  todaySales: { bags: number; amount: number };
+  monthPurchases: { bags: number; amount: number };
   monthProfit: number;
   outstanding: number;
   outstandingReceivable: number;
@@ -406,7 +406,7 @@ export default function Dashboard() {
           <>{Array.from({ length: 3 }).map((_, i) => <SkeletonCard key={i} />)}</>
         ) : (
           <>
-            <KPICard title="Today's Sales" value={formatINR(stats.todaySales.amount)} subtitle={`${formatNumber(stats.todaySales.bags)} bags sold`} icon={TrendingUp} color="sale" />
+            <KPICard title="This Month's Purchases" value={formatINR(stats.monthPurchases.amount)} subtitle={`${formatNumber(stats.monthPurchases.bags)} bags purchased`} icon={TrendingUp} color="sale" />
             <KPICard title="Net Profit" value={formatINR(stats.monthProfit)} subtitle="Stock + sales − purchases − expenses" icon={IndianRupee} color="profit" />
             <KPICard title="Stock Value" value={formatINR(stats.stockValue.value)} subtitle={`${formatNumber(stats.stockValue.bags)} bags`} icon={Package} color="purchase" />
           </>

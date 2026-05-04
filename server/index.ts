@@ -147,13 +147,8 @@ app.get('/api/dashboard/stats', async (_req, res) => {
     const today = new Date().toISOString().split('T')[0];
     const monthStart = today.substring(0, 7) + '-01';
 
-    const todaySales = await getOne(
-      `SELECT COALESCE(SUM(bags), 0) as bags, COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date = $1`,
-      [today]
-    );
-
     const monthPurchases = await getOne(
-      `SELECT COALESCE(SUM(purchase_amount), 0) as amount FROM purchases WHERE date >= $1`, [monthStart]
+      `SELECT COALESCE(SUM(bags), 0) as bags, COALESCE(SUM(purchase_amount), 0) as amount FROM purchases WHERE date >= $1`, [monthStart]
     );
     const monthSales = await getOne(
       `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date >= $1`, [monthStart]
@@ -230,7 +225,7 @@ app.get('/api/dashboard/stats', async (_req, res) => {
     `);
 
     res.json({
-      todaySales: { bags: Number(todaySales.bags), amount: Number(todaySales.amount) },
+      monthPurchases: { bags: Number(monthPurchases.bags), amount: Number(monthPurchases.amount) },
       // Net Profit = Stock Value + Total Sales - Total Purchases - Total Expenses
       // (stock value represents unsold inventory still held as asset)
       monthProfit: Number(stockCalc.value) + Number(totalSales.amount) - Number(totalPurchases.amount) - Number(totalExpenses.amount),
