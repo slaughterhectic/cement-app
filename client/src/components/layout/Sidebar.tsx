@@ -50,6 +50,7 @@ const cementNavItems = [
   { to: '/sales', label: 'Sales', icon: TrendingUp },
   { to: '/stock', label: 'Stock', icon: Package },
   { to: '/parties', label: 'Parties', icon: Users },
+  { to: '/freight-parties', label: 'Freight Parties', icon: Truck },
   { to: '/suspense', label: 'Suspense', icon: Wallet },
   { to: '/dealers', label: 'Dealers', icon: Store },
   { to: '/payments', label: 'Payments', icon: CreditCard },

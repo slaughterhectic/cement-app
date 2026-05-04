@@ -313,6 +313,33 @@ export async function initializeDatabase() {
     // Sales now track which purchase truck the bags came from, so the brand selector can
     // break stock down per truck and the party ledger can show that batch.
     await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS source_truck_number TEXT;`);
+    // Freight parties: separate ledger entity for freight on purchases. The freight portion
+    // (bags × freight_rate) lands on the freight party, not the supplier.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freight_parties (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL,
+        phone TEXT,
+        opening_balance REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS freight_party_payments (
+        id SERIAL PRIMARY KEY,
+        freight_party_id INTEGER NOT NULL REFERENCES freight_parties(id),
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'cash',
+        bank_name TEXT,
+        cash_handler TEXT,
+        remarks TEXT,
+        payment_type TEXT DEFAULT 'paid',
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`ALTER TABLE purchases ADD COLUMN IF NOT EXISTS freight_party_id INTEGER REFERENCES freight_parties(id);`);
     // Earlier "additional diesel" columns are folded into the unified trip diesel pair.
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_amount;`);
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_from_id;`);

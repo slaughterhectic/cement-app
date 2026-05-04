@@ -9,6 +9,7 @@ import Sales from './pages/Sales';
 import Stock from './pages/Stock';
 import Parties from './pages/Parties';
 import PartyLedger from './pages/PartyLedger';
+import FreightParties from './pages/FreightParties';
 import Dealers from './pages/Dealers';
 import DealerDetail from './pages/DealerDetail';
 import Payments from './pages/Payments';
@@ -127,6 +128,7 @@ export default function App() {
           <Route path="/sales" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Sales /></BookGuard>} />
           <Route path="/stock" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Stock /></BookGuard>} />
           <Route path="/parties" element={<BookGuard permission="access_cementbook" fallback="/no-access"><Parties /></BookGuard>} />
+          <Route path="/freight-parties" element={<BookGuard permission="access_cementbook" fallback="/no-access"><FreightParties /></BookGuard>} />
           <Route path="/suspense" element={<BookGuard permission="access_cementbook" fallback="/no-access"><SuspensePage /></BookGuard>} />
           <Route path="/bank-transfers" element={<BookGuard permission="access_cementbook" fallback="/no-access"><BankTransfers /></BookGuard>} />
           <Route path="/parties/:id" element={<BookGuard permission="access_cementbook" fallback="/no-access"><PartyLedger /></BookGuard>} />

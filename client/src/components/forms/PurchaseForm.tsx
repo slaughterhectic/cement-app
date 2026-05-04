@@ -15,6 +15,10 @@ const schema = z.object({
   bags: z.coerce.number().int().positive('Bags must be at least 1'),
   purchase_rate: z.coerce.number().positive('Rate must be positive'),
   freight_rate: z.coerce.number().min(0).optional(),
+  freight_party_id: z.preprocess(
+    (v) => (v === '' || v == null ? undefined : v),
+    z.coerce.number().int().positive().optional()
+  ),
   godown_id: z.coerce.number().int().positive('Godown is required'),
   truck_number: z.string().min(1, 'Truck number is required'),
   source_location: z.string().optional(),
@@ -39,6 +43,7 @@ export interface PurchaseFormProps {
 type Brand = { id: number; name: string; type?: string };
 type Godown = { id: number; name: string };
 type Party = { id: number; name: string; type?: string };
+type FreightParty = { id: number; name: string };
 
 export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseFormProps) {
   const addToast = useToastStore((s) => s.addToast);
@@ -48,6 +53,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
   const [parties, setParties] = useState<Party[]>([]);
   const [brands, setBrands] = useState<Brand[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [freightParties, setFreightParties] = useState<FreightParty[]>([]);
   const [supplierQuery, setSupplierQuery] = useState('');
   const [supplierMenuOpen, setSupplierMenuOpen] = useState(false);
   const supplierWrapRef = useRef<HTMLDivElement>(null);
@@ -62,6 +68,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
       bags: 1,
       purchase_rate: 0,
       freight_rate: 0,
+      freight_party_id: undefined as number | undefined,
       godown_id: 0,
       truck_number: '',
       source_location: '',
@@ -112,12 +119,13 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    Promise.all([api.parties.list(), api.brands.list(), api.godowns.list()])
-      .then(([pt, br, gd]) => {
+    Promise.all([api.parties.list(), api.brands.list(), api.godowns.list(), api.freightParties.list()])
+      .then(([pt, br, gd, fp]) => {
         if (!cancelled) {
           setParties(pt as Party[]);
           setBrands(br as Brand[]);
           setGodowns(gd as Godown[]);
+          setFreightParties(fp as FreightParty[]);
         }
       })
       .catch(() => {
@@ -139,6 +147,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         bags: editData.bags,
         purchase_rate: editData.purchase_rate,
         freight_rate: (editData as any).freight_rate ?? 0,
+        freight_party_id: (editData as any).freight_party_id ?? undefined,
         godown_id: editData.godown_id ?? 0,
         truck_number: editData.truck_number ?? '',
         source_location: editData.source_location ?? '',
@@ -186,6 +195,7 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
         bags: values.bags,
         purchase_rate: values.purchase_rate,
         freight_rate: values.freight_rate || 0,
+        freight_party_id: values.freight_party_id ?? null,
         godown_id: values.godown_id,
         truck_number: values.truck_number?.trim() || null,
         source_location: values.source_location?.trim() || null,
@@ -325,6 +335,31 @@ export function PurchaseForm({ isOpen, onClose, onSuccess, editData }: PurchaseF
               {...register('freight_rate')}
             />
             <p className="mt-1 text-xs text-heading/60">Optional. Transport cost per bag.</p>
+          </div>
+          <div className="sm:col-span-2">
+            <label className="mb-1 block text-sm font-medium text-heading">Freight party</label>
+            <Controller
+              name="freight_party_id"
+              control={control}
+              render={({ field }) => (
+                <select
+                  className="input-field w-full"
+                  value={field.value ?? ''}
+                  onChange={(e) => {
+                    const v = e.target.value;
+                    field.onChange(v === '' ? undefined : Number(v));
+                  }}
+                >
+                  <option value="">— None — freight stays unallocated —</option>
+                  {freightParties.map((fp) => (
+                    <option key={fp.id} value={fp.id}>{fp.name}</option>
+                  ))}
+                </select>
+              )}
+            />
+            <p className="mt-1 text-xs text-heading/60">
+              Freight amount lands on the freight party's ledger (not the supplier). Add a freight party in the Freight Parties tab. Editable later.
+            </p>
           </div>
           {/* Amount Breakdown */}
           <div className="sm:col-span-2 rounded-lg border border-brand-200 bg-brand-50 px-4 py-3">
