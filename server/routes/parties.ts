@@ -192,7 +192,11 @@ router.get('/:id/ledger', async (req, res) => {
 
       // Sales = debit (we sold to them, they owe us)
       const sales = await getAll(`
-        SELECT s.date, cb.name as particulars, s.bags as qty, s.sale_rate as rate,
+        SELECT s.date,
+          (cb.name
+            || CASE WHEN COALESCE(NULLIF(TRIM(s.source_truck_number), ''), '') <> '' THEN ' (' || s.source_truck_number || ')' ELSE '' END
+          ) as particulars,
+          s.bags as qty, s.sale_rate as rate,
           s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
         FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
         WHERE s.party_id = $1
@@ -218,7 +222,11 @@ router.get('/:id/ledger', async (req, res) => {
     } else {
       // Sales = debit (customer owes us)
       const sales = await getAll(`
-        SELECT s.date, cb.name as particulars, s.bags as qty, s.sale_rate as rate,
+        SELECT s.date,
+          (cb.name
+            || CASE WHEN COALESCE(NULLIF(TRIM(s.source_truck_number), ''), '') <> '' THEN ' (' || s.source_truck_number || ')' ELSE '' END
+          ) as particulars,
+          s.bags as qty, s.sale_rate as rate,
           s.sale_amount as debit, 0 as credit, 'sale' as entry_type, s.id
         FROM sales s JOIN cement_brands cb ON s.brand_id = cb.id
         WHERE s.party_id = $1

@@ -18,6 +18,75 @@ router.get('/', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
+// GET /api/brands/truck-batches — per (brand, source truck) breakdown for the SaleForm.
+// available_bags = purchased on that truck − sales already attributed to that truck (direct)
+//                  − unattributed sales spread across trucks FIFO (oldest purchase date first)
+router.get('/truck-batches', async (_req, res) => {
+  try {
+    const rows = await getAll(`
+      WITH per_truck AS (
+        SELECT brand_id, COALESCE(NULLIF(TRIM(truck_number), ''), '—') AS truck_number,
+               SUM(bags)::int AS purchased_bags,
+               SUM(bags * (purchase_rate + COALESCE(freight_rate,0)))::float / NULLIF(SUM(bags),0) AS landed_rate,
+               MIN(date) AS first_date,
+               MAX(date) AS last_date
+        FROM purchases
+        GROUP BY brand_id, COALESCE(NULLIF(TRIM(truck_number), ''), '—')
+      ),
+      direct_sold AS (
+        SELECT brand_id, COALESCE(NULLIF(TRIM(source_truck_number), ''), '—') AS truck_number,
+               SUM(bags)::int AS bags_sold
+        FROM sales
+        WHERE source_truck_number IS NOT NULL AND TRIM(source_truck_number) <> ''
+        GROUP BY brand_id, COALESCE(NULLIF(TRIM(source_truck_number), ''), '—')
+      ),
+      unattr_per_brand AS (
+        SELECT brand_id, COALESCE(SUM(bags), 0)::int AS total_unattr
+        FROM sales
+        WHERE source_truck_number IS NULL OR TRIM(source_truck_number) = ''
+        GROUP BY brand_id
+      ),
+      after_direct AS (
+        SELECT pt.*, GREATEST(0, pt.purchased_bags - COALESCE(ds.bags_sold, 0)) AS remaining_after_direct
+        FROM per_truck pt
+        LEFT JOIN direct_sold ds USING (brand_id, truck_number)
+      ),
+      fifo AS (
+        SELECT ad.*,
+          COALESCE(SUM(ad.remaining_after_direct) OVER (
+            PARTITION BY ad.brand_id
+            ORDER BY ad.first_date, ad.truck_number
+            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+          ), 0) AS cum_start
+        FROM after_direct ad
+      )
+      SELECT
+        f.brand_id, f.truck_number, f.purchased_bags, f.landed_rate, f.last_date,
+        GREATEST(0,
+          f.remaining_after_direct - GREATEST(0,
+            LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.remaining_after_direct)
+          )
+        )::int AS available_bags
+      FROM fifo f
+      LEFT JOIN unattr_per_brand u ON u.brand_id = f.brand_id
+      WHERE GREATEST(0,
+        f.remaining_after_direct - GREATEST(0,
+          LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.remaining_after_direct)
+        )
+      ) > 0
+      ORDER BY f.brand_id, f.first_date, f.truck_number
+    `);
+    res.json(rows.map((r: any) => ({
+      brand_id: Number(r.brand_id),
+      truck_number: r.truck_number,
+      purchased_bags: Number(r.purchased_bags),
+      landed_rate: Number(r.landed_rate),
+      available_bags: Number(r.available_bags),
+      last_date: r.last_date,
+    })));
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
 // GET /api/brands/all — all brands including inactive
 router.get('/all', async (_req, res) => {
   try {

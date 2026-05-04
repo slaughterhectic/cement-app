@@ -88,6 +88,7 @@ export async function initializeDatabase() {
         billed_rate REAL,
         billed_amount REAL,
         truck_number TEXT,
+        source_truck_number TEXT,
         godown_id INTEGER REFERENCES godowns(id),
         remarks TEXT,
         created_at TIMESTAMPTZ DEFAULT NOW()
@@ -309,6 +310,9 @@ export async function initializeDatabase() {
     // GST: transporters can be GST-registered. When they are, the trip's freight gets +18% on top.
     await client.query(`ALTER TABLE transporters ADD COLUMN IF NOT EXISTS has_gst BOOLEAN DEFAULT FALSE;`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS gst_amount REAL DEFAULT 0;`);
+    // Sales now track which purchase truck the bags came from, so the brand selector can
+    // break stock down per truck and the party ledger can show that batch.
+    await client.query(`ALTER TABLE sales ADD COLUMN IF NOT EXISTS source_truck_number TEXT;`);
     // Earlier "additional diesel" columns are folded into the unified trip diesel pair.
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_amount;`);
     await client.query(`ALTER TABLE truck_trips DROP COLUMN IF EXISTS additional_diesel_from_id;`);

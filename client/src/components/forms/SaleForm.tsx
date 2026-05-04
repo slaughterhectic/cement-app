@@ -26,6 +26,7 @@ const schema = z.object({
   destination: z.string().optional(),
   godown_id: z.number().int().positive().optional(),
   truck_number: z.string().optional(),
+  source_truck_number: z.string().optional(),
   invoice_number: z.string().optional(),
   billed_party: z.string().optional(),
   billed_quantity: optionalInt,
@@ -53,6 +54,7 @@ export interface SaleFormProps {
 type Brand = { id: number; name: string; type?: string; stock: number };
 type Party = { id: number; name: string; type?: string };
 type Godown = { id: number; name: string };
+type TruckBatch = { brand_id: number; truck_number: string; purchased_bags: number; landed_rate: number; available_bags: number; last_date: string };
 
 export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId }: SaleFormProps) {
   const addToast = useToastStore((s) => s.addToast);
@@ -61,6 +63,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   const [parties, setParties] = useState<Party[]>([]);
   const [allBrands, setAllBrands] = useState<Brand[]>([]);
   const [godowns, setGodowns] = useState<Godown[]>([]);
+  const [truckBatches, setTruckBatches] = useState<TruckBatch[]>([]);
   const [partyQuery, setPartyQuery] = useState('');
   const [partyMenuOpen, setPartyMenuOpen] = useState(false);
   const partyWrapRef = useRef<HTMLDivElement>(null);
@@ -84,6 +87,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
       destination: '',
       godown_id: undefined as number | undefined,
       truck_number: '',
+      source_truck_number: '',
       invoice_number: '',
       billed_party: '',
       billed_quantity: undefined as number | undefined,
@@ -188,12 +192,13 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    Promise.all([api.parties.list(), api.brands.list(), api.godowns.list()])
-      .then(([pt, br, gd]) => {
+    Promise.all([api.parties.list(), api.brands.list(), api.godowns.list(), api.brands.truckBatches()])
+      .then(([pt, br, gd, tb]) => {
         if (!cancelled) {
           setParties(pt as Party[]);
           setAllBrands(br as Brand[]);
           setGodowns(gd as Godown[]);
+          setTruckBatches(tb as TruckBatch[]);
         }
       })
       .catch(() => {
@@ -267,6 +272,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
         destination: editData.destination ?? '',
         godown_id: editData.godown_id ?? undefined,
         truck_number: editData.truck_number ?? '',
+        source_truck_number: (editData as any).source_truck_number ?? '',
         invoice_number: editData.invoice_number ?? '',
         billed_party: editData.billed_party ?? '',
         billed_quantity: editData.billed_quantity ?? undefined,
@@ -315,6 +321,12 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
     return allBrands.filter((b) => (stockByBrand[b.id] ?? 0) > 0);
   }, [allBrands, godownId, stockByBrand, stocksForGodownLoading]);
 
+  // Per-truck batches for the selected brand. Each option shows "TRUCK# — N bags @ ₹rate".
+  const sourceTruckOptions = useMemo(() => {
+    if (!brandId) return [];
+    return truckBatches.filter((tb) => tb.brand_id === Number(brandId));
+  }, [truckBatches, brandId]);
+
   const stockZeroMessage =
     brandId && !loadingStock && !stocksForGodownLoading && effectiveMaxStock <= 0
       ? `No stock available for ${selectedBrandName}. Please record a purchase first.`
@@ -360,6 +372,7 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
         destination: values.destination?.trim() || null,
         godown_id: values.godown_id ?? null,
         truck_number: values.truck_number?.trim() || null,
+        source_truck_number: values.source_truck_number?.trim() || null,
         invoice_number: values.invoice_number?.trim() || null,
         billed_party: values.billed_party?.trim() || null,
         billed_quantity: values.billed_quantity ?? null,
@@ -457,15 +470,32 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                 {stocksForGodownLoading ? 'Loading brands…' : 'Select brand'}
               </option>
               {brandOptions.map((b) => {
+                const batches = truckBatches.filter((tb) => tb.brand_id === b.id);
                 const qty = godownId ? stockByBrand[b.id] ?? 0 : b.stock;
+                const breakdown = batches.length > 0
+                  ? batches.map((tb) => `${tb.available_bags} in ${tb.truck_number}`).join(', ')
+                  : `${qty} bags`;
                 return (
                   <option key={b.id} value={b.id}>
-                    {b.name} ({qty} bags)
+                    {b.name} — {breakdown}
                   </option>
                 );
               })}
             </select>
             {errors.brand_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.brand_id.message}</p>}
+          </div>
+
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Source truck (purchase batch)</label>
+            <select className="input-field w-full" disabled={lockFields || !brandId} {...register('source_truck_number')}>
+              <option value="">All / unspecified</option>
+              {sourceTruckOptions.map((tb) => (
+                <option key={tb.truck_number} value={tb.truck_number}>
+                  {tb.truck_number} — {tb.available_bags} bags @ ₹{Number(tb.landed_rate).toFixed(0)}/bag
+                </option>
+              ))}
+            </select>
+            <p className="mt-1 text-[11px] text-heading/60">Pick the truck this stock came in on — shown on the party ledger.</p>
           </div>
 
           <div>

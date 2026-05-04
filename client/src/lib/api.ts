@@ -226,6 +226,7 @@ export const api = {
   brands: {
     list: () => request<any[]>('/brands'),
     all: () => request<any[]>('/brands/all'),
+    truckBatches: () => request<{ brand_id: number; truck_number: string; purchased_bags: number; landed_rate: number; available_bags: number; last_date: string }[]>('/brands/truck-batches'),
     create: (data: { name: string; type: string; manufacturer: string }) =>
       request<any>('/brands', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) =>
