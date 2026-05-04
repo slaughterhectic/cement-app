@@ -145,7 +145,7 @@ export default function App() {
           <Route path="/import" element={<BookGuard permission="access_cementbook" fallback="/no-access"><ImportPage /></BookGuard>} />
           {/* TruckBook routes — require access_truckbook */}
           <Route path="/truckbook" element={<BookGuard permission="access_truckbook" fallback="/no-access"><BookGuard permission="view_truckbook_dashboard" fallback="/truckbook/trucks"><TruckDashboard /></BookGuard></BookGuard>} />
-          <Route path="/truckbook/trucks" element={<BookGuard permission="access_truckbook" fallback="/no-access"><Trucks /></BookGuard>} />
+          <Route path="/truckbook/trucks" element={<BookGuard permission="access_truckbook" fallback="/no-access"><BookGuard permission="view_truckbook_trucks" fallback="/truckbook/trips"><Trucks /></BookGuard></BookGuard>} />
           <Route path="/truckbook/trips" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripLog /></BookGuard>} />
           <Route path="/truckbook/trip-expenses" element={<BookGuard permission="access_truckbook" fallback="/no-access"><TripExpenses /></BookGuard>} />
           <Route path="/truckbook/drivers" element={<BookGuard permission="access_truckbook" fallback="/no-access"><DriverLedger /></BookGuard>} />

@@ -10,7 +10,9 @@ const router = Router();
 
 const ALL_PERMISSIONS = [
   'access_cementbook', 'access_truckbook', 'access_transportbook',
-  'view_dashboard', 'view_truckbook_dashboard', 'view_transportbook_dashboard', 'view_capital', 'view_finance',
+  'view_dashboard', 'view_truckbook_dashboard', 'view_transportbook_dashboard',
+  'view_truckbook_trucks',
+  'view_capital', 'view_finance',
   'delete_purchases', 'delete_sales', 'delete_payments', 'delete_expenses',
   'delete_imprest', 'delete_capital_banks', 'delete_loans',
   'manage_transport_rates',

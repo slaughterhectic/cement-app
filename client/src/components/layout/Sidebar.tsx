@@ -75,7 +75,7 @@ const financeNavItems = [
 
 const truckNavItems = [
   { to: '/truckbook', label: 'Dashboard', icon: LayoutDashboard, permission: 'view_truckbook_dashboard' },
-  { to: '/truckbook/trucks', label: 'Trucks', icon: Truck },
+  { to: '/truckbook/trucks', label: 'Trucks', icon: Truck, permission: 'view_truckbook_trucks' },
   { to: '/truckbook/trips', label: 'Trip Log', icon: FileText },
   { to: '/truckbook/trip-expenses', label: 'Trip Expenses', icon: Receipt },
   { to: '/truckbook/drivers', label: 'Drivers', icon: MapPin },

@@ -30,8 +30,10 @@ export default function Login() {
       } else if (permissions.includes('access_cementbook')) {
         navigate('/purchases');
       } else if (permissions.includes('access_truckbook')) {
-        // Go to trucks list — dashboard requires view_truckbook_dashboard separately
-        navigate(permissions.includes('view_truckbook_dashboard') ? '/truckbook' : '/truckbook/trucks');
+        // Dashboard / Trucks each require their own grant; otherwise fall back to Trip Log.
+        if (permissions.includes('view_truckbook_dashboard')) navigate('/truckbook');
+        else if (permissions.includes('view_truckbook_trucks')) navigate('/truckbook/trucks');
+        else navigate('/truckbook/trips');
       } else if (permissions.includes('access_transportbook')) {
         navigate('/transportbook');
       } else {
