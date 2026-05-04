@@ -5,7 +5,8 @@ import { formatINR, formatDate } from '../lib/format';
 import { DataTable, type ColumnDef } from '../components/tables/DataTable';
 import Modal from '../components/ui/Modal';
 import { useToastStore, useAuthStore } from '../lib/store';
-import { ArrowLeft, Plus, CreditCard, Trash2 } from 'lucide-react';
+import { ArrowLeft, Plus, CreditCard, Trash2, FileDown } from 'lucide-react';
+import { openLedgerPdf } from '../lib/ledgerPdf';
 
 type LedgerEntry = {
   source_id?: number;
@@ -314,6 +315,36 @@ export default function FreightPartyLedger() {
   const fp = data?.freight_party;
   const outstanding = Number(data?.outstanding) || 0;
 
+  const handleDownloadPdf = useCallback(() => {
+    if (!fp || !data) return;
+    const ok = openLedgerPdf({
+      title: 'Freight Ledger Statement',
+      partyName: fp.name,
+      partyType: 'Freight party',
+      partyPhone: fp.phone,
+      isSupplier: true,
+      rows: tableRows.map((r) => ({
+        sno: r.sno,
+        date: r.date,
+        particulars: r.particulars,
+        qty: r.qty,
+        rate: r.rate,
+        debit: r.debit,
+        credit: r.credit,
+        balance: r.balance,
+      })),
+      totals: {
+        totalDebit: data.totalFreight,
+        totalCredit: data.totalPaid + data.totalReceived,
+        outstanding,
+      },
+      debitLabel: 'Freight (Dr)',
+      creditLabel: 'Paid / Received (Cr)',
+      balanceLabel: 'Balance (We Owe)',
+    });
+    if (!ok) addToast('Please allow popups to download the ledger PDF', 'error');
+  }, [fp, data, tableRows, outstanding, addToast]);
+
   return (
     <div className="space-y-6">
       <Link
@@ -365,6 +396,14 @@ export default function FreightPartyLedger() {
               >
                 <CreditCard className="h-4 w-4" />
                 Record Payment
+              </button>
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                className="inline-flex items-center gap-2 rounded-lg border border-card-border bg-card px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface"
+              >
+                <FileDown className="h-4 w-4" />
+                Download PDF
               </button>
             </div>
           </>

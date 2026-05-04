@@ -236,7 +236,7 @@ function buildHtml(opts: LedgerPdfOptions): string {
     <div class="brand-bar">
       <div>
         <div class="brand-name">armtech</div>
-        <div class="brand-subtitle">Business ledger &amp; account statement</div>
+        <div class="brand-subtitle">Innovation &amp; excellence</div>
       </div>
       <div class="doc-meta">
         <div class="doc-title">${escapeHtml(title)}</div>
