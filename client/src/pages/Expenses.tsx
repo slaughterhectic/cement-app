@@ -43,6 +43,19 @@ function categoryBadge(category: string | null) {
   );
 }
 
+function currentMonth(): string {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+function monthLabel(ym: string): string {
+  if (!ym) return '';
+  const [y, m] = ym.split('-').map(Number);
+  if (!y || !m) return ym;
+  const d = new Date(y, m - 1, 1);
+  return d.toLocaleDateString('en-IN', { month: 'long', year: 'numeric' });
+}
+
 export default function Expenses() {
   const addToast = useToastStore((s) => s.addToast);
   const hasPermission = useAuthStore((s) => s.hasPermission);
@@ -50,6 +63,7 @@ export default function Expenses() {
   const [monthTotal, setMonthTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [monthFilter, setMonthFilter] = useState<string>(currentMonth());
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -69,6 +83,36 @@ export default function Expenses() {
   useEffect(() => {
     load();
   }, [load]);
+
+  // Rows for the picked month + category breakdown.
+  const monthRows = useMemo(
+    () => (monthFilter ? rows.filter((r) => String(r.date).startsWith(monthFilter)) : rows),
+    [rows, monthFilter]
+  );
+  const monthRowsTotal = useMemo(
+    () => monthRows.reduce((s, r) => s + (Number(r.amount) || 0), 0),
+    [monthRows]
+  );
+  const categoryBreakdown = useMemo(() => {
+    const m = new Map<string, { total: number; count: number }>();
+    for (const r of monthRows) {
+      const key = (r.category && r.category.trim()) || 'Uncategorised';
+      const cur = m.get(key) || { total: 0, count: 0 };
+      cur.total += Number(r.amount) || 0;
+      cur.count += 1;
+      m.set(key, cur);
+    }
+    return Array.from(m.entries())
+      .map(([category, { total, count }]) => ({ category, total, count }))
+      .sort((a, b) => b.total - a.total);
+  }, [monthRows]);
+
+  // Handy "previous month" shortcut for the filter row.
+  const prevMonth = useMemo(() => {
+    const d = new Date();
+    d.setMonth(d.getMonth() - 1);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+  }, []);
 
   const handleDelete = useCallback(
     (row: ExpenseRow) => {
@@ -154,13 +198,76 @@ export default function Expenses() {
         </button>
       </div>
 
+      {/* Month filter + breakdown */}
+      <div className="card flex flex-col gap-4 p-4">
+        <div className="flex flex-wrap items-center gap-3">
+          <label className="text-sm font-medium text-heading/70">Month:</label>
+          <input
+            type="month"
+            className="input-field py-1.5 text-sm"
+            value={monthFilter}
+            onChange={(e) => setMonthFilter(e.target.value)}
+          />
+          <button
+            type="button"
+            onClick={() => setMonthFilter(currentMonth())}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              monthFilter === currentMonth() ? 'bg-brand-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'
+            }`}
+          >
+            This month
+          </button>
+          <button
+            type="button"
+            onClick={() => setMonthFilter(prevMonth)}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              monthFilter === prevMonth ? 'bg-brand-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'
+            }`}
+          >
+            Previous month
+          </button>
+          <button
+            type="button"
+            onClick={() => setMonthFilter('')}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${
+              !monthFilter ? 'bg-brand-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'
+            }`}
+          >
+            All time
+          </button>
+          <span className="ml-auto text-sm text-heading/70">
+            {monthFilter ? `${monthLabel(monthFilter)} total: ` : 'All-time total: '}
+            <span className="font-semibold text-heading">{formatINR(monthRowsTotal)}</span>
+            <span className="text-xs text-heading/50"> · {monthRows.length} rows</span>
+          </span>
+        </div>
+
+        {categoryBreakdown.length > 0 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-heading/60 mb-2">Category breakdown</p>
+            <div className="flex flex-wrap gap-2">
+              {categoryBreakdown.map((c) => {
+                const pct = monthRowsTotal > 0 ? (c.total / monthRowsTotal) * 100 : 0;
+                return (
+                  <div key={c.category} className="rounded-lg border border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30 px-3 py-2 text-xs">
+                    <p className="font-medium text-amber-900 dark:text-amber-100">{c.category}</p>
+                    <p className="mt-0.5 font-semibold text-heading">{formatINR(c.total)}</p>
+                    <p className="text-[11px] text-heading/60">{c.count} entries · {pct.toFixed(1)}%</p>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+      </div>
+
       <DataTable<ExpenseRow>
-        data={rows}
+        data={monthRows}
         columns={columns}
         isLoading={loading}
-        emptyMessage="No expenses yet."
+        emptyMessage={monthFilter ? `No expenses in ${monthLabel(monthFilter)}.` : 'No expenses yet.'}
         emptyAction={{ label: 'Add Expense', onClick: () => setModalOpen(true) }}
-        exportFileName="expenses"
+        exportFileName={monthFilter ? `expenses_${monthFilter}` : 'expenses'}
         canDelete={hasPermission('delete_expenses')}
         canDownload={hasPermission('download')}
       />
