@@ -790,6 +790,21 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_status TEXT DEFAULT 'not_claimed'`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_period TEXT`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS compliance_remarks TEXT`);
+    // Per-invoice payment receipts so partial payments accumulate over time.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_invoice_payments (
+        id SERIAL PRIMARY KEY,
+        invoice_id INTEGER NOT NULL REFERENCES rl_invoices(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'bank',
+        bank_name TEXT,
+        reference TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_invoice_payments_inv ON rl_invoice_payments (invoice_id, date);`);
     // Bifurcate invoice amount into base + GST and add a Misc line for one-off charges.
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS basic_amount REAL`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gst_amount REAL`);

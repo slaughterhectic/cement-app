@@ -303,6 +303,74 @@ router.patch('/:id/compliance', async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 
+// Helper: rebuild rl_invoices.received_amount + payment_receive_date + status from
+// the per-invoice payment ledger. Called whenever a payment is added or deleted.
+async function recomputeInvoiceFromPayments(invoiceId: number) {
+  const tot = await getOne(
+    `SELECT COALESCE(SUM(amount),0)::float AS total, MAX(date) AS last_date
+     FROM rl_invoice_payments WHERE invoice_id=$1`,
+    [invoiceId]
+  );
+  const inv = await getOne('SELECT invoice_amount FROM rl_invoices WHERE id=$1', [invoiceId]);
+  const invAmt = Number(inv?.invoice_amount) || 0;
+  const recAmt = Number(tot?.total) || 0;
+  let status: 'pending' | 'partial' | 'done' = 'pending';
+  if (invAmt > 0 && recAmt >= invAmt * 0.98) status = 'done';
+  else if (recAmt > 0) status = 'partial';
+  await query(
+    `UPDATE rl_invoices SET received_amount=$1, payment_receive_date=$2, status=$3 WHERE id=$4`,
+    [recAmt, tot?.last_date || null, status, invoiceId]
+  );
+}
+
+// GET /rl/invoices/:id/payments
+router.get('/:id/payments', async (req, res) => {
+  try {
+    const rows = await getAll(
+      `SELECT * FROM rl_invoice_payments WHERE invoice_id=$1 ORDER BY date ASC, id ASC`,
+      [req.params.id]
+    );
+    res.json(rows);
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
+// POST /rl/invoices/:id/payments — add a payment receipt
+router.post('/:id/payments', async (req, res) => {
+  try {
+    const { date, amount, mode, bank_name, reference, remarks } = req.body;
+    if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
+
+    if (req.user?.role !== 'admin') {
+      const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
+      const payload = { ...req.body, invoice_id: Number(req.params.id) };
+      const pending = await getOne(
+        `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)
+         VALUES ('rl_invoice_payment', $1::jsonb, $2, $3, 'transportbook') RETURNING id`,
+        [JSON.stringify(payload), req.user!.id, user?.display_name || req.user!.username]
+      );
+      return res.status(202).json({ pending: true, pending_id: pending.id, message: 'Entry sent for admin approval' });
+    }
+
+    const m = mode === 'cash' ? 'cash' : 'bank';
+    const row = await getOne(
+      `INSERT INTO rl_invoice_payments (invoice_id, date, amount, mode, bank_name, reference, remarks)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+      [req.params.id, date, Number(amount), m, m === 'bank' ? (bank_name || null) : null, reference?.trim() || null, remarks?.trim() || null]
+    );
+    await recomputeInvoiceFromPayments(Number(req.params.id));
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
+});
+
+router.delete('/:id/payments/:pid', async (req, res) => {
+  try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    await query('DELETE FROM rl_invoice_payments WHERE id=$1 AND invoice_id=$2', [req.params.pid, req.params.id]);
+    await recomputeInvoiceFromPayments(Number(req.params.id));
+    res.json({ success: true });
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
+});
+
 // DELETE /rl/invoices/:id
 router.delete('/:id', async (req, res) => {
   try {

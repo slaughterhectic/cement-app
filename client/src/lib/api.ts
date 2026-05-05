@@ -398,6 +398,8 @@ export const api = {
     update: (id: number, data: any) => request<any>(`/rl/trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     setReceived: (id: number, received: boolean) =>
       request<any>(`/rl/trips/${id}/received`, { method: 'PATCH', body: JSON.stringify({ received }) }),
+    monthlyGrowth: (months: number = 12) =>
+      request<Array<{ month: string; trips: number; acc_amount: number; commission: number; bilty: number; qty: number }>>(`/rl/trips/monthly-growth?months=${months}`),
     delete: (id: number) => request<any>(`/rl/trips/${id}`, { method: 'DELETE' }),
     ewayAlerts: () => request<{ atRisk: any[]; counts: { expired: number; risk: number; warning: number; ok: number } }>('/rl/trips/eway-alerts'),
   },
@@ -419,6 +421,11 @@ export const api = {
     },
     patchCompliance: (id: number, data: any) =>
       request<any>(`/rl/invoices/${id}/compliance`, { method: 'PATCH', body: JSON.stringify(data) }),
+    payments: (id: number) => request<Array<{ id: number; invoice_id: number; date: string; amount: number; mode: string; bank_name: string | null; reference: string | null; remarks: string | null }>>(`/rl/invoices/${id}/payments`),
+    addPayment: (id: number, data: { date: string; amount: number; mode?: 'cash' | 'bank'; bank_name?: string | null; reference?: string | null; remarks?: string | null }) =>
+      request<any>(`/rl/invoices/${id}/payments`, { method: 'POST', body: JSON.stringify(data) }),
+    deletePayment: (id: number, pid: number) =>
+      request<any>(`/rl/invoices/${id}/payments/${pid}`, { method: 'DELETE' }),
   },
   rlDieselParties: {
     list: () => request<any[]>('/rl/diesel-parties'),

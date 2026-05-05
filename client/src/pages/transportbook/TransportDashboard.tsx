@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
+import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Truck, FileText, IndianRupee, Users, TrendingUp, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
 import { Link, useNavigate } from 'react-router-dom';
 import { api } from '../../lib/api';
@@ -88,6 +89,7 @@ export default function TransportDashboard() {
   const [eway, setEway] = useState<EwayData | null>(null);
   const [compliance, setCompliance] = useState<ComplianceSummary | null>(null);
   const [bankSummary, setBankSummary] = useState<{ closing: number; credits: number; debits: number; opening: number; active_banks: number } | null>(null);
+  const [growth, setGrowth] = useState<Array<{ month: string; trips: number; acc_amount: number; commission: number; bilty: number; qty: number }>>([]);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -112,6 +114,8 @@ export default function TransportDashboard() {
       ]);
       // TransportBook-isolated bank closing — independent of CementBook/Finance.
       try { setBankSummary(await api.rlBanks.summary()); } catch (_) { setBankSummary(null); }
+      // 12-month growth — best-effort.
+      try { setGrowth(await api.rlTrips.monthlyGrowth(12)); } catch (_) { setGrowth([]); }
 
       // "Pending Invoice Amount" combines the receivable that's already invoiced but unpaid
       // with the trip freight that hasn't been billed yet — both are money ACC/JK still owe us.
@@ -238,6 +242,44 @@ export default function TransportDashboard() {
             </p>
           </div>
           <Link to="/transportbook/bank" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">View bank statement →</Link>
+        </div>
+      )}
+
+      {/* Month-wise growth (last 12 months) */}
+      {growth.length > 0 && (
+        <div className="card p-0 overflow-hidden">
+          <div className="border-b border-card-border px-5 py-4 flex items-center justify-between">
+            <h2 className="font-semibold text-heading">Month-wise growth · last 12 months</h2>
+            <span className="text-xs text-heading/60">Trips count + ACC freight + Commission</span>
+          </div>
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 p-4">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2">Trips per month</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <BarChart data={growth} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="trips" name="Trips" fill="#6366f1" radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400 mb-2">ACC freight + Commission earned (₹)</p>
+              <ResponsiveContainer width="100%" height={220}>
+                <LineChart data={growth} margin={{ top: 8, right: 8, left: 0, bottom: 0 }}>
+                  <CartesianGrid strokeDasharray="3 3" opacity={0.2} />
+                  <XAxis dataKey="month" tick={{ fontSize: 11 }} />
+                  <YAxis tick={{ fontSize: 11 }} tickFormatter={(v) => `₹${(v / 1000).toFixed(0)}K`} />
+                  <Tooltip formatter={(v: any) => formatINR(Number(v))} />
+                  <Legend wrapperStyle={{ fontSize: 11 }} />
+                  <Line type="monotone" dataKey="acc_amount" name="ACC Freight" stroke="#6366f1" strokeWidth={2} dot={{ r: 3 }} />
+                  <Line type="monotone" dataKey="commission" name="Commission" stroke="#10b981" strokeWidth={2} dot={{ r: 3 }} />
+                </LineChart>
+              </ResponsiveContainer>
+            </div>
+          </div>
         </div>
       )}
 

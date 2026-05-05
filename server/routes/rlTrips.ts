@@ -124,6 +124,39 @@ router.get('/', async (req, res) => {
 });
 
 // GET /rl/trips/eway-alerts — trips with at-risk E-Way Bills (not delivered)
+// GET /rl/trips/monthly-growth — last N months (default 12) of trips count and ACC amount
+router.get('/monthly-growth', async (req, res) => {
+  try {
+    const monthsParam = Number((req.query as any).months);
+    const months = Number.isFinite(monthsParam) && monthsParam > 0 && monthsParam <= 36 ? Math.floor(monthsParam) : 12;
+    const rows = await getAll(`
+      WITH months AS (
+        SELECT to_char((date_trunc('month', NOW()) - (n || ' months')::interval)::date, 'YYYY-MM') AS ym
+        FROM generate_series(0, $1 - 1) AS n
+      )
+      SELECT m.ym AS month,
+        COALESCE(t.trips, 0)::int AS trips,
+        COALESCE(t.acc_amount, 0)::float AS acc_amount,
+        COALESCE(t.commission, 0)::float AS commission,
+        COALESCE(t.bilty, 0)::float AS bilty,
+        COALESCE(t.qty, 0)::float AS qty
+      FROM months m
+      LEFT JOIN (
+        SELECT to_char(date::date, 'YYYY-MM') AS ym,
+               COUNT(*) AS trips,
+               SUM(qty * acc_freight_rate) AS acc_amount,
+               SUM(qty * acc_freight_rate * commission_pct / 100) AS commission,
+               SUM(qty * COALESCE((SELECT (value)::float FROM app_settings WHERE key='bilty_per_mt'), 10)) AS bilty,
+               SUM(qty) AS qty
+        FROM rl_trips
+        GROUP BY to_char(date::date, 'YYYY-MM')
+      ) t ON t.ym = m.ym
+      ORDER BY m.ym ASC
+    `, [months]);
+    res.json(rows);
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
 router.get('/eway-alerts', async (_req, res) => {
   try {
     const rows = await getAll(

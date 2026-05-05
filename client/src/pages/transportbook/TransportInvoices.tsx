@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, CreditCard } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -67,6 +67,11 @@ export default function TransportInvoices() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [billing, setBilling] = useState<{ trip_acc_total: number; invoiced: number; pending_to_invoice: number } | null>(null);
+  const [pmtTarget, setPmtTarget] = useState<InvoiceRow | null>(null);
+  const [pmtList, setPmtList] = useState<Array<{ id: number; date: string; amount: number; mode: string; bank_name: string | null; reference: string | null; remarks: string | null }>>([]);
+  const [pmtLoading, setPmtLoading] = useState(false);
+  const [pmtForm, setPmtForm] = useState({ date: new Date().toISOString().split('T')[0], amount: '', mode: 'bank' as 'bank' | 'cash', bank_name: '', reference: '', remarks: '' });
+  const [pmtSaving, setPmtSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -100,6 +105,50 @@ export default function TransportInvoices() {
     setEditing(null);
     setForm({ ...emptyForm, company });
     setModalOpen(true);
+  };
+
+  const openPayments = async (row: InvoiceRow) => {
+    setPmtTarget(row);
+    setPmtForm({ date: new Date().toISOString().split('T')[0], amount: '', mode: 'bank', bank_name: '', reference: '', remarks: '' });
+    setPmtLoading(true);
+    try { setPmtList(await api.rlInvoices.payments(row.id)); }
+    catch (e) { addToast(e instanceof Error ? e.message : 'Failed to load payments', 'error'); }
+    finally { setPmtLoading(false); }
+  };
+
+  const submitPayment = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pmtTarget || !pmtForm.amount) return;
+    if (pmtForm.mode === 'bank' && !pmtForm.bank_name.trim()) { addToast('Bank name required for bank payments', 'error'); return; }
+    setPmtSaving(true);
+    try {
+      const result = await api.rlInvoices.addPayment(pmtTarget.id, {
+        date: pmtForm.date,
+        amount: Number(pmtForm.amount),
+        mode: pmtForm.mode,
+        bank_name: pmtForm.mode === 'bank' ? pmtForm.bank_name.trim() : null,
+        reference: pmtForm.reference.trim() || null,
+        remarks: pmtForm.remarks.trim() || null,
+      });
+      if ((result as any).pending) addToast('Payment sent for admin approval', 'info');
+      else addToast('Payment recorded', 'success');
+      setPmtForm({ date: new Date().toISOString().split('T')[0], amount: '', mode: 'bank', bank_name: '', reference: '', remarks: '' });
+      // Refresh payment list + invoice list (received_amount changed).
+      setPmtList(await api.rlInvoices.payments(pmtTarget.id));
+      load();
+    } catch (e) { addToast(e instanceof Error ? e.message : 'Save failed', 'error'); }
+    finally { setPmtSaving(false); }
+  };
+
+  const deletePayment = async (pid: number) => {
+    if (!pmtTarget) return;
+    if (!window.confirm('Delete this payment?')) return;
+    try {
+      await api.rlInvoices.deletePayment(pmtTarget.id, pid);
+      addToast('Payment deleted', 'success');
+      setPmtList(await api.rlInvoices.payments(pmtTarget.id));
+      load();
+    } catch (e) { addToast(e instanceof Error ? e.message : 'Delete failed', 'error'); }
   };
 
   const openEdit = (row: InvoiceRow) => {
@@ -261,9 +310,18 @@ export default function TransportInvoices() {
             <p className="text-[10px] text-heading/50 mt-0.5">across {rows.length} bill{rows.length === 1 ? '' : 's'}</p>
           </div>
           <div className="card p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800 text-center">
-            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium uppercase tracking-wider">Yet to Bill</p>
+            <p className="text-xs text-amber-700 dark:text-amber-300 font-medium uppercase tracking-wider">Bills Ready (yet to invoice)</p>
             <p className="text-xl font-bold text-heading">{formatINR(billing.pending_to_invoice)}</p>
-            <p className="text-[10px] text-heading/50 mt-0.5">trip total − invoiced</p>
+            <p className="text-[10px] text-heading/50 mt-0.5">
+              {billing.invoiced > billing.trip_acc_total
+                ? 'invoiced ≥ trip total — nothing pending here'
+                : 'trip total − invoiced'}
+            </p>
+            {billing.invoiced > billing.trip_acc_total && (
+              <p className="mt-1 rounded-md bg-amber-100 dark:bg-amber-900/50 px-2 py-1 text-[10px] text-amber-800 dark:text-amber-200">
+                Invoiced ({formatINR(billing.invoiced)}) exceeds Trip {company.toUpperCase()} ({formatINR(billing.trip_acc_total)}) — usually means past trips were billed; no new bills pending.
+              </p>
+            )}
           </div>
         </div>
       )}
@@ -332,6 +390,14 @@ export default function TransportInvoices() {
                       <td className="px-4 py-3"><StatusBadge status={row.status} /></td>
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => openPayments(row)}
+                            className="inline-flex items-center gap-1 rounded-md border border-emerald-300 dark:border-emerald-700 bg-emerald-50 dark:bg-emerald-900/30 px-2 py-0.5 text-xs font-medium text-emerald-700 dark:text-emerald-300 hover:bg-emerald-100 dark:hover:bg-emerald-900/50"
+                            title="Add / view payments"
+                          >
+                            <CreditCard className="h-3 w-3" /> Pmt
+                          </button>
                           <button
                             type="button"
                             onClick={() => openEdit(row)}
@@ -520,6 +586,112 @@ export default function TransportInvoices() {
           </div>
         </div>
       )}
+
+      {pmtTarget && (() => {
+        const totalPaid = pmtList.reduce((s, p) => s + Number(p.amount || 0), 0);
+        const pendingNow = Math.max(0, Number(pmtTarget.invoice_amount) - totalPaid);
+        return (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
+            <div className="flex min-h-full items-start justify-center px-4 py-6">
+              <div className="w-full max-w-2xl rounded-xl bg-card shadow-2xl">
+                <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+                  <div>
+                    <h2 className="font-semibold text-heading">Payments — {pmtTarget.invoice_number}</h2>
+                    <p className="mt-0.5 text-xs text-heading/60">
+                      Invoice {formatINR(Number(pmtTarget.invoice_amount))} · Received {formatINR(totalPaid)} · Pending {formatINR(pendingNow)}
+                    </p>
+                  </div>
+                  <button type="button" onClick={() => setPmtTarget(null)} className="rounded-lg p-1.5 hover:bg-card-border/50"><X className="h-5 w-5 text-heading/60" /></button>
+                </div>
+
+                {/* Existing payments */}
+                <div className="px-5 pt-4">
+                  {pmtLoading ? (
+                    <p className="py-6 text-center text-xs text-heading/60">Loading payments…</p>
+                  ) : pmtList.length === 0 ? (
+                    <p className="py-4 text-center text-xs text-heading/60">No payments recorded yet.</p>
+                  ) : (
+                    <div className="overflow-x-auto rounded-lg border border-card-border">
+                      <table className="w-full text-xs">
+                        <thead className="bg-surface">
+                          <tr className="text-left">
+                            <th className="px-3 py-2 font-medium text-heading/70">Date</th>
+                            <th className="px-3 py-2 font-medium text-heading/70 text-right">Amount</th>
+                            <th className="px-3 py-2 font-medium text-heading/70">Mode</th>
+                            <th className="px-3 py-2 font-medium text-heading/70">Reference</th>
+                            <th className="px-3 py-2 font-medium text-heading/70">Remarks</th>
+                            <th className="px-3 py-2 font-medium text-heading/70"></th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-card-border">
+                          {pmtList.map((p) => (
+                            <tr key={p.id} className="hover:bg-surface/60">
+                              <td className="px-3 py-1.5 whitespace-nowrap">{formatDate(p.date)}</td>
+                              <td className="px-3 py-1.5 text-right tabular-nums font-semibold text-green-700 dark:text-green-300">{formatINR(Number(p.amount))}</td>
+                              <td className="px-3 py-1.5 text-heading/70">{p.mode === 'bank' ? `Bank — ${p.bank_name || ''}`.trim() : 'Cash'}</td>
+                              <td className="px-3 py-1.5 text-heading/70">{p.reference || '—'}</td>
+                              <td className="px-3 py-1.5 text-heading/70">{p.remarks || '—'}</td>
+                              <td className="px-3 py-1.5 text-right">
+                                {isAdmin() && (
+                                  <button type="button" onClick={() => deletePayment(p.id)} className="text-xs text-red-500 hover:underline">Delete</button>
+                                )}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  )}
+                </div>
+
+                {/* Add new payment */}
+                <form onSubmit={submitPayment} className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-3 border-t border-card-border mt-4">
+                  <p className="sm:col-span-2 text-xs font-semibold uppercase tracking-wider text-emerald-700 dark:text-emerald-300">Record new payment</p>
+                  <div>
+                    <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
+                    <input type="date" className="input-field" value={pmtForm.date} onChange={(e) => setPmtForm({ ...pmtForm, date: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-heading/70 mb-1">Amount (₹) *</label>
+                    <input type="number" min="0" step="0.01" className="input-field" value={pmtForm.amount} onChange={(e) => setPmtForm({ ...pmtForm, amount: e.target.value })} required />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-medium text-heading/70 mb-1">Mode *</label>
+                    <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-sm">
+                      {(['bank', 'cash'] as const).map((m) => (
+                        <button key={m} type="button" onClick={() => setPmtForm({ ...pmtForm, mode: m })}
+                          className={`flex-1 px-3 py-1.5 rounded-md font-medium capitalize ${pmtForm.mode === m ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+                          {m}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                  {pmtForm.mode === 'bank' && (
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Bank name *</label>
+                      <input className="input-field" value={pmtForm.bank_name} onChange={(e) => setPmtForm({ ...pmtForm, bank_name: e.target.value })} placeholder="e.g. KOTAK ARMTECH" required />
+                    </div>
+                  )}
+                  <div className={pmtForm.mode === 'bank' ? '' : 'sm:col-span-2'}>
+                    <label className="block text-xs font-medium text-heading/70 mb-1">Reference / UTR</label>
+                    <input className="input-field" value={pmtForm.reference} onChange={(e) => setPmtForm({ ...pmtForm, reference: e.target.value })} placeholder="Optional" />
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
+                    <input className="input-field" value={pmtForm.remarks} onChange={(e) => setPmtForm({ ...pmtForm, remarks: e.target.value })} placeholder="Optional" />
+                  </div>
+                  <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
+                    <button type="button" onClick={() => setPmtTarget(null)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Close</button>
+                    <button type="submit" disabled={pmtSaving} className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-60">
+                      {pmtSaving ? 'Saving…' : 'Add Payment'}
+                    </button>
+                  </div>
+                </form>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
