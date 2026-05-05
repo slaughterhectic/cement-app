@@ -30,6 +30,7 @@ interface Entry {
   period?: string;
   amount?: number;
   remarks?: string | null;
+  company?: 'acc' | 'jk' | null;
 }
 
 interface AdvanceEntry {
@@ -86,6 +87,7 @@ export default function OwnerLedger() {
   const [loading, setLoading] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
+  const [companyFilter, setCompanyFilter] = useState<'all' | 'acc' | 'jk'>('all');
 
   // Advance modal state
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
@@ -199,6 +201,11 @@ export default function OwnerLedger() {
     const d = String(r.date || '');
     if (dateFrom && d < dateFrom) return false;
     if (dateTo && d > dateTo) return false;
+    if (companyFilter !== 'all') {
+      // Trip rows have a company; non-trip rows (gps_rent, advance_paid) are always shown.
+      const c = r.company;
+      if (c && c !== companyFilter) return false;
+    }
     return true;
   });
 
@@ -387,12 +394,20 @@ export default function OwnerLedger() {
         <div className="border-b border-card-border px-5 py-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-heading">Ledger Entries</h2>
           <div className="flex flex-wrap items-center gap-2 text-sm">
+            <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-xs">
+              {(['all', 'acc', 'jk'] as const).map((c) => (
+                <button key={c} type="button" onClick={() => setCompanyFilter(c)}
+                  className={`px-3 py-1 rounded-md font-medium uppercase transition-colors ${companyFilter === c ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+                  {c === 'all' ? 'All' : c}
+                </button>
+              ))}
+            </div>
             <label className="text-heading/60">From</label>
             <input type="date" className="input-field py-1.5 text-sm" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
             <label className="text-heading/60">To</label>
             <input type="date" className="input-field py-1.5 text-sm" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
-            {(dateFrom || dateTo) && (
-              <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-xs text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
+            {(dateFrom || dateTo || companyFilter !== 'all') && (
+              <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); setCompanyFilter('all'); }} className="text-xs text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
             )}
             <span className="text-xs text-heading/50">{ledger.length} of {rawLedger.length}</span>
           </div>

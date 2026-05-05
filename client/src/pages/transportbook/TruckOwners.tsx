@@ -176,14 +176,16 @@ export default function TruckOwners() {
           <h1 className="text-2xl font-bold text-heading">Truck Owners</h1>
           <p className="text-sm text-heading/60 mt-1">{rows.length} truck owner{rows.length !== 1 ? 's' : ''} registered</p>
         </div>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Truck Owner
-        </button>
+        {isAdmin() && (
+          <button
+            type="button"
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Truck Owner
+          </button>
+        )}
       </div>
 
       <div className="card overflow-hidden p-0">
@@ -253,31 +255,33 @@ export default function TruckOwners() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => handleToggleActive(row)}
-                          className={`rounded p-1.5 hover:bg-card-border/50 transition-colors ${row.is_active ? 'text-green-600 dark:text-green-400' : 'text-heading/50'}`}
-                          title={row.is_active ? 'Deactivate (stop GPS rent)' : 'Activate (start GPS rent)'}
-                        >
-                          {row.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => openEdit(row)}
-                          className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
-                          title="Edit"
-                        >
-                          <Pencil className="h-4 w-4" />
-                        </button>
                         {isAdmin() && (
-                          <button
-                            type="button"
-                            onClick={() => handleDelete(row)}
-                            className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                            title="Delete"
-                          >
-                            <Trash2 className="h-4 w-4" />
-                          </button>
+                          <>
+                            <button
+                              type="button"
+                              onClick={() => handleToggleActive(row)}
+                              className={`rounded p-1.5 hover:bg-card-border/50 transition-colors ${row.is_active ? 'text-green-600 dark:text-green-400' : 'text-heading/50'}`}
+                              title={row.is_active ? 'Deactivate (stop GPS rent)' : 'Activate (start GPS rent)'}
+                            >
+                              {row.is_active ? <ToggleRight className="h-4 w-4" /> : <ToggleLeft className="h-4 w-4" />}
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => openEdit(row)}
+                              className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400 transition-colors"
+                              title="Edit"
+                            >
+                              <Pencil className="h-4 w-4" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleDelete(row)}
+                              className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                              title="Delete"
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </button>
+                          </>
                         )}
                       </div>
                     </td>
@@ -311,16 +315,16 @@ export default function TruckOwners() {
                   <input className="input-field" value={form.owner_name} onChange={f('owner_name')} placeholder="Owner's full name" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">Owner Phone</label>
-                  <input className="input-field" value={form.owner_phone} onChange={f('owner_phone')} placeholder="Mobile number" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Owner Phone *</label>
+                  <input className="input-field" value={form.owner_phone} onChange={f('owner_phone')} placeholder="Mobile number" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">Driver Name</label>
-                  <input className="input-field" value={form.driver_name} onChange={f('driver_name')} placeholder="Driver's name" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Driver Name *</label>
+                  <input className="input-field" value={form.driver_name} onChange={f('driver_name')} placeholder="Driver's name" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">Driver Phone</label>
-                  <input className="input-field" value={form.driver_phone} onChange={f('driver_phone')} placeholder="Driver's mobile" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Driver Phone *</label>
+                  <input className="input-field" value={form.driver_phone} onChange={f('driver_phone')} placeholder="Driver's mobile" required />
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Commission % *</label>
@@ -342,20 +346,20 @@ export default function TruckOwners() {
               <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mt-2">Bank & Payment Details</p>
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">Bank Account Number</label>
-                  <input className="input-field" value={form.bank_account} onChange={f('bank_account')} placeholder="Account number" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Bank Account Number *</label>
+                  <input className="input-field" value={form.bank_account} onChange={f('bank_account')} placeholder="Account number" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">IFSC Code</label>
-                  <input className="input-field" value={form.ifsc_code} onChange={f('ifsc_code')} placeholder="e.g. SBIN0001234" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">IFSC Code *</label>
+                  <input className="input-field" value={form.ifsc_code} onChange={f('ifsc_code')} placeholder="e.g. SBIN0001234" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">Beneficiary Name</label>
-                  <input className="input-field" value={form.beneficiary_name} onChange={f('beneficiary_name')} placeholder="Name as per bank" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">Beneficiary Name *</label>
+                  <input className="input-field" value={form.beneficiary_name} onChange={f('beneficiary_name')} placeholder="Name as per bank" required />
                 </div>
                 <div>
-                  <label className="block text-sm font-medium text-heading/80 mb-1">PAN Number</label>
-                  <input className="input-field" value={form.pan_number} onChange={f('pan_number')} placeholder="ABCDE1234F" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">PAN Number *</label>
+                  <input className="input-field" value={form.pan_number} onChange={f('pan_number')} placeholder="ABCDE1234F" required />
                 </div>
               </div>
 

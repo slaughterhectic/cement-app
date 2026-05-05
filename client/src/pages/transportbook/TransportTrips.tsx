@@ -323,6 +323,8 @@ export default function TransportTrips() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   });
   const [filterEwayAtRisk, setFilterEwayAtRisk] = useState(false);
+  const [filterCompany, setFilterCompany] = useState<'all' | 'acc' | 'jk'>('all');
+  const [filterReceived, setFilterReceived] = useState<'all' | 'received' | 'pending'>('all');
   const [rates, setRates] = useState<RateSettings>(DEFAULT_RATES);
 
   const live = computeLive(form, rates);
@@ -467,9 +469,13 @@ export default function TransportTrips() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const visibleRows = filterEwayAtRisk
-    ? rows.filter((r) => ['risk', 'warning', 'expired'].includes(r.eway_status))
-    : rows;
+  const visibleRows = rows.filter((r) => {
+    if (filterEwayAtRisk && !['risk', 'warning', 'expired'].includes(r.eway_status)) return false;
+    if (filterCompany !== 'all' && r.company !== filterCompany) return false;
+    if (filterReceived === 'received' && !r.received) return false;
+    if (filterReceived === 'pending' && r.received) return false;
+    return true;
+  });
 
   const totals = visibleRows.reduce(
     (acc, r) => ({
@@ -524,6 +530,28 @@ export default function TransportTrips() {
             onChange={(e) => setFilterMonth(e.target.value)}
           />
         </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Company:</label>
+          <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-xs">
+            {(['all', 'acc', 'jk'] as const).map((c) => (
+              <button key={c} type="button" onClick={() => setFilterCompany(c)}
+                className={`px-3 py-1 rounded-md font-medium uppercase transition-colors ${filterCompany === c ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+                {c === 'all' ? 'All' : c}
+              </button>
+            ))}
+          </div>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Received:</label>
+          <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-xs">
+            {(['all', 'received', 'pending'] as const).map((v) => (
+              <button key={v} type="button" onClick={() => setFilterReceived(v)}
+                className={`px-3 py-1 rounded-md font-medium capitalize transition-colors ${filterReceived === v ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+                {v}
+              </button>
+            ))}
+          </div>
+        </div>
         <label className="inline-flex items-center gap-2 text-sm text-heading/70 cursor-pointer">
           <input
             type="checkbox"
@@ -533,10 +561,10 @@ export default function TransportTrips() {
           />
           <span>E-Way at-risk only</span>
         </label>
-        {(filterOwner || filterMonth || filterEwayAtRisk) && (
+        {(filterOwner || filterMonth || filterEwayAtRisk || filterCompany !== 'all' || filterReceived !== 'all') && (
           <button
             type="button"
-            onClick={() => { setFilterOwner(''); setFilterMonth(''); setFilterEwayAtRisk(false); }}
+            onClick={() => { setFilterOwner(''); setFilterMonth(''); setFilterEwayAtRisk(false); setFilterCompany('all'); setFilterReceived('all'); }}
             className="text-sm text-indigo-600 dark:text-indigo-400 hover:underline font-medium"
           >
             Clear filters
