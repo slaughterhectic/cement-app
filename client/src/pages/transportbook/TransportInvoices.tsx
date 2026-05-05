@@ -191,8 +191,27 @@ export default function TransportInvoices() {
     { invoice_amount: 0, received_amount: 0, tds_amount: 0, pending: 0 }
   );
 
-  // Compute live TDS hint in modal
-  const liveTds = Number(form.invoice_amount) * 0.02;
+  // Compute live TDS hint in modal — 2% of base (basic + misc + invoice). When the
+  // bifurcation is present, base = basic; otherwise base = invoice_amount.
+  const tdsBase = (Number(form.basic_amount) || 0) > 0
+    ? Number(form.basic_amount)
+    : Number(form.invoice_amount) || 0;
+  const liveTds = tdsBase * 0.02;
+
+  // Auto-fill TDS as the user types — 2% of the base. Lets admins override by typing
+  // a different value afterwards (we only sync when the user hasn't manually edited it).
+  const [tdsAutoFilled, setTdsAutoFilled] = useState(true);
+  useEffect(() => {
+    if (!modalOpen) return;
+    if (!tdsAutoFilled) return;
+    const expected = liveTds.toFixed(2);
+    if (form.tds_amount !== expected && (Number(form.tds_amount) || 0) === 0) {
+      setForm((p) => ({ ...p, tds_amount: expected === '0.00' ? '' : expected }));
+    } else if (Number(form.tds_amount).toFixed(2) !== expected && expected !== '0.00') {
+      setForm((p) => ({ ...p, tds_amount: expected }));
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [modalOpen, tdsAutoFilled, liveTds]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -443,8 +462,30 @@ export default function TransportInvoices() {
                   <input type="number" min="0" step="0.01" className="input-field" value={form.received_amount} onChange={f('received_amount')} placeholder="0" />
                 </div>
                 <div className="col-span-2">
-                  <label className="block text-sm font-medium text-heading/80 mb-1">TDS Amount (₹)</label>
-                  <input type="number" min="0" step="0.01" className="input-field" value={form.tds_amount} onChange={f('tds_amount')} placeholder="0" />
+                  <label className="block text-sm font-medium text-heading/80 mb-1">
+                    TDS Amount (₹) <span className="text-[11px] font-normal text-heading/50">— auto 2% of base</span>
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type="number" min="0" step="0.01"
+                      className="input-field flex-1"
+                      value={form.tds_amount}
+                      onChange={(e) => { setTdsAutoFilled(false); setForm((p) => ({ ...p, tds_amount: e.target.value })); }}
+                      placeholder="0"
+                    />
+                    {!tdsAutoFilled && (
+                      <button type="button"
+                        onClick={() => { setTdsAutoFilled(true); setForm((p) => ({ ...p, tds_amount: liveTds > 0 ? liveTds.toFixed(2) : '' })); }}
+                        className="rounded-md border border-card-border bg-card px-2 py-1 text-xs text-heading/70 hover:bg-surface">
+                        Reset to 2%
+                      </button>
+                    )}
+                  </div>
+                  <p className="mt-1 text-xs text-heading/50">
+                    {tdsAutoFilled
+                      ? `Auto-calculated as 2% of ${(Number(form.basic_amount) || 0) > 0 ? 'Basic Amount' : 'Invoice Amount'}.`
+                      : 'Manually overridden — click Reset to 2% to re-enable auto-calc.'}
+                  </p>
                 </div>
                 {form.invoice_amount && form.received_amount && (
                   <div className="col-span-2 rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs">

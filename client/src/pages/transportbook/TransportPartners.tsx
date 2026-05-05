@@ -87,7 +87,7 @@ function DateWiseActivity({
         if (typeFilter !== 'all' && t.type !== typeFilter) return false;
         return true;
       })
-      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+      .sort((a, b) => a.date.localeCompare(b.date) || a.id - b.id);
   }, [partners, loadedTxns, dateFrom, dateTo, typeFilter]);
 
   const totals = useMemo(() => allTxns.reduce((acc, t) => {
