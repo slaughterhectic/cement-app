@@ -87,6 +87,7 @@ export default function TransportDashboard() {
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [eway, setEway] = useState<EwayData | null>(null);
   const [compliance, setCompliance] = useState<ComplianceSummary | null>(null);
+  const [bankSummary, setBankSummary] = useState<{ closing: number; credits: number; debits: number; opening: number; active_banks: number } | null>(null);
   const [loading, setLoading] = useState(true);
 
   const load = useCallback(async () => {
@@ -109,6 +110,8 @@ export default function TransportDashboard() {
         api.rlInvoices.billingSummary('acc').catch(() => ({ pending_to_invoice: 0 })),
         api.rlInvoices.billingSummary('jk').catch(() => ({ pending_to_invoice: 0 })),
       ]);
+      // TransportBook-isolated bank closing — independent of CementBook/Finance.
+      try { setBankSummary(await api.rlBanks.summary()); } catch (_) { setBankSummary(null); }
 
       // "Pending Invoice Amount" combines the receivable that's already invoiced but unpaid
       // with the trip freight that hasn't been billed yet — both are money ACC/JK still owe us.
@@ -223,6 +226,20 @@ export default function TransportDashboard() {
           color="bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400"
         />
       </div>
+
+      {/* Bank closing — TransportBook-isolated, separate from Finance. */}
+      {bankSummary && (
+        <div className="card p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 flex flex-wrap items-center justify-between gap-3">
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-blue-700 dark:text-blue-300">Bank closing balance · TransportBook</p>
+            <p className="text-2xl font-bold text-heading mt-1">{formatINR(bankSummary.closing)}</p>
+            <p className="text-xs text-heading/60 mt-0.5">
+              Opening {formatINR(bankSummary.opening)} · Credits {formatINR(bankSummary.credits)} · Debits {formatINR(bankSummary.debits)} · {bankSummary.active_banks} bank{bankSummary.active_banks === 1 ? '' : 's'}
+            </p>
+          </div>
+          <Link to="/transportbook/bank" className="text-xs text-blue-600 dark:text-blue-400 hover:underline font-medium">View bank statement →</Link>
+        </div>
+      )}
 
       {/* E-Way Bill Monitoring */}
       <div className="card overflow-hidden p-0">

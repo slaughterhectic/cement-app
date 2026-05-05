@@ -370,6 +370,19 @@ export const api = {
     delete: (id: number) =>
       request<any>(`/rl/owner-advances/${id}`, { method: 'DELETE' }),
   },
+  rlBanks: {
+    list: () => request<any[]>('/rl/banks'),
+    summary: () => request<{ opening: number; credits: number; debits: number; closing: number; active_banks: number }>('/rl/banks/summary'),
+    statement: (id: number) => request<any>(`/rl/banks/${id}/statement`),
+    create: (data: { name: string; opening_balance?: number }) =>
+      request<any>('/rl/banks', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/banks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/banks/${id}`, { method: 'DELETE' }),
+    addTransaction: (id: number, data: any) =>
+      request<any>(`/rl/banks/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
+    deleteTransaction: (id: number, txId: number) =>
+      request<any>(`/rl/banks/${id}/transactions/${txId}`, { method: 'DELETE' }),
+  },
   rlExpenses: {
     list: () => request<{ data: any[]; monthTotal: number }>('/rl/expenses'),
     create: (data: any) => request<any>('/rl/expenses', { method: 'POST', body: JSON.stringify(data) }),

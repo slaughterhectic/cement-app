@@ -910,6 +910,33 @@ export async function initializeDatabase() {
     // Per-trip diesel receipt number from the pump's credit memo + payment-received flag.
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS diesel_receipt_number TEXT`);
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS received BOOLEAN NOT NULL DEFAULT FALSE`);
+    // TransportBook-isolated banking. Kept separate from CementBook bank_balances /
+    // payments / capital — TransportBook tracks its own banks and a manual debit/credit
+    // ledger so totals never bleed between books.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_banks (
+        id SERIAL PRIMARY KEY,
+        name TEXT NOT NULL UNIQUE,
+        opening_balance REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_bank_transactions (
+        id SERIAL PRIMARY KEY,
+        bank_id INTEGER NOT NULL REFERENCES rl_banks(id) ON DELETE CASCADE,
+        date TEXT NOT NULL,
+        type TEXT CHECK(type IN ('credit','debit')) NOT NULL,
+        amount REAL NOT NULL,
+        particulars TEXT,
+        remarks TEXT,
+        source_table TEXT,
+        source_id INTEGER,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_bank_txn_bank ON rl_bank_transactions (bank_id, date);`);
     // TransportBook expenses log — salary, office rent, etc. Mirrors CementBook expenses.
     await client.query(`
       CREATE TABLE IF NOT EXISTS rl_expenses (

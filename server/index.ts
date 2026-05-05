@@ -33,6 +33,7 @@ import requestsRouter from './routes/requests';
 import transportersRouter from './routes/transporters';
 import freightPartiesRouter from './routes/freightParties';
 import rlExpensesRouter from './routes/rlExpenses';
+import rlBanksRouter from './routes/rlBanks';
 import pendingEntriesRouter from './routes/pendingEntries';
 import rlTruckOwnersRouter from './routes/rlTruckOwners';
 import rlOwnersRouter from './routes/rlOwners';
@@ -100,6 +101,7 @@ app.use('/api/rl/invoices', rlInvoicesRouter);
 app.use('/api/rl/partners', rlPartnersRouter);
 app.use('/api/rl/diesel-parties', rlDieselPartiesRouter);
 app.use('/api/rl/expenses', rlExpensesRouter);
+app.use('/api/rl/banks', rlBanksRouter);
 app.use('/api/settings', settingsRouter);
 
 // Godown CRUD
