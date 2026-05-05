@@ -32,6 +32,54 @@ router.get('/', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
+// GET /rl/partners/trip-earnings — total commission + bilty earned across all trips,
+// broken down by company. This is the company-side income that flows into capital.
+router.get('/trip-earnings', async (req, res) => {
+  try {
+    const { from, to, company } = req.query as { from?: string; to?: string; company?: string };
+    const params: any[] = [];
+    let where = 'WHERE 1=1';
+    if (from) { params.push(from); where += ` AND t.date >= $${params.length}`; }
+    if (to)   { params.push(to);   where += ` AND t.date <= $${params.length}`; }
+    if (company === 'acc' || company === 'jk') { params.push(company); where += ` AND t.company = $${params.length}`; }
+
+    const rows = await getAll(`
+      SELECT
+        COALESCE(SUM(t.qty * t.acc_freight_rate * t.commission_pct / 100), 0)::float AS total_commission,
+        COALESCE(SUM(t.qty * COALESCE((SELECT (value)::float FROM app_settings WHERE key='bilty_per_mt'), 10)), 0)::float AS total_bilty,
+        COUNT(*)::int AS trip_count,
+        COALESCE(SUM(t.qty), 0)::float AS total_qty
+      FROM rl_trips t ${where}
+    `, params);
+
+    const byCompany = await getAll(`
+      SELECT
+        t.company,
+        COALESCE(SUM(t.qty * t.acc_freight_rate * t.commission_pct / 100), 0)::float AS commission,
+        COALESCE(SUM(t.qty * COALESCE((SELECT (value)::float FROM app_settings WHERE key='bilty_per_mt'), 10)), 0)::float AS bilty,
+        COUNT(*)::int AS trips
+      FROM rl_trips t ${where}
+      GROUP BY t.company
+    `, params);
+
+    const r = rows[0] || {};
+    res.json({
+      total_commission: Number(r.total_commission) || 0,
+      total_bilty: Number(r.total_bilty) || 0,
+      total_earnings: (Number(r.total_commission) || 0) + (Number(r.total_bilty) || 0),
+      trip_count: Number(r.trip_count) || 0,
+      total_qty: Number(r.total_qty) || 0,
+      by_company: byCompany.map((b: any) => ({
+        company: b.company,
+        commission: Number(b.commission) || 0,
+        bilty: Number(b.bilty) || 0,
+        earnings: (Number(b.commission) || 0) + (Number(b.bilty) || 0),
+        trips: Number(b.trips) || 0,
+      })),
+    });
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
 // POST /rl/partners
 router.post('/', async (req, res) => {
   try {

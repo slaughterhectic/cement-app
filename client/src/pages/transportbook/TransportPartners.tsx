@@ -184,12 +184,24 @@ export default function TransportPartners() {
   const [partnerForm, setPartnerForm] = useState(emptyPartnerForm);
   const [editingPartner, setEditingPartner] = useState<PartnerRow | null>(null);
   const [savingPartner, setSavingPartner] = useState(false);
+  const [tripEarnings, setTripEarnings] = useState<{
+    total_commission: number;
+    total_bilty: number;
+    total_earnings: number;
+    trip_count: number;
+    total_qty: number;
+    by_company: Array<{ company: string; commission: number; bilty: number; earnings: number; trips: number }>;
+  } | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.rlPartners.list();
+      const [data, earnings] = await Promise.all([
+        api.rlPartners.list(),
+        api.rlPartners.tripEarnings(),
+      ]);
       setPartners(data);
+      setTripEarnings(earnings);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load partners', 'error');
     } finally {
@@ -355,6 +367,30 @@ export default function TransportPartners() {
           </button>
         </div>
       </div>
+
+      {/* Trip Earnings → Capital — commission + bilty earned across all trips. */}
+      {tripEarnings && (
+        <div className="card p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <div>
+              <p className="text-xs font-semibold uppercase tracking-wider text-amber-700 dark:text-amber-300">Trip Earnings → Capital</p>
+              <p className="text-2xl font-bold text-heading mt-1">{formatINR(tripEarnings.total_earnings)}</p>
+              <p className="text-xs text-heading/60 mt-0.5">
+                Commission {formatINR(tripEarnings.total_commission)} · Bilty {formatINR(tripEarnings.total_bilty)} · {tripEarnings.trip_count} trips · {tripEarnings.total_qty.toFixed(1)} T
+              </p>
+            </div>
+            <div className="flex flex-wrap gap-2">
+              {tripEarnings.by_company.map((b) => (
+                <div key={b.company} className="rounded-lg bg-card px-3 py-2 border border-amber-200 dark:border-amber-800 text-xs">
+                  <p className="font-bold uppercase text-amber-700 dark:text-amber-300">{b.company}</p>
+                  <p className="font-semibold text-heading">{formatINR(b.earnings)}</p>
+                  <p className="text-[11px] text-heading/60">Comm {formatINR(b.commission)} · Bilty {formatINR(b.bilty)} · {b.trips} trips</p>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Summary Cards */}
       {partners.length > 0 && (

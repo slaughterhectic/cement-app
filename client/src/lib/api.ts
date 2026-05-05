@@ -428,6 +428,17 @@ export const api = {
     transactions: (id: number) => request<any[]>(`/rl/partners/${id}/transactions`),
     addTransaction: (id: number, data: any) => request<any>(`/rl/partners/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
     deleteTransaction: (id: number, txId: number) => request<any>(`/rl/partners/${id}/transactions/${txId}`, { method: 'DELETE' }),
+    tripEarnings: (params?: { from?: string; to?: string; company?: 'acc' | 'jk' }) => {
+      const q = params ? '?' + new URLSearchParams(params as any).toString() : '';
+      return request<{
+        total_commission: number;
+        total_bilty: number;
+        total_earnings: number;
+        trip_count: number;
+        total_qty: number;
+        by_company: Array<{ company: string; commission: number; bilty: number; earnings: number; trips: number }>;
+      }>(`/rl/partners/trip-earnings${q}`);
+    },
   },
   settings: {
     list: () => request<Record<string, string>>('/settings'),
