@@ -47,7 +47,7 @@ router.get('/', async (_req, res) => {
         ), '[]'::json) AS trucks
       FROM rl_truck_owners o
       GROUP BY o.owner_name
-      ORDER BY o.owner_name
+      ORDER BY trip_count DESC, o.owner_name
     `);
     res.json(rows.map((r: any) => ({
       ...r,

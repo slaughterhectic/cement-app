@@ -156,6 +156,7 @@ router.post('/', async (req, res) => {
       petrol_slip_number, epod_bill_number, difference_rate, remarks,
       eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
       delivery_status, delivered_at, diesel_party_id, company,
+      diesel_receipt_number,
     } = req.body;
 
     if (!date) return res.status(400).json({ error: 'Date is required' });
@@ -196,8 +197,8 @@ router.post('/', async (req, res) => {
          qty, acc_freight_rate, commission_pct, diesel_advance, cash_advance,
          petrol_slip_number, epod_bill_number, difference_rate, remarks,
          eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
-         delivery_status, delivered_at, diesel_party_id, company)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24)
+         delivery_status, delivered_at, diesel_party_id, company, diesel_receipt_number)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22,$23,$24,$25)
        RETURNING *`,
       [
         date,
@@ -224,6 +225,7 @@ router.post('/', async (req, res) => {
         delivered_at || null,
         dieselPartyIdNum,
         tripCompany,
+        diesel_receipt_number?.trim() || null,
       ]
     );
 
@@ -246,6 +248,7 @@ router.put('/:id', async (req, res) => {
       petrol_slip_number, epod_bill_number, difference_rate, remarks,
       eway_bill_number, eway_bill_generated_at, eway_bill_valid_until,
       delivery_status, delivered_at, diesel_party_id, company,
+      diesel_receipt_number,
     } = req.body;
 
     if (!date) return res.status(400).json({ error: 'Date is required' });
@@ -265,8 +268,9 @@ router.put('/:id', async (req, res) => {
         diesel_advance=$12, cash_advance=$13, petrol_slip_number=$14, epod_bill_number=$15,
         difference_rate=$16, remarks=$17,
         eway_bill_number=$18, eway_bill_generated_at=$19, eway_bill_valid_until=$20,
-        delivery_status=$21, delivered_at=$22, diesel_party_id=$23, company=$24
-       WHERE id=$25 RETURNING *`,
+        delivery_status=$21, delivered_at=$22, diesel_party_id=$23, company=$24,
+        diesel_receipt_number=$25
+       WHERE id=$26 RETURNING *`,
       [
         date,
         builty_number?.trim() || null,
@@ -292,6 +296,7 @@ router.put('/:id', async (req, res) => {
         delivered_at || null,
         dieselPartyIdNum,
         tripCompany,
+        diesel_receipt_number?.trim() || null,
         req.params.id,
       ]
     );
@@ -304,6 +309,19 @@ router.put('/:id', async (req, res) => {
 
     const settings = await loadSettings();
     res.json(computeTrip(row, settings));
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
+});
+
+// PATCH /rl/trips/:id/received — toggle the payment-received flag (open to all authed users).
+router.patch('/:id/received', async (req, res) => {
+  try {
+    const { received } = req.body;
+    const row = await getOne(
+      'UPDATE rl_trips SET received=$1 WHERE id=$2 RETURNING id, received',
+      [Boolean(received), req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Trip not found' });
+    res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
 

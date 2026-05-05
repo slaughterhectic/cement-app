@@ -84,6 +84,8 @@ export default function OwnerLedger() {
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<LedgerData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
 
   // Advance modal state
   const [advanceModalOpen, setAdvanceModalOpen] = useState(false);
@@ -192,7 +194,13 @@ export default function OwnerLedger() {
 
   if (!data) return null;
 
-  const { owner, ledger, advances, summary } = data;
+  const { owner, ledger: rawLedger, advances, summary } = data;
+  const ledger = rawLedger.filter((r: any) => {
+    const d = String(r.date || '');
+    if (dateFrom && d < dateFrom) return false;
+    if (dateTo && d > dateTo) return false;
+    return true;
+  });
 
   return (
     <div className="flex flex-col gap-6">
@@ -376,8 +384,18 @@ export default function OwnerLedger() {
 
       {/* Trip Table */}
       <div className="card overflow-hidden p-0">
-        <div className="border-b border-card-border px-5 py-4">
+        <div className="border-b border-card-border px-5 py-4 flex flex-wrap items-center justify-between gap-3">
           <h2 className="font-semibold text-heading">Ledger Entries</h2>
+          <div className="flex flex-wrap items-center gap-2 text-sm">
+            <label className="text-heading/60">From</label>
+            <input type="date" className="input-field py-1.5 text-sm" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <label className="text-heading/60">To</label>
+            <input type="date" className="input-field py-1.5 text-sm" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            {(dateFrom || dateTo) && (
+              <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); }} className="text-xs text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
+            )}
+            <span className="text-xs text-heading/50">{ledger.length} of {rawLedger.length}</span>
+          </div>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">

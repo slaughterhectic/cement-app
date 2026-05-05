@@ -44,6 +44,7 @@ export default function DieselParties() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [txns, setTxns] = useState<Record<number, Txn[]>>({});
+  const [monthFilter, setMonthFilter] = useState<string>('');
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(emptyAdd);
@@ -270,11 +271,21 @@ export default function DieselParties() {
                         </div>
                       </td>
                     </tr>
-                    {isOpen && (
+                    {isOpen && (() => {
+                      const filtered = monthFilter ? list.filter((t) => String(t.date || '').startsWith(monthFilter)) : list;
+                      return (
                       <tr className="bg-surface/60">
                         <td colSpan={6} className="px-4 py-3">
-                          {list.length === 0 ? (
-                            <p className="py-4 text-center text-xs text-heading/60">No transactions yet.</p>
+                          <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-heading/70">
+                            <label>Month:</label>
+                            <input type="month" className="input-field py-1 text-xs" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
+                            {monthFilter && (
+                              <button type="button" onClick={() => setMonthFilter('')} className="text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
+                            )}
+                            <span className="ml-2">{filtered.length} of {list.length}</span>
+                          </div>
+                          {filtered.length === 0 ? (
+                            <p className="py-4 text-center text-xs text-heading/60">{monthFilter ? `No transactions in ${monthFilter}.` : 'No transactions yet.'}</p>
                           ) : (
                             <div className="max-h-96 overflow-y-auto rounded-lg border border-card-border bg-card">
                               <table className="min-w-full text-xs">
@@ -291,7 +302,7 @@ export default function DieselParties() {
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-card-border">
-                                  {list.map((t) => (
+                                  {filtered.map((t) => (
                                     <tr key={t.id} className="hover:bg-surface/70">
                                       <td className="px-3 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
                                       <td className="px-3 py-2">{t.type === 'credit' ? 'Credit' : 'Debit'}</td>
@@ -327,7 +338,8 @@ export default function DieselParties() {
                           )}
                         </td>
                       </tr>
-                    )}
+                      );
+                    })()}
                   </Fragment>
                 );
               })}

@@ -902,6 +902,9 @@ export async function initializeDatabase() {
     await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_diesel_txn_party ON rl_diesel_transactions(diesel_party_id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_diesel_txn_source ON rl_diesel_transactions(source_table, source_id)`);
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS diesel_party_id INTEGER REFERENCES rl_diesel_parties(id)`);
+    // Per-trip diesel receipt number from the pump's credit memo + payment-received flag.
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS diesel_receipt_number TEXT`);
+    await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS received BOOLEAN NOT NULL DEFAULT FALSE`);
 
     // Trips bill either ACC or JK — used by /rl/invoices/billing-summary so each company
     // sees only its own auto-shifted freight receivable. Existing rows default to 'acc'.

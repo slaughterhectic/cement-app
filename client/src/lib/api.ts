@@ -377,6 +377,8 @@ export const api = {
     },
     create: (data: any) => request<any>('/rl/trips', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/rl/trips/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    setReceived: (id: number, received: boolean) =>
+      request<any>(`/rl/trips/${id}/received`, { method: 'PATCH', body: JSON.stringify({ received }) }),
     delete: (id: number) => request<any>(`/rl/trips/${id}`, { method: 'DELETE' }),
     ewayAlerts: () => request<{ atRisk: any[]; counts: { expired: number; risk: number; warning: number; ok: number } }>('/rl/trips/eway-alerts'),
   },

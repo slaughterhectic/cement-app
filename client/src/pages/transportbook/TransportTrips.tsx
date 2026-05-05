@@ -43,6 +43,8 @@ interface TripRow {
   diesel_party_id: number | null;
   diesel_party_name: string | null;
   company: 'acc' | 'jk';
+  diesel_receipt_number: string | null;
+  received: boolean;
 }
 
 interface DieselPartyOption {
@@ -82,6 +84,7 @@ const emptyForm = {
   delivery_status: 'pending' as 'pending' | 'in_transit' | 'delivered',
   delivered_at: '',
   company: 'acc' as 'acc' | 'jk',
+  diesel_receipt_number: '',
 };
 
 const DCH_TYPES = ['IT', 'DC', 'DE', 'IS'];
@@ -393,6 +396,7 @@ export default function TransportTrips() {
       delivery_status: (row.delivery_status || 'pending') as 'pending' | 'in_transit' | 'delivered',
       delivered_at: row.delivered_at ? row.delivered_at.slice(0, 16) : '',
       company: (row.company === 'jk' ? 'jk' : 'acc') as 'acc' | 'jk',
+      diesel_receipt_number: row.diesel_receipt_number || '',
     });
     setModalOpen(true);
   };
@@ -432,6 +436,7 @@ export default function TransportTrips() {
         delivery_status: form.delivery_status,
         delivered_at: form.delivered_at ? new Date(form.delivered_at).toISOString() : null,
         company: form.company,
+        diesel_receipt_number: form.diesel_receipt_number?.trim() || null,
       };
       if (editing) {
         await api.rlTrips.update(editing.id, payload);
@@ -592,15 +597,16 @@ export default function TransportTrips() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Advances</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final Pay</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">E-Way</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Received</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={14} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
+                <tr><td colSpan={15} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
               ) : visibleRows.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-4 py-12 text-center">
+                  <td colSpan={15} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">{rows.length === 0 ? 'No trips found' : 'No trips match current filters'}</p>
                     {rows.length === 0 && (
                       <button type="button" onClick={openAdd} className="text-indigo-600 dark:text-indigo-400 hover:underline text-sm font-medium">Log first trip</button>
@@ -610,8 +616,14 @@ export default function TransportTrips() {
               ) : (
                 visibleRows.map((row) => {
                   const risky = row.eway_status === 'expired' || row.eway_status === 'risk';
+                  // Trip row turns green once payment is received — same pattern as cement sales.
+                  const rowCls = row.received
+                    ? 'bg-green-50 dark:bg-green-900/30 hover:bg-green-100 dark:hover:bg-green-900/40'
+                    : risky
+                      ? 'bg-red-50/60 dark:bg-red-900/20 hover:bg-red-50 dark:hover:bg-red-900/30'
+                      : 'hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30';
                   return (
-                  <tr key={row.id} className={`border-b border-card-border last:border-0 transition-colors ${risky ? 'bg-red-50/60 dark:bg-red-900/20 hover:bg-red-50 dark:hover:bg-red-900/30' : 'hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30'}`}>
+                  <tr key={row.id} className={`border-b border-card-border last:border-0 transition-colors ${rowCls}`}>
                     <td className="px-3 py-2.5 whitespace-nowrap">{formatDate(row.date)}</td>
                     <td className="px-3 py-2.5 text-heading/70 text-xs">{row.builty_number || '—'}</td>
                     <td className="px-3 py-2.5 font-medium text-indigo-600 dark:text-indigo-400">{row.truck_number}</td>
@@ -649,6 +661,28 @@ export default function TransportTrips() {
                           <span className="text-[10px] text-heading/50 ml-1 font-mono truncate max-w-[90px]" title={row.eway_bill_number}>{row.eway_bill_number}</span>
                         )}
                       </div>
+                    </td>
+                    <td className="px-3 py-2.5">
+                      <button
+                        type="button"
+                        onClick={async () => {
+                          try {
+                            await api.rlTrips.setReceived(row.id, !row.received);
+                            addToast(row.received ? 'Marked as not received' : 'Marked as received', 'success');
+                            load();
+                          } catch (e) {
+                            addToast(e instanceof Error ? e.message : 'Failed', 'error');
+                          }
+                        }}
+                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium transition-colors ${
+                          row.received
+                            ? 'bg-green-100 dark:bg-green-900/40 text-green-700 dark:text-green-300 hover:bg-green-200 dark:hover:bg-green-900/60'
+                            : 'bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                        }`}
+                        title={row.received ? 'Click to mark not received' : 'Click to mark received'}
+                      >
+                        {row.received ? '✓ Received' : 'Mark received'}
+                      </button>
                     </td>
                     <td className="px-3 py-2.5">
                       <div className="flex items-center gap-1">
@@ -838,6 +872,11 @@ export default function TransportTrips() {
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">Cash Advance (₹)</label>
                         <input type="number" min="0" step="0.01" className="input-field" value={form.cash_advance} onChange={f('cash_advance')} placeholder="0" />
+                      </div>
+                      <div>
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Receipt #</label>
+                        <input className="input-field" value={form.diesel_receipt_number} onChange={f('diesel_receipt_number')} placeholder="e.g. 3953" />
+                        <p className="mt-1 text-[10px] text-heading/50">From the pump's credit memo — links the receipt to this trip's diesel + cash split.</p>
                       </div>
                     </div>
                   </div>
