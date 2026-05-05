@@ -138,13 +138,22 @@ router.post('/', async (req, res) => {
       received_amount, tds_amount, status, remarks, company,
       gstr1_status, gstr1_period, gstr3b_status, gstr3b_period,
       itc_status, itc_period, compliance_remarks,
+      basic_amount, gst_amount, misc_amount, misc_remarks,
     } = req.body;
 
     if (!invoice_number?.trim()) return res.status(400).json({ error: 'Invoice number is required' });
     const co = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
     if (co !== 'acc' && co !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
-    const invAmt = Number(invoice_amount) || 0;
+    // Caller can either send a single invoice_amount or the bifurcation. If basic+gst
+    // (and optional misc) are provided we sum them; otherwise we trust invoice_amount.
+    let basicAmt = Number(basic_amount);
+    let gstAmt   = Number(gst_amount);
+    const miscAmt = Number(misc_amount) || 0;
+    if (!Number.isFinite(basicAmt)) basicAmt = 0;
+    if (!Number.isFinite(gstAmt))   gstAmt = 0;
+    const haveBifurcation = basicAmt > 0 || gstAmt > 0 || miscAmt > 0;
+    const invAmt = haveBifurcation ? (basicAmt + gstAmt + miscAmt) : (Number(invoice_amount) || 0);
     const recAmt = Number(received_amount) || 0;
     const tdsAmt = Number(tds_amount) || 0;
 
@@ -160,8 +169,9 @@ router.post('/', async (req, res) => {
         (invoice_number, invoice_date, invoice_amount, payment_receive_date,
          received_amount, tds_amount, status, remarks, company,
          gstr1_status, gstr1_period, gstr3b_status, gstr3b_period,
-         itc_status, itc_period, compliance_remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16)
+         itc_status, itc_period, compliance_remarks,
+         basic_amount, gst_amount, misc_amount, misc_remarks)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20)
        RETURNING *`,
       [
         invoice_number.trim(),
@@ -180,6 +190,10 @@ router.post('/', async (req, res) => {
         normItc(itc_status),
         itc_period?.trim() || null,
         compliance_remarks?.trim() || null,
+        haveBifurcation ? basicAmt : null,
+        haveBifurcation ? gstAmt : null,
+        miscAmt,
+        misc_remarks?.trim() || null,
       ]
     );
     res.json(row);
@@ -194,6 +208,7 @@ router.put('/:id', async (req, res) => {
       received_amount, tds_amount, status, remarks, company,
       gstr1_status, gstr1_period, gstr3b_status, gstr3b_period,
       itc_status, itc_period, compliance_remarks,
+      basic_amount, gst_amount, misc_amount, misc_remarks,
     } = req.body;
 
     if (!invoice_number?.trim()) return res.status(400).json({ error: 'Invoice number is required' });
@@ -204,7 +219,13 @@ router.put('/:id', async (req, res) => {
     const co = (typeof company === 'string' ? company.trim().toLowerCase() : '') || existing.company || 'acc';
     if (co !== 'acc' && co !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
-    const invAmt = Number(invoice_amount) || 0;
+    let basicAmt = Number(basic_amount);
+    let gstAmt   = Number(gst_amount);
+    const miscAmt = Number(misc_amount) || 0;
+    if (!Number.isFinite(basicAmt)) basicAmt = 0;
+    if (!Number.isFinite(gstAmt))   gstAmt = 0;
+    const haveBifurcation = basicAmt > 0 || gstAmt > 0 || miscAmt > 0;
+    const invAmt = haveBifurcation ? (basicAmt + gstAmt + miscAmt) : (Number(invoice_amount) || 0);
     const recAmt = Number(received_amount) || 0;
     const tdsAmt = Number(tds_amount) || 0;
 
@@ -220,8 +241,9 @@ router.put('/:id', async (req, res) => {
         invoice_number=$1, invoice_date=$2, invoice_amount=$3, payment_receive_date=$4,
         received_amount=$5, tds_amount=$6, status=$7, remarks=$8, company=$9,
         gstr1_status=$10, gstr1_period=$11, gstr3b_status=$12, gstr3b_period=$13,
-        itc_status=$14, itc_period=$15, compliance_remarks=$16
-       WHERE id=$17 RETURNING *`,
+        itc_status=$14, itc_period=$15, compliance_remarks=$16,
+        basic_amount=$17, gst_amount=$18, misc_amount=$19, misc_remarks=$20
+       WHERE id=$21 RETURNING *`,
       [
         invoice_number.trim(),
         invoice_date || null,
@@ -239,6 +261,10 @@ router.put('/:id', async (req, res) => {
         normItc(itc_status),
         itc_period?.trim() || null,
         compliance_remarks?.trim() || null,
+        haveBifurcation ? basicAmt : null,
+        haveBifurcation ? gstAmt : null,
+        miscAmt,
+        misc_remarks?.trim() || null,
         req.params.id,
       ]
     );

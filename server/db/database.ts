@@ -790,6 +790,11 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_status TEXT DEFAULT 'not_claimed'`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS itc_period TEXT`);
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS compliance_remarks TEXT`);
+    // Bifurcate invoice amount into base + GST and add a Misc line for one-off charges.
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS basic_amount REAL`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS gst_amount REAL`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS misc_amount REAL DEFAULT 0`);
+    await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS misc_remarks TEXT`);
 
     // ACC vs JK billing — invoices are tagged per company; numbering is unique per company.
     await client.query(`ALTER TABLE rl_invoices ADD COLUMN IF NOT EXISTS company TEXT NOT NULL DEFAULT 'acc'`);

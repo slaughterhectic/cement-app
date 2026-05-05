@@ -24,6 +24,10 @@ const emptyForm = {
   invoice_number: '',
   invoice_date: '',
   invoice_amount: '',
+  basic_amount: '',
+  gst_amount: '',
+  misc_amount: '',
+  misc_remarks: '',
   payment_receive_date: '',
   received_amount: '',
   tds_amount: '',
@@ -104,6 +108,10 @@ export default function TransportInvoices() {
       invoice_number: row.invoice_number,
       invoice_date: row.invoice_date || '',
       invoice_amount: String(row.invoice_amount || ''),
+      basic_amount: (row as any).basic_amount != null ? String((row as any).basic_amount) : '',
+      gst_amount: (row as any).gst_amount != null ? String((row as any).gst_amount) : '',
+      misc_amount: (row as any).misc_amount ? String((row as any).misc_amount) : '',
+      misc_remarks: (row as any).misc_remarks || '',
       payment_receive_date: row.payment_receive_date || '',
       received_amount: String(row.received_amount || ''),
       tds_amount: String(row.tds_amount || ''),
@@ -118,13 +126,21 @@ export default function TransportInvoices() {
     if (!form.invoice_number.trim()) { addToast('Invoice number is required', 'error'); return; }
     setSaving(true);
     try {
-      const invAmt = Number(form.invoice_amount) || 0;
+      const basicAmt = Number(form.basic_amount) || 0;
+      const gstAmt = Number(form.gst_amount) || 0;
+      const miscAmt = Number(form.misc_amount) || 0;
+      const haveBifurcation = basicAmt > 0 || gstAmt > 0 || miscAmt > 0;
+      const invAmt = haveBifurcation ? (basicAmt + gstAmt + miscAmt) : (Number(form.invoice_amount) || 0);
       const recAmt = Number(form.received_amount) || 0;
       const tdsAmt = Number(form.tds_amount) || 0;
       const payload = {
         invoice_number: form.invoice_number.trim(),
         invoice_date: form.invoice_date || null,
         invoice_amount: invAmt,
+        basic_amount: haveBifurcation ? basicAmt : null,
+        gst_amount: haveBifurcation ? gstAmt : null,
+        misc_amount: miscAmt,
+        misc_remarks: form.misc_remarks || null,
         payment_receive_date: form.payment_receive_date || null,
         received_amount: recAmt,
         tds_amount: tdsAmt,
@@ -383,10 +399,40 @@ export default function TransportInvoices() {
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Invoice Amount (₹)</label>
-                  <input type="number" min="0" step="0.01" className="input-field" value={form.invoice_amount} onChange={f('invoice_amount')} placeholder="0" />
+                  <input type="number" min="0" step="0.01" className="input-field" value={form.invoice_amount} onChange={f('invoice_amount')} placeholder="0 — or use bifurcation below" />
                   {form.invoice_amount && (
                     <p className="text-xs text-heading/50 mt-1">TDS hint (2%): {formatINR(liveTds)}</p>
                   )}
+                </div>
+
+                {/* Optional bifurcation — when filled, the total invoice amount is computed from these. */}
+                <div className="col-span-2 rounded-lg border border-emerald-200 dark:border-emerald-800 bg-emerald-50 dark:bg-emerald-900/30 p-3">
+                  <p className="text-xs font-semibold uppercase tracking-wide text-emerald-700 dark:text-emerald-300 mb-2">
+                    Bifurcation (optional — overrides Invoice Amount when filled)
+                  </p>
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Basic Amount (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.basic_amount} onChange={f('basic_amount')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">GST Amount (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.gst_amount} onChange={f('gst_amount')} placeholder="0" />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹)</label>
+                      <input type="number" min="0" step="0.01" className="input-field" value={form.misc_amount} onChange={f('misc_amount')} placeholder="0" />
+                    </div>
+                    <div className="sm:col-span-3">
+                      <label className="block text-xs font-medium text-heading/70 mb-1">Misc Remarks</label>
+                      <input className="input-field" value={form.misc_remarks} onChange={f('misc_remarks')} placeholder="What's the miscellaneous charge for?" />
+                    </div>
+                    {(Number(form.basic_amount) > 0 || Number(form.gst_amount) > 0 || Number(form.misc_amount) > 0) && (
+                      <div className="sm:col-span-3 text-xs text-heading/70">
+                        Total: <span className="font-bold text-emerald-700 dark:text-emerald-300">{formatINR((Number(form.basic_amount) || 0) + (Number(form.gst_amount) || 0) + (Number(form.misc_amount) || 0))}</span>
+                      </div>
+                    )}
+                  </div>
                 </div>
                 <div>
                   <label className="block text-sm font-medium text-heading/80 mb-1">Payment Received Date</label>
