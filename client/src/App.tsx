@@ -43,6 +43,7 @@ import TruckOwnerLedger from './pages/transportbook/TruckOwnerLedger';
 import TransportOwners from './pages/transportbook/TransportOwners';
 import OwnerLedger from './pages/transportbook/OwnerLedger';
 import TransportTrips from './pages/transportbook/TransportTrips';
+import TransportExpenses from './pages/transportbook/TransportExpenses';
 import TransportInvoices from './pages/transportbook/TransportInvoices';
 import TransportPartners from './pages/transportbook/TransportPartners';
 import TransportSettings from './pages/transportbook/TransportSettings';
@@ -165,6 +166,7 @@ export default function App() {
           <Route path="/transportbook/rates" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportSettings /></BookGuard>} />
           <Route path="/transportbook/compliance" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportCompliance /></BookGuard>} />
           <Route path="/transportbook/diesel" element={<BookGuard permission="access_transportbook" fallback="/no-access"><DieselParties /></BookGuard>} />
+          <Route path="/transportbook/expenses" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportExpenses /></BookGuard>} />
           {/* CementBook requests/approvals */}
           <Route path="/requests" element={<Requests source="cementbook" />} />
           <Route path="/pending-approvals" element={<PendingApprovals source="cementbook" />} />

@@ -370,6 +370,12 @@ export const api = {
     delete: (id: number) =>
       request<any>(`/rl/owner-advances/${id}`, { method: 'DELETE' }),
   },
+  rlExpenses: {
+    list: () => request<{ data: any[]; monthTotal: number }>('/rl/expenses'),
+    create: (data: any) => request<any>('/rl/expenses', { method: 'POST', body: JSON.stringify(data) }),
+    update: (id: number, data: any) => request<any>(`/rl/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/expenses/${id}`, { method: 'DELETE' }),
+  },
   rlTrips: {
     list: (params?: Record<string, string>) => {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';

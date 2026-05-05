@@ -905,6 +905,21 @@ export async function initializeDatabase() {
     // Per-trip diesel receipt number from the pump's credit memo + payment-received flag.
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS diesel_receipt_number TEXT`);
     await client.query(`ALTER TABLE rl_trips ADD COLUMN IF NOT EXISTS received BOOLEAN NOT NULL DEFAULT FALSE`);
+    // TransportBook expenses log — salary, office rent, etc. Mirrors CementBook expenses.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_expenses (
+        id SERIAL PRIMARY KEY,
+        date TEXT NOT NULL,
+        category TEXT,
+        description TEXT,
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'cash',
+        bank_name TEXT,
+        cash_handler TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
 
     // Trips bill either ACC or JK — used by /rl/invoices/billing-summary so each company
     // sees only its own auto-shifted freight receivable. Existing rows default to 'acc'.
