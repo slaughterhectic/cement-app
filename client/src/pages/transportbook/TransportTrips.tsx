@@ -529,6 +529,29 @@ export default function TransportTrips() {
             value={filterMonth}
             onChange={(e) => setFilterMonth(e.target.value)}
           />
+          {(() => {
+            const now = new Date();
+            const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const thisMonth = ym(now);
+            const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
+            const prevMonth = ym(prev);
+            return (
+              <div className="flex items-center gap-1 text-xs">
+                <button type="button" onClick={() => setFilterMonth(thisMonth)}
+                  className={`rounded-md px-2 py-1 font-medium transition-colors ${filterMonth === thisMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+                  MTD
+                </button>
+                <button type="button" onClick={() => setFilterMonth(prevMonth)}
+                  className={`rounded-md px-2 py-1 font-medium transition-colors ${filterMonth === prevMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+                  Prev
+                </button>
+                <button type="button" onClick={() => setFilterMonth('')}
+                  className={`rounded-md px-2 py-1 font-medium transition-colors ${!filterMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+                  All
+                </button>
+              </div>
+            );
+          })()}
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Company:</label>

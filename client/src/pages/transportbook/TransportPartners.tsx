@@ -1,4 +1,4 @@
-import { Fragment, useCallback, useEffect, useState } from 'react';
+import { Fragment, useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2, X, ChevronDown, ChevronRight, Pencil, UserPlus } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
@@ -47,6 +47,127 @@ const emptyPartnerForm = {
   name: '',
   opening_capital: '',
 };
+
+// Consolidated date-wise activity across all partners. Lazy-loads each partner's
+// transactions only when the section is expanded.
+function DateWiseActivity({
+  partners,
+  getTxns,
+  loadedTxns,
+  loadingMap,
+}: {
+  partners: PartnerRow[];
+  getTxns: (id: number) => Promise<void>;
+  loadedTxns: Record<number, Transaction[]>;
+  loadingMap: Record<number, boolean>;
+}) {
+  const [open, setOpen] = useState(false);
+  const [dateFrom, setDateFrom] = useState('');
+  const [dateTo, setDateTo] = useState('');
+  const [typeFilter, setTypeFilter] = useState<'all' | 'capital' | 'withdrawal' | 'profit'>('capital');
+
+  useEffect(() => {
+    if (!open) return;
+    // Pull transactions for any partner that hasn't been fetched yet.
+    partners.forEach((p) => {
+      if (!loadedTxns[p.id] && !loadingMap[p.id]) void getTxns(p.id);
+    });
+  }, [open, partners, loadedTxns, loadingMap, getTxns]);
+
+  const allTxns = useMemo(() => {
+    const out: Array<Transaction & { partner_name: string }> = [];
+    for (const p of partners) {
+      const list = loadedTxns[p.id] || [];
+      for (const t of list) out.push({ ...t, partner_name: p.name });
+    }
+    return out
+      .filter((t) => {
+        if (dateFrom && t.date < dateFrom) return false;
+        if (dateTo && t.date > dateTo) return false;
+        if (typeFilter !== 'all' && t.type !== typeFilter) return false;
+        return true;
+      })
+      .sort((a, b) => b.date.localeCompare(a.date) || b.id - a.id);
+  }, [partners, loadedTxns, dateFrom, dateTo, typeFilter]);
+
+  const totals = useMemo(() => allTxns.reduce((acc, t) => {
+    if (t.type === 'capital') acc.capital += Number(t.amount);
+    else if (t.type === 'withdrawal') acc.withdrawal += Number(t.amount);
+    else acc.profit += Number(t.amount);
+    return acc;
+  }, { capital: 0, withdrawal: 0, profit: 0 }), [allTxns]);
+
+  const stillLoading = open && partners.some((p) => loadingMap[p.id]);
+
+  return (
+    <div className="card p-0 overflow-hidden">
+      <button type="button" onClick={() => setOpen(!open)}
+        className="w-full flex items-center justify-between px-4 py-3 bg-blue-50 dark:bg-blue-900/30 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition-colors">
+        <div className="text-left">
+          <p className="font-semibold text-blue-700 dark:text-blue-300">Date-wise capital activity</p>
+          <p className="text-xs text-heading/60">Who deposited / withdrew / earned profit, in date order across all partners</p>
+        </div>
+        <span className="text-xs text-blue-600 dark:text-blue-400 font-medium">{open ? 'Hide' : 'Show'}</span>
+      </button>
+      {open && (
+        <div className="p-4 flex flex-col gap-3">
+          <div className="flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-xs">
+              {(['all', 'capital', 'withdrawal', 'profit'] as const).map((t) => (
+                <button key={t} type="button" onClick={() => setTypeFilter(t)}
+                  className={`px-3 py-1 rounded-md font-medium capitalize transition-colors ${typeFilter === t ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+                  {t === 'all' ? 'All' : t === 'capital' ? 'Deposits' : t === 'withdrawal' ? 'Withdrawals' : 'Profit'}
+                </button>
+              ))}
+            </div>
+            <label className="text-sm text-heading/60">From</label>
+            <input type="date" className="input-field py-1 text-sm" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)} />
+            <label className="text-sm text-heading/60">To</label>
+            <input type="date" className="input-field py-1 text-sm" value={dateTo} onChange={(e) => setDateTo(e.target.value)} />
+            {(dateFrom || dateTo || typeFilter !== 'capital') && (
+              <button type="button" onClick={() => { setDateFrom(''); setDateTo(''); setTypeFilter('capital'); }} className="text-xs text-orange-600 dark:text-orange-400 hover:underline">Reset</button>
+            )}
+            <span className="ml-auto text-xs text-heading/60">
+              Deposits {formatINR(totals.capital)} · Withdrawals {formatINR(totals.withdrawal)} · Profit {formatINR(totals.profit)}
+            </span>
+          </div>
+          {stillLoading ? (
+            <p className="text-sm text-heading/60 text-center py-4">Loading transactions…</p>
+          ) : allTxns.length === 0 ? (
+            <p className="text-sm text-heading/50 text-center py-4">No matching activity.</p>
+          ) : (
+            <div className="overflow-x-auto rounded-lg border border-card-border">
+              <table className="w-full text-sm">
+                <thead className="bg-surface">
+                  <tr className="text-left">
+                    <th className="px-3 py-2 font-medium text-heading/70">Date</th>
+                    <th className="px-3 py-2 font-medium text-heading/70">Partner</th>
+                    <th className="px-3 py-2 font-medium text-heading/70">Type</th>
+                    <th className="px-3 py-2 font-medium text-heading/70 text-right">Amount</th>
+                    <th className="px-3 py-2 font-medium text-heading/70">Remarks</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-card-border">
+                  {allTxns.map((t) => (
+                    <tr key={`${t.partner_id}-${t.id}`} className="hover:bg-surface/60">
+                      <td className="px-3 py-1.5 whitespace-nowrap">{formatDate(t.date)}</td>
+                      <td className="px-3 py-1.5 font-medium text-heading">{t.partner_name}</td>
+                      <td className={`px-3 py-1.5 font-medium ${TXN_TYPE_COLORS[t.type]}`}>{TXN_TYPE_LABELS[t.type]}</td>
+                      <td className={`px-3 py-1.5 text-right font-semibold ${TXN_TYPE_COLORS[t.type]}`}>
+                        {t.type === 'withdrawal' ? '−' : '+'}{formatINR(Number(t.amount))}
+                      </td>
+                      <td className="px-3 py-1.5 text-heading/60">{t.remarks || '—'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
 
 export default function TransportPartners() {
   const addToast = useToastStore((s) => s.addToast);
@@ -255,6 +376,16 @@ export default function TransportPartners() {
             <p className="text-xl font-bold text-heading">{formatINR(totalBalance)}</p>
           </div>
         </div>
+      )}
+
+      {/* Date-wise activity (consolidated across all partners) */}
+      {partners.length > 0 && (
+        <DateWiseActivity
+          partners={partners}
+          getTxns={loadTransactions}
+          loadedTxns={transactions}
+          loadingMap={loadingTxns}
+        />
       )}
 
       {/* Partner Table */}
