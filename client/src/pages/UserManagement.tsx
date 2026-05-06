@@ -353,7 +353,7 @@ export default function UserManagement() {
               <h2 className="text-lg font-semibold text-heading">Permissions — {permUser.display_name}</h2>
               <button type="button" onClick={() => setPermUserId(null)} className="rounded p-1 hover:bg-card-border/50"><X className="h-5 w-5" /></button>
             </div>
-            {['Book Access', 'Pages', 'Delete', 'Other'].map((group) => (
+            {['Book Access', 'Pages', 'Delete', 'TransportBook', 'Other'].map((group) => (
               <div key={group} className="mb-4">
                 <h3 className="mb-2 text-sm font-semibold text-heading/60 uppercase tracking-wide">{group}</h3>
                 <div className="space-y-2">
