@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { query, getOne, getAll } from '../db/database';
 import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
+import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
@@ -23,7 +24,7 @@ router.post('/', async (req, res) => {
     const { date, category, description, amount, mode, bank_name, cash_handler, remarks } = req.body;
     if (!date || !amount) return res.status(400).json({ error: 'date and amount are required' });
 
-    if (req.user?.role !== 'admin') {
+    if (!await canEditTransport(req)) {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)
@@ -92,7 +93,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
     await deleteImprestForSource('rl_expenses', Number(req.params.id));
     await query('DELETE FROM rl_expenses WHERE id=$1', [req.params.id]);
     res.json({ success: true });

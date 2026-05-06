@@ -42,7 +42,7 @@ function maskAccount(account: string | null): string {
 export default function TruckOwners() {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const canEditTransport = useAuthStore((s) => s.canEditTransport);
   const [rows, setRows] = useState<OwnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -176,7 +176,7 @@ export default function TruckOwners() {
           <h1 className="text-2xl font-bold text-heading">Truck Owners</h1>
           <p className="text-sm text-heading/60 mt-1">{rows.length} truck owner{rows.length !== 1 ? 's' : ''} registered</p>
         </div>
-        {isAdmin() && (
+        {canEditTransport() && (
           <button
             type="button"
             onClick={openAdd}
@@ -255,7 +255,7 @@ export default function TruckOwners() {
                         >
                           <Eye className="h-4 w-4" />
                         </button>
-                        {isAdmin() && (
+                        {canEditTransport() && (
                           <>
                             <button
                               type="button"

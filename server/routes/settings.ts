@@ -12,6 +12,21 @@ const EDITABLE_KEYS = new Set([
   'gps_rent_monthly',
 ]);
 
+// Admin-only: toggle open edit access for all users in TransportBook.
+router.put('/tb_open_edit', async (req: any, res) => {
+  try {
+    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    const { value } = req.body;
+    const v = value === true || value === 1 || value === '1' || value === 'true' ? '1' : '0';
+    await query(
+      `INSERT INTO app_settings (key, value, updated_at) VALUES ('tb_open_edit', $1, NOW())
+       ON CONFLICT (key) DO UPDATE SET value = EXCLUDED.value, updated_at = NOW()`,
+      [v]
+    );
+    res.json({ key: 'tb_open_edit', value: v });
+  } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 router.get('/', async (_req, res) => {
   try {
     const rows = await getAll('SELECT key, value FROM app_settings ORDER BY key');

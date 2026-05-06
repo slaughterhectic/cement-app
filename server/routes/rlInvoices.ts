@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
@@ -340,7 +341,7 @@ router.post('/:id/payments', async (req, res) => {
     const { date, amount, mode, bank_name, reference, remarks } = req.body;
     if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
 
-    if (req.user?.role !== 'admin') {
+    if (!await canEditTransport(req)) {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const payload = { ...req.body, invoice_id: Number(req.params.id) };
       const pending = await getOne(
@@ -364,7 +365,7 @@ router.post('/:id/payments', async (req, res) => {
 
 router.delete('/:id/payments/:pid', async (req, res) => {
   try {
-    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
     await query('DELETE FROM rl_invoice_payments WHERE id=$1 AND invoice_id=$2', [req.params.pid, req.params.id]);
     await recomputeInvoiceFromPayments(Number(req.params.id));
     res.json({ success: true });

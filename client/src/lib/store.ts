@@ -12,11 +12,14 @@ interface AuthState {
   token: string | null;
   user: User | null;
   permissions: string[];
+  tbEditOpen: boolean;
   setAuth: (token: string, user: User, permissions: string[]) => void;
   logout: () => void;
   hasPermission: (perm: string) => boolean;
   isAdmin: () => boolean;
   refreshPermissions: () => Promise<void>;
+  loadTbEditOpen: () => Promise<void>;
+  canEditTransport: () => boolean;
 }
 
 export const useAuthStore = create<AuthState>((set, get) => ({
@@ -28,6 +31,7 @@ export const useAuthStore = create<AuthState>((set, get) => ({
   permissions: (() => {
     try { return JSON.parse(localStorage.getItem('cb_perms') || '[]'); } catch { return []; }
   })(),
+  tbEditOpen: localStorage.getItem('tb_edit_open') !== '0',
   setAuth: (token, user, permissions) => {
     localStorage.setItem('cb_token', token);
     localStorage.setItem('cb_user', JSON.stringify(user));
@@ -39,6 +43,22 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     localStorage.removeItem('cb_user');
     localStorage.removeItem('cb_perms');
     set({ isAuthenticated: false, token: null, user: null, permissions: [] });
+  },
+  loadTbEditOpen: async () => {
+    const { token } = get();
+    if (!token) return;
+    try {
+      const res = await fetch('/api/settings', { headers: { Authorization: `Bearer ${token}` } });
+      if (!res.ok) return;
+      const data: Record<string, string> = await res.json();
+      const open = (data.tb_open_edit ?? '1') !== '0';
+      localStorage.setItem('tb_edit_open', open ? '1' : '0');
+      set({ tbEditOpen: open });
+    } catch { /* keep cached value */ }
+  },
+  canEditTransport: () => {
+    const state = get();
+    return state.user?.role === 'admin' || state.tbEditOpen;
   },
   hasPermission: (perm) => {
     const state = get();

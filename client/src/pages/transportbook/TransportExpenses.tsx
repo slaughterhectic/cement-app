@@ -62,7 +62,7 @@ function monthLabel(ym: string): string {
 
 export default function TransportExpenses() {
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const canEditTransport = useAuthStore((s) => s.canEditTransport);
   const [rows, setRows] = useState<ExpenseRow[]>([]);
   const [monthTotal, setMonthTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -157,13 +157,13 @@ export default function TransportExpenses() {
     { accessorKey: 'bank_name', header: 'Bank', cell: ({ getValue }) => (getValue() as string) ?? '—' },
     {
       id: 'actions', header: 'Actions', enableSorting: false, enableHiding: false,
-      cell: ({ row }) => isAdmin() ? (
+      cell: ({ row }) => canEditTransport() ? (
         <button type="button" className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" onClick={() => handleDelete(row.original)}>
           <Trash2 className="h-4 w-4" />
         </button>
       ) : null,
     },
-  ], [isAdmin]);
+  ], [canEditTransport]);
 
   return (
     <div className="flex flex-col gap-6">
@@ -229,7 +229,7 @@ export default function TransportExpenses() {
         emptyMessage={monthFilter ? `No expenses in ${monthLabel(monthFilter)}.` : 'No expenses yet.'}
         emptyAction={{ label: 'Add Expense', onClick: () => setModalOpen(true) }}
         exportFileName={monthFilter ? `transport_expenses_${monthFilter}` : 'transport_expenses'}
-        canDelete={isAdmin()}
+        canDelete={canEditTransport()}
         canDownload
       />
 

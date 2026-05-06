@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Truck, Lock } from 'lucide-react';
+import { Truck, Lock, ShieldCheck } from 'lucide-react';
 import { api } from '../../lib/api';
 import { useToastStore, useAuthStore } from '../../lib/store';
 
@@ -30,7 +30,10 @@ export default function TransportSettings() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
   const hasPermission = useAuthStore((s) => s.hasPermission);
+  const tbEditOpen = useAuthStore((s) => s.tbEditOpen);
+  const loadTbEditOpen = useAuthStore((s) => s.loadTbEditOpen);
   const canEdit = isAdmin() || hasPermission('manage_transport_rates');
+  const [savingAccess, setSavingAccess] = useState(false);
 
   const [values, setValues] = useState<Record<string, string>>({});
   const [saving, setSaving] = useState<string | null>(null);
@@ -49,6 +52,28 @@ export default function TransportSettings() {
   };
 
   useEffect(() => { load(); }, []);
+
+  const handleToggleAccess = async () => {
+    if (!isAdmin()) return;
+    setSavingAccess(true);
+    try {
+      const res = await fetch('/api/settings/tb_open_edit', {
+        method: 'PUT',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${localStorage.getItem('cb_token')}`,
+        },
+        body: JSON.stringify({ value: tbEditOpen ? '0' : '1' }),
+      });
+      if (!res.ok) throw new Error((await res.json()).error || 'Save failed');
+      await loadTbEditOpen();
+      addToast(tbEditOpen ? 'Edit access restricted to admin only' : 'Edit access opened to all users', 'success');
+    } catch (e: any) {
+      addToast(e.message || 'Save failed', 'error');
+    } finally {
+      setSavingAccess(false);
+    }
+  };
 
   const handleSave = async (key: string) => {
     const v = values[key];
@@ -75,6 +100,38 @@ export default function TransportSettings() {
           Global per-MT and per-month rates used in Trip calculations and GPS rent auto-debit.
         </p>
       </div>
+
+      {/* User Edit Access toggle — admin only */}
+      {isAdmin() && (
+        <div className="card">
+          <div className="flex items-start gap-4">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-green-500/10 text-green-600 dark:text-green-400">
+              <ShieldCheck className="h-5 w-5" />
+            </div>
+            <div className="flex-1">
+              <h2 className="text-lg font-semibold text-heading">User Edit Access</h2>
+              <p className="mt-1 text-sm text-heading/60">
+                When enabled, all users can add, edit, and delete entries in the TransportBook without requiring admin approval.
+                Disable to restrict edits to admins only.
+              </p>
+            </div>
+            <div className="flex items-center gap-3">
+              <span className={`text-sm font-medium ${tbEditOpen ? 'text-green-600 dark:text-green-400' : 'text-red-500 dark:text-red-400'}`}>
+                {tbEditOpen ? 'Open to all' : 'Admin only'}
+              </span>
+              <button
+                type="button"
+                onClick={handleToggleAccess}
+                disabled={savingAccess}
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors focus:outline-none disabled:opacity-60 ${tbEditOpen ? 'bg-green-500' : 'bg-gray-300 dark:bg-gray-600'}`}
+                title={tbEditOpen ? 'Click to restrict to admin only' : 'Click to open to all users'}
+              >
+                <span className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${tbEditOpen ? 'translate-x-6' : 'translate-x-1'}`} />
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="card">
         <div className="flex items-start gap-4">

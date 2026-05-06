@@ -307,7 +307,7 @@ function computeLive(form: typeof emptyForm, rates: RateSettings) {
 
 export default function TransportTrips() {
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const canEditTransport = useAuthStore((s) => s.canEditTransport);
   const [rows, setRows] = useState<TripRow[]>([]);
   const [owners, setOwners] = useState<OwnerOption[]>([]);
   const [dieselParties, setDieselParties] = useState<DieselPartyOption[]>([]);
@@ -765,7 +765,7 @@ export default function TransportTrips() {
                         >
                           <Pencil className="h-4 w-4" />
                         </button>
-                        {isAdmin() && (
+                        {canEditTransport() && (
                           <button
                             type="button"
                             onClick={() => handleDelete(row)}

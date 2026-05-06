@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
@@ -33,8 +34,8 @@ router.post('/', async (req, res) => {
     );
     if (!owner) return res.status(400).json({ error: 'Owner not found' });
 
-    // All non-admin entries — present or past — go through admin approval.
-    if (req.user?.role !== 'admin') {
+    // All non-editor entries — present or past — go through admin approval.
+    if (!await canEditTransport(req)) {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const pending = await getOne(
         `INSERT INTO pending_entries (entry_type, entry_data, created_by, created_by_name, source)

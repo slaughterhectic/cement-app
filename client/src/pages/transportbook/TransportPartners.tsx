@@ -171,7 +171,7 @@ function DateWiseActivity({
 
 export default function TransportPartners() {
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const canEditTransport = useAuthStore((s) => s.canEditTransport);
   const [partners, setPartners] = useState<PartnerRow[]>([]);
   const [loading, setLoading] = useState(true);
   const [txnModalOpen, setTxnModalOpen] = useState(false);
@@ -485,7 +485,7 @@ export default function TransportPartners() {
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
-                          {isAdmin() && (
+                          {canEditTransport() && (
                             <button
                               type="button"
                               onClick={() => handleDeletePartner(partner)}
@@ -513,7 +513,7 @@ export default function TransportPartners() {
                                   <th className="pb-2 font-medium text-heading/60">Type</th>
                                   <th className="pb-2 font-medium text-heading/60 text-right">Amount</th>
                                   <th className="pb-2 font-medium text-heading/60">Remarks</th>
-                                  {isAdmin() && <th className="pb-2 font-medium text-heading/60"></th>}
+                                  {canEditTransport() && <th className="pb-2 font-medium text-heading/60"></th>}
                                 </tr>
                               </thead>
                               <tbody>
@@ -527,7 +527,7 @@ export default function TransportPartners() {
                                       {txn.type === 'withdrawal' ? '−' : '+'}{formatINR(txn.amount)}
                                     </td>
                                     <td className="py-1.5 text-heading/60">{txn.remarks || '—'}</td>
-                                    {isAdmin() && (
+                                    {canEditTransport() && (
                                       <td className="py-1.5 text-right">
                                         <button
                                           type="button"

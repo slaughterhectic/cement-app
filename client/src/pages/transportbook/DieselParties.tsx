@@ -37,7 +37,7 @@ const emptyAdd = { name: '', phone: '', opening_balance: '', remarks: '' };
 
 export default function DieselParties() {
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin());
+  const canEditTransport = useAuthStore((s) => s.canEditTransport());
   const [rows, setRows] = useState<DieselParty[]>([]);
   const [banks, setBanks] = useState<string[]>([]);
   const [handlers, setHandlers] = useState<string[]>([]);
@@ -263,7 +263,7 @@ export default function DieselParties() {
                           <button type="button" onClick={() => openEdit(r)} className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400" title="Edit">
                             <Pencil className="h-3.5 w-3.5" />
                           </button>
-                          {isAdmin && (
+                          {canEditTransport && (
                             <button type="button" onClick={() => deleteParty(r.id)} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30" title="Delete">
                               <Trash2 className="h-3.5 w-3.5" />
                             </button>
@@ -298,7 +298,7 @@ export default function DieselParties() {
                                     <th className="px-3 py-2 text-right">Credit (₹)</th>
                                     <th className="px-3 py-2 text-right">Debit (₹)</th>
                                     <th className="px-3 py-2">Remarks</th>
-                                    {isAdmin && <th className="px-3 py-2"></th>}
+                                    {canEditTransport && <th className="px-3 py-2"></th>}
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-card-border">
@@ -319,7 +319,7 @@ export default function DieselParties() {
                                       <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{t.type === 'credit' ? formatINR(t.amount) : '—'}</td>
                                       <td className="px-3 py-2 text-right tabular-nums text-amber-700 dark:text-amber-300">{t.type === 'debit' ? formatINR(t.amount) : '—'}</td>
                                       <td className="px-3 py-2 text-heading/70 max-w-[200px] truncate">{t.remarks || '—'}</td>
-                                      {isAdmin && (
+                                      {canEditTransport && (
                                         <td className="px-3 py-2">
                                           {t.source_table === 'manual' ? (
                                             <button type="button" onClick={() => deleteTxn(r.id, t.id)} className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">

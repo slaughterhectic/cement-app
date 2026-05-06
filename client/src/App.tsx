@@ -26,6 +26,7 @@ import UserManagement from './pages/UserManagement';
 import Settings from './pages/Settings';
 import ResetPassword from './pages/ResetPassword';
 import { useAuthStore } from './lib/store';
+import { useEffect } from 'react';
 import TruckDashboard from './pages/truckbook/TruckDashboard';
 import Trucks from './pages/truckbook/Trucks';
 import TripLog from './pages/truckbook/TripLog';
@@ -54,6 +55,8 @@ import { Building2, Truck, LogOut } from 'lucide-react';
 
 function Protected({ children }: { children: ReactNode }) {
   const ok = useAuthStore((s) => s.isAuthenticated);
+  const loadTbEditOpen = useAuthStore((s) => s.loadTbEditOpen);
+  useEffect(() => { if (ok) loadTbEditOpen(); }, [ok]);
   if (!ok) return <Navigate to="/login" replace />;
   return <>{children}</>;
 }

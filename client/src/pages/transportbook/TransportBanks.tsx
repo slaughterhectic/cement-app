@@ -33,7 +33,7 @@ const emptyTxn = { date: new Date().toISOString().split('T')[0], type: 'credit' 
 
 export default function TransportBanks() {
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin());
+  const canEditTransport = useAuthStore((s) => s.canEditTransport());
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
@@ -160,7 +160,7 @@ export default function TransportBanks() {
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={() => { setTxnForm(emptyTxn); setTxnTarget(b); }}
                             className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600">+ Txn</button>
-                          {isAdmin && (
+                          {canEditTransport && (
                             <>
                               <button type="button" onClick={() => { setEditing(b); setForm({ name: b.name, opening_balance: String(b.opening_balance) }); setAddOpen(true); }}
                                 className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40">Edit</button>

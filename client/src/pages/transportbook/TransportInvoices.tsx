@@ -55,7 +55,7 @@ function StatusBadge({ status }: { status: string }) {
 
 export default function TransportInvoices() {
   const addToast = useToastStore((s) => s.addToast);
-  const isAdmin = useAuthStore((s) => s.isAdmin);
+  const canEditTransport = useAuthStore((s) => s.canEditTransport);
   const [searchParams, setSearchParams] = useSearchParams();
   const company: Company = searchParams.get('company') === 'jk' ? 'jk' : 'acc';
   const setCompany = (c: Company) => setSearchParams(c === 'acc' ? {} : { company: c });
@@ -453,7 +453,7 @@ export default function TransportInvoices() {
                           >
                             <Pencil className="h-4 w-4" />
                           </button>
-                          {isAdmin() && (
+                          {canEditTransport() && (
                             <button
                               type="button"
                               onClick={() => handleDelete(row)}
@@ -679,7 +679,7 @@ export default function TransportInvoices() {
                               <td className="px-3 py-1.5 text-heading/70">{p.reference || '—'}</td>
                               <td className="px-3 py-1.5 text-heading/70">{p.remarks || '—'}</td>
                               <td className="px-3 py-1.5 text-right">
-                                {isAdmin() && (
+                                {canEditTransport() && (
                                   <button type="button" onClick={() => deletePayment(p.id)} className="text-xs text-red-500 hover:underline">Delete</button>
                                 )}
                               </td>

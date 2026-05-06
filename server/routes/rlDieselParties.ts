@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
 import { dieselPartyBalance } from '../lib/walletSync';
+import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
@@ -55,7 +56,7 @@ router.put('/:id', async (req, res) => {
 
 // DELETE /api/rl/diesel-parties/:id (admin) — blocked if any trip references it.
 router.delete('/:id', async (req: any, res) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
   try {
     const used = await getOne(`SELECT 1 FROM rl_trips WHERE diesel_party_id=$1 LIMIT 1`, [req.params.id]);
     if (used) return res.status(400).json({ error: 'Diesel party is linked to trips and cannot be deleted' });
@@ -103,7 +104,7 @@ router.post('/:id/credit', async (req, res) => {
 
 // DELETE /api/rl/diesel-parties/:id/transactions/:txId (admin)
 router.delete('/:id/transactions/:txId', async (req: any, res) => {
-  if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+  if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
   try {
     await query(
       `DELETE FROM rl_diesel_transactions WHERE id=$1 AND diesel_party_id=$2`,

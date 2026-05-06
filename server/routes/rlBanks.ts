@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
@@ -101,7 +102,7 @@ router.put('/:id', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
     await query('DELETE FROM rl_banks WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
@@ -114,7 +115,7 @@ router.post('/:id/transactions', async (req, res) => {
     if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
     if (type !== 'credit' && type !== 'debit') return res.status(400).json({ error: "type must be 'credit' or 'debit'" });
 
-    if (req.user?.role !== 'admin') {
+    if (!await canEditTransport(req)) {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const payload = { ...req.body, bank_id: Number(req.params.id) };
       const pending = await getOne(
@@ -136,7 +137,7 @@ router.post('/:id/transactions', async (req, res) => {
 
 router.delete('/:id/transactions/:txId', async (req, res) => {
   try {
-    if (req.user?.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
+    if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
     await query(
       "DELETE FROM rl_bank_transactions WHERE id=$1 AND bank_id=$2 AND source_table='manual'",
       [req.params.txId, req.params.id]

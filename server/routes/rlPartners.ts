@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
@@ -139,8 +140,8 @@ router.post('/:id/transactions', async (req: any, res) => {
     if (!type) return res.status(400).json({ error: 'Type is required' });
     if (!amount || Number(amount) <= 0) return res.status(400).json({ error: 'Amount must be positive' });
 
-    // All non-admin entries — present or past — go through admin approval.
-    if (req.user?.role !== 'admin') {
+    // All non-editor entries — present or past — go through admin approval.
+    if (!await canEditTransport(req)) {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
       const payload = { ...req.body, partner_id: Number(req.params.id) };
       const pending = await getOne(
