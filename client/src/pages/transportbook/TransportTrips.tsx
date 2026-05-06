@@ -407,8 +407,16 @@ export default function TransportTrips() {
     e.preventDefault();
     if (!form.truck_owner_id) { addToast('Select a truck owner', 'error'); return; }
     if (!form.party_name.trim()) { addToast('Party name is required', 'error'); return; }
+    if (form.diesel_advance === '' || form.cash_advance === '') {
+      addToast('Diesel Advance and Cash Advance are required (use 0 if none)', 'error');
+      return;
+    }
     if (n(form.diesel_advance) > 0 && !form.diesel_party_id) {
       addToast('Pick the diesel pump for this advance so it lands on the right ledger', 'error');
+      return;
+    }
+    if (n(form.diesel_advance) > 0 && !form.diesel_receipt_number.trim()) {
+      addToast('Diesel Receipt # is required when Diesel Advance is greater than 0', 'error');
       return;
     }
     setSaving(true);
@@ -908,19 +916,20 @@ export default function TransportTrips() {
                     </div>
                   </div>
 
-                  {/* Advances */}
+                  {/* Advances — every field is mandatory. Use 0 explicitly when there is no
+                      advance; pump and receipt # become required as soon as diesel advance > 0. */}
                   <div>
-                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Advances</p>
+                    <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Advances <span className="text-[10px] font-normal text-heading/60 normal-case">(all fields required)</span></p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Advance (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_advance} onChange={f('diesel_advance')} placeholder="0" />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Advance (₹) <span className="text-red-500">*</span></label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.diesel_advance} onChange={f('diesel_advance')} placeholder="0" required />
                       </div>
                       <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">
                           Diesel Pump {n(form.diesel_advance) > 0 && <span className="text-red-500">*</span>}
                         </label>
-                        <select className="input-field" value={form.diesel_party_id} onChange={f('diesel_party_id')}>
+                        <select className="input-field" value={form.diesel_party_id} onChange={f('diesel_party_id')} required={n(form.diesel_advance) > 0}>
                           <option value="">— Select pump —</option>
                           {dieselParties.map((d) => (
                             <option key={d.id} value={d.id}>{d.name}</option>
@@ -933,12 +942,14 @@ export default function TransportTrips() {
                         )}
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Cash Advance (₹)</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.cash_advance} onChange={f('cash_advance')} placeholder="0" />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">Cash Advance (₹) <span className="text-red-500">*</span></label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.cash_advance} onChange={f('cash_advance')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Diesel Receipt #</label>
-                        <input className="input-field" value={form.diesel_receipt_number} onChange={f('diesel_receipt_number')} placeholder="e.g. 3953" />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">
+                          Diesel Receipt # {n(form.diesel_advance) > 0 && <span className="text-red-500">*</span>}
+                        </label>
+                        <input className="input-field" value={form.diesel_receipt_number} onChange={f('diesel_receipt_number')} placeholder="e.g. 3953" required={n(form.diesel_advance) > 0} />
                         <p className="mt-1 text-[10px] text-heading/50">From the pump's credit memo — links the receipt to this trip's diesel + cash split.</p>
                       </div>
                     </div>
