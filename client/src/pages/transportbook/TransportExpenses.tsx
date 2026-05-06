@@ -18,7 +18,7 @@ type ExpenseRow = {
   remarks: string | null;
 };
 
-const CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Travel', 'Repairs', 'Other'];
+const CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Freight payment', 'Repairs', 'Other'];
 
 const emptyForm = {
   date: new Date().toISOString().split('T')[0],
