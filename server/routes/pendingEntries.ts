@@ -366,6 +366,76 @@ router.post('/:id/approve', async (req, res) => {
          VALUES ($1,$2,$3,$4,$5) RETURNING *`,
         [d.date, Number(d.partner_id), d.type, Number(d.amount), d.remarks?.trim() || null]
       );
+    } else if (pending.entry_type === 'freight_party_payment') {
+      const d = data;
+      const m = d.mode === 'cash' ? 'cash' : 'bank';
+      const handler = m === 'cash' ? (d.cash_handler || null) : null;
+      const bank    = m === 'bank' ? (d.bank_name    || null) : null;
+      const pType   = d.payment_type || 'paid';
+      result = await getOne(
+        `INSERT INTO freight_party_payments (date, freight_party_id, amount, mode, bank_name, cash_handler, remarks, payment_type)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [d.date, Number(d.freight_party_id), Number(d.amount), m, bank, handler, d.remarks?.trim() || null, pType]
+      );
+      const fp = await getOne(`SELECT name FROM freight_parties WHERE id=$1`, [Number(d.freight_party_id)]);
+      await syncImprestForCashTxn({
+        sourceTable: 'freight_party_payments',
+        sourceId: result.id,
+        mode: m, cashHandler: handler,
+        amount: Number(d.amount), date: d.date,
+        direction: pType === 'received' ? 'credit' : 'debit',
+        particulars: `Freight ${pType === 'received' ? 'receipt' : 'payment'} — ${fp?.name ?? 'Freight party #' + d.freight_party_id}`,
+        narration: d.remarks || null,
+      });
+    } else if (pending.entry_type === 'rl_expense') {
+      const d = data;
+      const m = d.mode === 'cash' ? 'cash' : 'bank';
+      const handler = m === 'cash' ? (d.cash_handler || null) : null;
+      const bank    = m === 'bank' ? (d.bank_name    || null) : null;
+      result = await getOne(
+        `INSERT INTO rl_expenses (date, category, description, amount, mode, bank_name, cash_handler, remarks)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
+        [d.date, d.category || null, d.description || null, Number(d.amount), m, bank, handler, d.remarks || null]
+      );
+      await syncImprestForCashTxn({
+        sourceTable: 'rl_expenses',
+        sourceId: result.id,
+        mode: m, cashHandler: handler,
+        amount: Number(d.amount), date: d.date,
+        particulars: `Transport expense — ${d.category || 'General'}`,
+        narration: d.description || null,
+      });
+    } else if (pending.entry_type === 'rl_bank_txn') {
+      const d = data;
+      result = await getOne(
+        `INSERT INTO rl_bank_transactions (bank_id, date, type, amount, particulars, remarks, source_table)
+         VALUES ($1,$2,$3,$4,$5,$6,'manual') RETURNING *`,
+        [Number(d.bank_id), d.date, d.type, Number(d.amount), d.particulars?.trim() || null, d.remarks?.trim() || null]
+      );
+    } else if (pending.entry_type === 'rl_invoice_payment') {
+      const d = data;
+      const m = d.mode === 'cash' ? 'cash' : 'bank';
+      result = await getOne(
+        `INSERT INTO rl_invoice_payments (invoice_id, date, amount, mode, bank_name, reference, remarks)
+         VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING *`,
+        [Number(d.invoice_id), d.date, Number(d.amount), m, m === 'bank' ? (d.bank_name || null) : null, d.reference?.trim() || null, d.remarks?.trim() || null]
+      );
+      // Recompute the invoice's received_amount + status from the payment ledger.
+      const tot = await getOne(
+        `SELECT COALESCE(SUM(amount),0)::float AS total, MAX(date) AS last_date
+         FROM rl_invoice_payments WHERE invoice_id=$1`,
+        [Number(d.invoice_id)]
+      );
+      const inv = await getOne('SELECT invoice_amount FROM rl_invoices WHERE id=$1', [Number(d.invoice_id)]);
+      const invAmt = Number(inv?.invoice_amount) || 0;
+      const recAmt = Number(tot?.total) || 0;
+      let status: 'pending' | 'partial' | 'done' = 'pending';
+      if (invAmt > 0 && recAmt >= invAmt * 0.98) status = 'done';
+      else if (recAmt > 0) status = 'partial';
+      await query(
+        `UPDATE rl_invoices SET received_amount=$1, payment_receive_date=$2, status=$3 WHERE id=$4`,
+        [recAmt, tot?.last_date || null, status, Number(d.invoice_id)]
+      );
     } else {
       return res.status(400).json({ error: 'Unknown entry type' });
     }

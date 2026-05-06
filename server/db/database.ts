@@ -566,7 +566,8 @@ export async function initializeDatabase() {
         CHECK (entry_type IN (
           'sale','purchase','payment','expense',
           'truck_trip','truck_expense','driver_payment','transporter_payment',
-          'rl_trip','rl_owner_advance','rl_partner_transaction'
+          'rl_trip','rl_owner_advance','rl_partner_transaction',
+          'freight_party_payment','rl_expense','rl_bank_txn','rl_invoice_payment'
         ))
     `);
 
