@@ -98,8 +98,6 @@ function buildHtml(opts: TransportLedgerPdfOptions): string {
           <td class="num">${Number(r.qty || 0).toFixed(2)}</td>
           <td class="num">${esc(formatINR(Number(r.acc_freight_rate || 0)))}</td>
           <td class="num">${esc(formatINR(Number(r.acc_amount || 0)))}</td>
-          <td class="num">${esc(formatINR(Number(r.commission_amount || 0)))}</td>
-          <td class="num">${esc(formatINR(Number(r.builty_charge || 0)))}</td>
           <td class="num">${esc(formatINR(Number(r.diesel_advance || 0) + Number(r.cash_advance || 0)))}</td>
           <td class="num">${esc(formatINR(Number(r.final_payment || 0)))}</td>
         </tr>`;
@@ -282,8 +280,6 @@ function buildHtml(opts: TransportLedgerPdfOptions): string {
       <div class="card"><div class="label">Trips</div><div class="value">${summary.totalTrips}</div></div>
       <div class="card"><div class="label">Total Qty (T)</div><div class="value">${summary.totalQty.toFixed(2)}</div></div>
       <div class="card"><div class="label">ACC Earned</div><div class="value">${esc(formatINR(summary.totalAccAmount))}</div></div>
-      <div class="card"><div class="label">Commission</div><div class="value">${esc(formatINR(summary.totalCommission))}</div></div>
-      <div class="card"><div class="label">Bilty</div><div class="value">${esc(formatINR(summary.totalBuiltyCharge))}</div></div>
       <div class="card"><div class="label">Diesel Adv</div><div class="value">${esc(formatINR(summary.totalDieselAdvance))}</div></div>
       <div class="card"><div class="label">Cash Adv</div><div class="value">${esc(formatINR(summary.totalCashAdvance))}</div></div>
       <div class="card"><div class="label">GPS Rent</div><div class="value">${esc(formatINR(summary.totalGpsRent))}</div></div>
@@ -296,7 +292,7 @@ function buildHtml(opts: TransportLedgerPdfOptions): string {
         <col class="c-date" /><col class="c-builty" /><col class="c-do" />
         <col class="c-truck" /><col class="c-party" /><col class="c-dch" />
         <col class="c-qty" /><col class="c-rate" /><col class="c-acc" />
-        <col class="c-comm" /><col class="c-bilty" /><col class="c-adv" />
+        <col class="c-adv" />
         <col class="c-final" />
       </colgroup>
       <thead>
@@ -304,12 +300,12 @@ function buildHtml(opts: TransportLedgerPdfOptions): string {
           <th>Date</th><th>Builty#</th><th>DO#</th><th>Truck</th>
           <th>Party / Location</th><th>DCH</th>
           <th class="num">Qty (T)</th><th class="num">Rate</th><th class="num">ACC Amt</th>
-          <th class="num">Comm</th><th class="num">Bilty</th><th class="num">Adv</th>
+          <th class="num">Adv</th>
           <th class="num">Final</th>
         </tr>
       </thead>
       <tbody>
-        ${rowsHtml || `<tr><td colspan="13" style="text-align:center;padding:20px;color:#6b7280;">No entries.</td></tr>`}
+        ${rowsHtml || `<tr><td colspan="11" style="text-align:center;padding:20px;color:#6b7280;">No entries.</td></tr>`}
       </tbody>
       <tfoot>
         <tr>
@@ -317,23 +313,21 @@ function buildHtml(opts: TransportLedgerPdfOptions): string {
           <td class="num">${summary.totalQty.toFixed(2)}</td>
           <td class="num">—</td>
           <td class="num">${esc(formatINR(summary.totalAccAmount))}</td>
-          <td class="num">${esc(formatINR(summary.totalCommission))}</td>
-          <td class="num">${esc(formatINR(summary.totalBuiltyCharge))}</td>
           <td class="num">${esc(formatINR(summary.totalDieselAdvance + summary.totalCashAdvance))}</td>
           <td class="num">${esc(formatINR(summary.totalFinalPayment))}</td>
         </tr>
         ${summary.totalGpsRent > 0 ? `
         <tr>
-          <td colspan="12" style="text-align:right;">Less: GPS Rent (auto-debited)</td>
+          <td colspan="10" style="text-align:right;">Less: GPS Rent (auto-debited)</td>
           <td class="num neg">−${esc(formatINR(summary.totalGpsRent))}</td>
         </tr>` : ''}
         ${totalAdvancePaid > 0 ? `
         <tr>
-          <td colspan="12" style="text-align:right;">Less: Advance Paid</td>
+          <td colspan="10" style="text-align:right;">Less: Advance Paid</td>
           <td class="num neg">−${esc(formatINR(totalAdvancePaid))}</td>
         </tr>` : ''}
         <tr class="final-row">
-          <td colspan="12" style="text-align:right;">Final Payment</td>
+          <td colspan="10" style="text-align:right;">Final Payment</td>
           <td class="num balance">${esc(formatINR(summary.netOwed))}</td>
         </tr>
       </tfoot>

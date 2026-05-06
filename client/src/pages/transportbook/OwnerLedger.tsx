@@ -301,11 +301,8 @@ export default function OwnerLedger() {
           <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider">ACC Freight Earned</p>
           <p className="text-xl font-bold text-heading">{formatINR(summary.totalAccAmount)}</p>
         </div>
-        <div className="card p-4 bg-amber-50 dark:bg-amber-900/30 border-amber-200 dark:border-amber-800">
-          <p className="text-xs text-amber-600 dark:text-amber-400 font-medium uppercase tracking-wider">Commission + Bilty</p>
-          <p className="text-xl font-bold text-heading">{formatINR(summary.totalCommission + summary.totalBuiltyCharge)}</p>
-          <p className="text-xs text-amber-500 mt-0.5">Comm {formatINR(summary.totalCommission)} · Bilty {formatINR(summary.totalBuiltyCharge)}</p>
-        </div>
+        {/* Commission + Bilty card hidden — those are company-internal numbers, not owner-facing.
+            Final payment already accounts for them in the totals row below. */}
         <div className="card p-4 bg-green-50 dark:bg-green-900/30 border-green-200 dark:border-green-800">
           <p className="text-xs text-green-600 dark:text-green-400 font-medium uppercase tracking-wider">Net Payable to Owner</p>
           <p className="text-xl font-bold text-heading">{formatINR(summary.netOwed)}</p>
@@ -425,8 +422,6 @@ export default function OwnerLedger() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Qty (T)</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Rate</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">ACC Amt</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Comm</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Bilty</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Diesel</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Cash</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Final</th>
@@ -435,7 +430,7 @@ export default function OwnerLedger() {
             <tbody>
               {ledger.length === 0 ? (
                 <tr>
-                  <td colSpan={14} className="px-4 py-8 text-center text-heading/50">No entries found for this owner</td>
+                  <td colSpan={12} className="px-4 py-8 text-center text-heading/50">No entries found for this owner</td>
                 </tr>
               ) : (
                 ledger.map((row) => {
@@ -448,7 +443,7 @@ export default function OwnerLedger() {
                           <span className="ml-2 text-xs text-heading/60">{row.period}</span>
                           {row.truck_number && <span className="ml-2 text-xs text-heading/50">({row.truck_number})</span>}
                         </td>
-                        <td className="px-3 py-2.5" colSpan={8} />
+                        <td className="px-3 py-2.5" colSpan={6} />
                         <td className="px-3 py-2.5 text-right font-semibold text-red-600 dark:text-red-400">−{formatINR(Number(row.amount || 0))}</td>
                       </tr>
                     );
@@ -471,8 +466,6 @@ export default function OwnerLedger() {
                       <td className="px-3 py-2.5 text-right">{Number(row.qty || 0).toFixed(2)}</td>
                       <td className="px-3 py-2.5 text-right">{formatINR(Number(row.acc_freight_rate || 0))}</td>
                       <td className="px-3 py-2.5 text-right font-medium">{formatINR(Number(row.acc_amount || 0))}</td>
-                      <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.commission_amount || 0))}</td>
-                      <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.builty_charge || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.diesel_advance || 0))}</td>
                       <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400">{formatINR(Number(row.cash_advance || 0))}</td>
                       <td className="px-3 py-2.5 text-right font-semibold text-green-600 dark:text-green-400">{formatINR(Number(row.final_payment || 0))}</td>
@@ -488,15 +481,13 @@ export default function OwnerLedger() {
                   <td className="px-3 py-3 text-right">{summary.totalQty.toFixed(2)}</td>
                   <td className="px-3 py-3 text-right">—</td>
                   <td className="px-3 py-3 text-right">{formatINR(summary.totalAccAmount)}</td>
-                  <td className="px-3 py-3 text-right text-amber-600 dark:text-amber-400">{formatINR(summary.totalCommission)}</td>
-                  <td className="px-3 py-3 text-right text-amber-600 dark:text-amber-400">{formatINR(summary.totalBuiltyCharge)}</td>
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalDieselAdvance)}</td>
                   <td className="px-3 py-3 text-right text-red-600 dark:text-red-400">{formatINR(summary.totalCashAdvance)}</td>
                   <td className="px-3 py-3 text-right text-green-600 dark:text-green-400">{formatINR(summary.totalFinalPayment)}</td>
                 </tr>
                 {summary.totalGpsRent ? (
                   <tr className="bg-slate-50 dark:bg-slate-900/30 font-medium border-t border-slate-200 dark:border-slate-800 text-sm">
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={13}>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={11}>
                       Less: GPS Rent (auto-debited monthly, across all trucks)
                     </td>
                     <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">−{formatINR(summary.totalGpsRent)}</td>
@@ -504,14 +495,14 @@ export default function OwnerLedger() {
                 ) : null}
                 {summary.totalAdvancePaid ? (
                   <tr className="bg-slate-50 dark:bg-slate-900/30 font-medium border-t border-slate-200 dark:border-slate-800 text-sm">
-                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={13}>
+                    <td className="px-3 py-2 text-slate-600 dark:text-slate-400" colSpan={11}>
                       Less: Advance Paid ({advances.length} entr{advances.length === 1 ? 'y' : 'ies'})
                     </td>
                     <td className="px-3 py-2 text-right text-red-600 dark:text-red-400">−{formatINR(summary.totalAdvancePaid)}</td>
                   </tr>
                 ) : null}
                 <tr className="bg-green-50 dark:bg-green-900/30 font-bold border-t-2 border-green-200 dark:border-green-800">
-                  <td className="px-3 py-3 text-green-700 dark:text-green-300" colSpan={13}>Final Payment</td>
+                  <td className="px-3 py-3 text-green-700 dark:text-green-300" colSpan={11}>Final Payment</td>
                   <td className="px-3 py-3 text-right text-green-700 dark:text-green-300">{formatINR(summary.netOwed)}</td>
                 </tr>
               </tfoot>
