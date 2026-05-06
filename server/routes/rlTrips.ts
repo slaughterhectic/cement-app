@@ -199,6 +199,19 @@ router.post('/', async (req, res) => {
     const tripCompany = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
     if (tripCompany !== 'acc' && tripCompany !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
 
+    // Diesel receipt numbers must be unique across trips — prevents the same pump
+    // memo from being entered twice (catches duplicate / fraud cases).
+    const drn = diesel_receipt_number?.trim();
+    if (drn) {
+      const dup = await getOne(
+        `SELECT id, builty_number FROM rl_trips WHERE diesel_receipt_number = $1 LIMIT 1`,
+        [drn]
+      );
+      if (dup) {
+        return res.status(400).json({ error: `Diesel receipt #${drn} is already used on trip ${dup.builty_number ? `${dup.builty_number} (#${dup.id})` : `#${dup.id}`}.` });
+      }
+    }
+
     // All non-admin entries — present or past — go through the TransportBook approval queue.
     if (req.user?.role !== 'admin') {
       const user = await getOne('SELECT display_name FROM users WHERE id=$1', [req.user!.id]);
@@ -290,6 +303,18 @@ router.put('/:id', async (req, res) => {
 
     const tripCompany = (typeof company === 'string' ? company.trim().toLowerCase() : '') || 'acc';
     if (tripCompany !== 'acc' && tripCompany !== 'jk') return res.status(400).json({ error: "company must be 'acc' or 'jk'" });
+
+    // Diesel receipt uniqueness on edit — exclude the trip we're updating.
+    const drn = diesel_receipt_number?.trim();
+    if (drn) {
+      const dup = await getOne(
+        `SELECT id, builty_number FROM rl_trips WHERE diesel_receipt_number = $1 AND id <> $2 LIMIT 1`,
+        [drn, req.params.id]
+      );
+      if (dup) {
+        return res.status(400).json({ error: `Diesel receipt #${drn} is already used on trip ${dup.builty_number ? `${dup.builty_number} (#${dup.id})` : `#${dup.id}`}.` });
+      }
+    }
 
     const dieselPartyIdNum = diesel_party_id ? Number(diesel_party_id) : null;
     const dieselAdvanceNum = Number(diesel_advance) || 0;

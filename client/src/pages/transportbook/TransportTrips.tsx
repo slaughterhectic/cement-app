@@ -697,7 +697,19 @@ export default function TransportTrips() {
                     <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.commission_amount))}</td>
                     <td className="px-3 py-2.5 text-right text-amber-600 dark:text-amber-400">{formatINR(Number(row.builty_charge))}</td>
                     <td className="px-3 py-2.5 text-right text-red-600 dark:text-red-400 text-xs">
-                      D: {formatINR(Number(row.diesel_advance))} / C: {formatINR(Number(row.cash_advance))}
+                      <div className="flex flex-col items-end gap-0.5">
+                        <span>D: {formatINR(Number(row.diesel_advance))} / C: {formatINR(Number(row.cash_advance))}</span>
+                        {Number(row.diesel_advance) > 0 && row.diesel_party_id && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-emerald-100 dark:bg-emerald-900/40 px-1.5 py-0.5 text-[10px] font-medium text-emerald-700 dark:text-emerald-300" title={`Logged to ${row.diesel_party_name || 'pump'}${row.diesel_receipt_number ? ` · receipt ${row.diesel_receipt_number}` : ''}`}>
+                            ✓ Diesel logged
+                          </span>
+                        )}
+                        {Number(row.diesel_advance) > 0 && !row.diesel_party_id && (
+                          <span className="inline-flex items-center gap-0.5 rounded-full bg-amber-100 dark:bg-amber-900/40 px-1.5 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300" title="Diesel advance recorded but no pump selected — won't appear on any pump's ledger.">
+                            ⚠ No pump
+                          </span>
+                        )}
+                      </div>
                     </td>
                     <td className="px-3 py-2.5 text-right font-semibold text-green-600 dark:text-green-400">{formatINR(Number(row.final_payment))}</td>
                     <td className="px-3 py-2.5">
