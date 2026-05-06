@@ -22,6 +22,7 @@ router.get('/summary', async (_req, res) => {
       assetsAggs,
       walletAggs,
       fastagAggs,
+      freightPartyPayAggs,
       bankReceivedRows,
       bankPayOutRows,
       bankExpenseRows,
@@ -109,12 +110,19 @@ router.get('/summary', async (_req, res) => {
         SELECT COALESCE(SUM(amount),0) as bank
         FROM fastag_transactions WHERE type='credit'
       `),
+      getOne(`
+        SELECT
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'),0) as bank_paid,
+          COALESCE(SUM(amount) FILTER (WHERE mode='bank' AND payment_type='received'),0)              as bank_recv
+        FROM freight_party_payments
+      `),
       getAll(`
         SELECT COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified') as bank_name, COALESCE(SUM(amount),0) as received
         FROM (
           SELECT bank_name, amount FROM payments WHERE mode='bank' AND direction='receive'
           UNION ALL SELECT bank_name, amount FROM party_loans WHERE mode='bank' AND type='repayment'
           UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND payment_type='received'
+          UNION ALL SELECT bank_name, amount FROM freight_party_payments WHERE mode='bank' AND payment_type='received'
         ) combined
         GROUP BY COALESCE(NULLIF(TRIM(bank_name),''), 'Unspecified')
       `),
@@ -130,6 +138,7 @@ router.get('/summary', async (_req, res) => {
           UNION ALL SELECT bank_name, amount FROM truck_expenses WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM driver_payments WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
+          UNION ALL SELECT bank_name, amount FROM freight_party_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid'
           UNION ALL SELECT bank_name, amount FROM assets WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM asset_topups WHERE mode='bank'
           UNION ALL SELECT bank_name, amount FROM party_loans WHERE mode='bank' AND type='disbursement'
@@ -236,6 +245,7 @@ router.get('/summary', async (_req, res) => {
       + num(payAggs.bank_recv) - num(payAggs.bank_pay)
       - num(expAggs.bank) - num(truckExpAggs.bank) - num(driverPayAggs.bank)
       - num(transporterPayAggs.bank_paid) + num(transporterPayAggs.bank_recv)
+      - num(freightPartyPayAggs?.bank_paid) + num(freightPartyPayAggs?.bank_recv)
       - num(partyLoansAggs.bank_disbursed) + num(partyLoansAggs.bank_repaid)
       - num(loanRepayAggs.bank)
       - num(assetsAggs.bank)
@@ -312,6 +322,16 @@ router.get('/banks/:name/transactions', async (req, res) => {
         FROM transporter_payments tp
         LEFT JOIN transporters tr ON tr.id = tp.transporter_id
         WHERE tp.mode='bank' AND TRIM(LOWER(COALESCE(tp.bank_name,'')))=TRIM(LOWER($1))
+
+        UNION ALL
+        SELECT fp_pay.date,
+          CASE WHEN COALESCE(fp_pay.payment_type,'paid')='paid' THEN 'Freight party paid' ELSE 'Freight party received' END,
+          fp.name, 'freight_party_payment', fp_pay.id,
+          CASE WHEN fp_pay.payment_type='received' THEN fp_pay.amount ELSE 0 END,
+          CASE WHEN COALESCE(fp_pay.payment_type,'paid')='paid' THEN fp_pay.amount ELSE 0 END
+        FROM freight_party_payments fp_pay
+        LEFT JOIN freight_parties fp ON fp.id = fp_pay.freight_party_id
+        WHERE fp_pay.mode='bank' AND TRIM(LOWER(COALESCE(fp_pay.bank_name,'')))=TRIM(LOWER($1))
 
         UNION ALL
         SELECT pl.date,

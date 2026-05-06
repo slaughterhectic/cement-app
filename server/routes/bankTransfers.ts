@@ -18,6 +18,8 @@ async function bankBalance(bank: string): Promise<number> {
       - COALESCE((SELECT SUM(amount) FROM driver_payments    WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       - COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       + COALESCE((SELECT SUM(amount) FROM transporter_payments WHERE mode='bank' AND payment_type='received'                AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      - COALESCE((SELECT SUM(amount) FROM freight_party_payments WHERE mode='bank' AND COALESCE(payment_type,'paid')='paid' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
+      + COALESCE((SELECT SUM(amount) FROM freight_party_payments WHERE mode='bank' AND payment_type='received'               AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       - COALESCE((SELECT SUM(amount) FROM party_loans WHERE mode='bank' AND type='disbursement' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       + COALESCE((SELECT SUM(amount) FROM party_loans WHERE mode='bank' AND type='repayment'    AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
       - COALESCE((SELECT SUM(amount) FROM loan_repayments WHERE mode='bank' AND LOWER(TRIM(COALESCE(bank_name,''))) = LOWER(TRIM($1))), 0)
