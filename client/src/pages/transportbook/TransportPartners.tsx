@@ -61,7 +61,7 @@ function DateWiseActivity({
   loadedTxns: Record<number, Transaction[]>;
   loadingMap: Record<number, boolean>;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(true);
   const [dateFrom, setDateFrom] = useState('');
   const [dateTo, setDateTo] = useState('');
   const [typeFilter, setTypeFilter] = useState<'all' | 'capital' | 'withdrawal' | 'profit'>('capital');
