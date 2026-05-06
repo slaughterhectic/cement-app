@@ -186,6 +186,8 @@ function EntrySummary({ type, data }: { type: string; data: Record<string, any> 
 export default function PendingApprovals({ source = 'cementbook' }: { source?: 'cementbook' | 'truckbook' | 'transportbook' }) {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin)();
+  const hasPermission = useAuthStore((s) => s.hasPermission);
+  const canApprove = isAdmin || (source === 'transportbook' && hasPermission('tb_approve'));
 
   const [rows, setRows] = useState<PendingEntry[]>([]);
   const [loading, setLoading] = useState(true);
@@ -253,9 +255,9 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
       <div>
         <h1 className="text-2xl font-bold text-heading">Pending Approvals</h1>
         <p className="text-sm text-heading/60 mt-1">
-          {isAdmin
-            ? 'Review and approve entries submitted by users with non-today dates'
-            : 'Track your entries that are awaiting admin approval'}
+          {canApprove
+            ? 'Review and approve entries submitted by users'
+            : 'Track your entries that are awaiting approval'}
         </p>
       </div>
 
@@ -355,7 +357,7 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
 
                     {/* Actions */}
                     <div className="flex items-center gap-1 shrink-0">
-                      {isAdmin && entry.status === 'pending' && (
+                      {canApprove && entry.status === 'pending' && (
                         <>
                           <button
                             type="button"

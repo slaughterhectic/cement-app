@@ -6,6 +6,14 @@ import { syncDieselDebitForSource } from '../lib/walletSync';
 
 const router = Router();
 
+async function hasTbApprove(userId: number): Promise<boolean> {
+  const row = await getOne(
+    `SELECT 1 FROM user_permissions WHERE user_id=$1 AND permission_name='tb_approve'`,
+    [userId]
+  );
+  return !!row;
+}
+
 async function getStock(brandId: number, godownId?: number): Promise<number> {
   if (godownId) {
     const r = await getOne(`
@@ -138,17 +146,20 @@ router.get('/count', async (req, res) => {
   }
 });
 
-// POST /api/pending-entries/:id/approve (admin only)
+// POST /api/pending-entries/:id/approve (admin or tb_approve for transportbook entries)
 router.post('/:id/approve', async (req, res) => {
-  if (req.user!.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin only' });
-  }
+  const isAdmin = req.user!.role === 'admin';
+  const tbApprover = !isAdmin && await hasTbApprove(req.user!.id);
+  if (!isAdmin && !tbApprover) return res.status(403).json({ error: 'Insufficient permissions' });
   try {
     const pending = await getOne(
       `SELECT * FROM pending_entries WHERE id=$1 AND status='pending'`,
       [req.params.id]
     );
     if (!pending) return res.status(404).json({ error: 'Pending entry not found or already processed' });
+    if (tbApprover && pending.source !== 'transportbook') {
+      return res.status(403).json({ error: 'You can only approve TransportBook entries' });
+    }
 
     const data = pending.entry_data;
     let result: any;
@@ -451,17 +462,20 @@ router.post('/:id/approve', async (req, res) => {
   }
 });
 
-// POST /api/pending-entries/:id/reject (admin only)
+// POST /api/pending-entries/:id/reject (admin or tb_approve for transportbook entries)
 router.post('/:id/reject', async (req, res) => {
-  if (req.user!.role !== 'admin') {
-    return res.status(403).json({ error: 'Admin only' });
-  }
+  const isAdmin = req.user!.role === 'admin';
+  const tbApprover = !isAdmin && await hasTbApprove(req.user!.id);
+  if (!isAdmin && !tbApprover) return res.status(403).json({ error: 'Insufficient permissions' });
   try {
     const pending = await getOne(
-      `SELECT id FROM pending_entries WHERE id=$1 AND status='pending'`,
+      `SELECT id, source FROM pending_entries WHERE id=$1 AND status='pending'`,
       [req.params.id]
     );
     if (!pending) return res.status(404).json({ error: 'Pending entry not found or already processed' });
+    if (tbApprover && pending.source !== 'transportbook') {
+      return res.status(403).json({ error: 'You can only reject TransportBook entries' });
+    }
 
     await query(
       `UPDATE pending_entries SET status='rejected', reviewed_by=$1, reviewed_at=NOW(), admin_note=$2 WHERE id=$3`,
