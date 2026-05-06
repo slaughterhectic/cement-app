@@ -61,6 +61,8 @@ export default function TransportInvoices() {
   const setCompany = (c: Company) => setSearchParams(c === 'acc' ? {} : { company: c });
 
   const [rows, setRows] = useState<InvoiceRow[]>([]);
+  const [monthFilter, setMonthFilter] = useState<string>('');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'partial' | 'done'>('all');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<InvoiceRow | null>(null);
@@ -230,7 +232,22 @@ export default function TransportInvoices() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  const totals = rows.reduce(
+  // Apply month + status filters and sort ASC by invoice date (oldest → newest).
+  const visibleRows = useMemo(() => {
+    return [...rows]
+      .filter((r) => {
+        if (monthFilter && !(r.invoice_date || '').startsWith(monthFilter)) return false;
+        if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+        return true;
+      })
+      .sort((a, b) => {
+        const da = a.invoice_date || '';
+        const db = b.invoice_date || '';
+        return da.localeCompare(db) || a.id - b.id;
+      });
+  }, [rows, monthFilter, statusFilter]);
+
+  const totals = visibleRows.reduce(
     (acc, r) => ({
       invoice_amount: acc.invoice_amount + Number(r.invoice_amount),
       received_amount: acc.received_amount + Number(r.received_amount),
@@ -348,6 +365,36 @@ export default function TransportInvoices() {
         </div>
       )}
 
+      {/* Filters */}
+      <div className="card flex flex-wrap items-center gap-3 p-3">
+        <label className="text-sm font-medium text-heading/70">Month:</label>
+        <input type="month" className="input-field py-1.5 text-sm" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
+        {(() => {
+          const now = new Date();
+          const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+          const mtd = ym(now);
+          const prev = new Date(now); prev.setMonth(prev.getMonth() - 1);
+          const prevMonth = ym(prev);
+          return (
+            <div className="flex items-center gap-1 text-xs">
+              <button type="button" onClick={() => setMonthFilter(mtd)} className={`rounded-md px-2 py-1 font-medium transition-colors ${monthFilter === mtd ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>MTD</button>
+              <button type="button" onClick={() => setMonthFilter(prevMonth)} className={`rounded-md px-2 py-1 font-medium transition-colors ${monthFilter === prevMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>Prev</button>
+              <button type="button" onClick={() => setMonthFilter('')} className={`rounded-md px-2 py-1 font-medium transition-colors ${!monthFilter ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>All</button>
+            </div>
+          );
+        })()}
+        <label className="text-sm font-medium text-heading/70 ml-2">Status:</label>
+        <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-xs">
+          {(['all', 'pending', 'partial', 'done'] as const).map((s) => (
+            <button key={s} type="button" onClick={() => setStatusFilter(s)}
+              className={`px-3 py-1 rounded-md font-medium capitalize transition-colors ${statusFilter === s ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+              {s}
+            </button>
+          ))}
+        </div>
+        <span className="ml-auto text-xs text-heading/60">{visibleRows.length} of {rows.length} · oldest → newest</span>
+      </div>
+
       {/* Table */}
       <div className="card overflow-hidden p-0">
         <div className="overflow-x-auto">
@@ -368,7 +415,7 @@ export default function TransportInvoices() {
             <tbody>
               {loading ? (
                 <tr><td colSpan={9} className="px-4 py-8 text-center text-heading/50">Loading...</td></tr>
-              ) : rows.length === 0 ? (
+              ) : visibleRows.length === 0 ? (
                 <tr>
                   <td colSpan={9} className="px-4 py-12 text-center">
                     <p className="text-heading/50 mb-3">No invoices yet</p>
@@ -376,7 +423,7 @@ export default function TransportInvoices() {
                   </td>
                 </tr>
               ) : (
-                rows.map((row) => {
+                visibleRows.map((row) => {
                   const pending = Math.max(0, Number(row.invoice_amount) - Number(row.received_amount));
                   return (
                     <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/30 transition-colors">
