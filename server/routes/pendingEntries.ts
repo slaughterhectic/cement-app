@@ -32,12 +32,14 @@ async function getStock(brandId: number, godownId?: number): Promise<number> {
 }
 
 // GET /api/pending-entries
-// Admin: all entries; User: own entries only; ?source= filters by book
+// Admin: all entries; tb_approve users: all transportbook entries; others: own entries only
 router.get('/', async (req, res) => {
   try {
     const source = (req.query.source as string) || 'cementbook';
     let rows: any[];
-    if (req.user!.role === 'admin') {
+    const isAdmin = req.user!.role === 'admin';
+    const tbApprover = !isAdmin && source === 'transportbook' && await hasTbApprove(req.user!.id);
+    if (isAdmin || tbApprover) {
       rows = await getAll(`
         SELECT pe.*, u.display_name as created_by_name, rv.display_name as reviewed_by_name
         FROM pending_entries pe
