@@ -36,6 +36,7 @@ const emptyRepayForm = {
   amount: '',
   mode: 'bank' as 'bank' | 'cash',
   bank_name: '',
+  cash_handler: '',
   remarks: '',
 };
 
@@ -56,6 +57,8 @@ export default function Trucks() {
   const [repayLoading, setRepayLoading] = useState(false);
   const [repaySaving, setRepaySaving] = useState(false);
   const [repayHistory, setRepayHistory] = useState(false);
+  const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
+  const [cashHandlers, setCashHandlers] = useState<string[]>([]);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -70,6 +73,13 @@ export default function Trucks() {
   }, [addToast]);
 
   useEffect(() => { load(); }, [load]);
+
+  useEffect(() => {
+    Promise.all([api.capital.banks(), api.imprest.handlers()]).then(([b, h]) => {
+      setBanks(b || []);
+      setCashHandlers((h || []).map((r: any) => r.handler_name));
+    }).catch(() => {});
+  }, []);
 
   const openAdd = () => {
     setEditing(null);
@@ -170,6 +180,7 @@ export default function Trucks() {
         amount: amt,
         mode: repayForm.mode,
         bank_name: repayForm.mode === 'bank' ? (repayForm.bank_name || null) : null,
+        cash_handler: repayForm.mode === 'cash' ? (repayForm.cash_handler || null) : null,
         remarks: repayForm.remarks || null,
       });
       addToast('Repayment recorded', 'success');
@@ -333,8 +344,32 @@ export default function Trucks() {
                   </div>
                   {repayForm.mode === 'bank' && (
                     <div>
-                      <label className="block text-sm font-medium text-heading/80 mb-1">Bank Name</label>
-                      <input className="input-field" value={repayForm.bank_name} onChange={(e) => setRepayForm((p) => ({ ...p, bank_name: e.target.value }))} placeholder="e.g. SBI" />
+                      <label className="block text-sm font-medium text-heading/80 mb-1">Bank</label>
+                      <select
+                        className="input-field"
+                        value={repayForm.bank_name}
+                        onChange={(e) => setRepayForm((p) => ({ ...p, bank_name: e.target.value }))}
+                      >
+                        <option value="">Select bank</option>
+                        {banks.map((b) => (
+                          <option key={b.bank_name} value={b.bank_name}>{b.bank_name}</option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                  {repayForm.mode === 'cash' && (
+                    <div>
+                      <label className="block text-sm font-medium text-heading/80 mb-1">Cash Handler</label>
+                      <select
+                        className="input-field"
+                        value={repayForm.cash_handler}
+                        onChange={(e) => setRepayForm((p) => ({ ...p, cash_handler: e.target.value }))}
+                      >
+                        <option value="">Select handler</option>
+                        {cashHandlers.map((h) => (
+                          <option key={h} value={h}>{h}</option>
+                        ))}
+                      </select>
                     </div>
                   )}
                   <div className="col-span-2">
