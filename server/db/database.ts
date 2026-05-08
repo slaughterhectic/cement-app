@@ -980,6 +980,32 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS unloading_charge_description TEXT`);
     await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS miscellaneous_items JSONB DEFAULT '[]'`);
 
+    // Monthly Urea Charges — one row per YYYY-MM, upserted from TripLog page
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS truck_urea_charges (
+        id SERIAL PRIMARY KEY,
+        month TEXT NOT NULL UNIQUE,
+        amount REAL NOT NULL,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+
+    // Truck EMI Repayments — one row per payment instalment
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS truck_emi_repayments (
+        id SERIAL PRIMARY KEY,
+        truck_id INTEGER NOT NULL REFERENCES trucks(id),
+        date TEXT NOT NULL,
+        amount REAL NOT NULL,
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'bank',
+        bank_name TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_truck_emi_rep_truck ON truck_emi_repayments(truck_id)`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

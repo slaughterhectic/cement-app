@@ -63,7 +63,7 @@ export const api = {
     },
   },
   dashboard: {
-    stats: () => request<any>('/dashboard/stats'),
+    stats: (month?: string) => request<any>('/dashboard/stats' + (month ? '?month=' + encodeURIComponent(month) : '')),
     charts: () => request<any>('/dashboard/charts'),
     outstandingBreakdown: (type: 'receivable' | 'payable') => request<any>(`/dashboard/outstanding-breakdown?type=${type}`),
   },
@@ -467,6 +467,20 @@ export const api = {
     list: () => request<Record<string, string>>('/settings'),
     update: (key: string, value: number | string) =>
       request<{ key: string; value: string }>(`/settings/${key}`, { method: 'PUT', body: JSON.stringify({ value }) }),
+  },
+  truckUrea: {
+    list: (month?: string) => request<any[]>('/truck-urea' + (month ? '?month=' + encodeURIComponent(month) : '')),
+    upsert: (data: { month: string; amount: number; remarks?: string }) =>
+      request<any>('/truck-urea', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/truck-urea/${id}`, { method: 'DELETE' }),
+  },
+  truckEmiRepayments: {
+    list: (params?: { truck_id?: number; month?: string }) => {
+      const q = params ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined).map(([k, v]) => [k, String(v)])).toString() : '';
+      return request<any[]>(`/truck-emi-repayments${q}`);
+    },
+    create: (data: any) => request<any>('/truck-emi-repayments', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/truck-emi-repayments/${id}`, { method: 'DELETE' }),
   },
   import: {
     parse: async (file: File, fileType: string) => {

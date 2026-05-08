@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, CreditCard } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -31,6 +31,14 @@ const emptyForm = {
   remarks: '',
 };
 
+const emptyRepayForm = {
+  date: new Date().toISOString().split('T')[0],
+  amount: '',
+  mode: 'bank' as 'bank' | 'cash',
+  bank_name: '',
+  remarks: '',
+};
+
 export default function Trucks() {
   const addToast = useToastStore((s) => s.addToast);
   const isAdmin = useAuthStore((s) => s.isAdmin);
@@ -40,6 +48,14 @@ export default function Trucks() {
   const [editing, setEditing] = useState<TruckRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
+
+  // EMI Repayments state
+  const [repayTarget, setRepayTarget] = useState<TruckRow | null>(null);
+  const [repayments, setRepayments] = useState<any[]>([]);
+  const [repayForm, setRepayForm] = useState(emptyRepayForm);
+  const [repayLoading, setRepayLoading] = useState(false);
+  const [repaySaving, setRepaySaving] = useState(false);
+  const [repayHistory, setRepayHistory] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -120,6 +136,63 @@ export default function Trucks() {
     }
   };
 
+  const openRepay = async (row: TruckRow) => {
+    setRepayTarget(row);
+    setRepayHistory(false);
+    setRepayForm({ ...emptyRepayForm, amount: row.emi_amount ? String(row.emi_amount) : '' });
+    setRepayLoading(true);
+    try {
+      const data = await api.truckEmiRepayments.list({ truck_id: row.id });
+      setRepayments(data);
+    } catch (_) { setRepayments([]); }
+    finally { setRepayLoading(false); }
+  };
+
+  const loadRepayments = async (truckId: number) => {
+    setRepayLoading(true);
+    try {
+      const data = await api.truckEmiRepayments.list({ truck_id: truckId });
+      setRepayments(data);
+    } catch (_) { setRepayments([]); }
+    finally { setRepayLoading(false); }
+  };
+
+  const handleRepaySubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!repayTarget) return;
+    const amt = Number(repayForm.amount);
+    if (!(amt > 0)) { addToast('Amount must be greater than 0', 'error'); return; }
+    setRepaySaving(true);
+    try {
+      await api.truckEmiRepayments.create({
+        truck_id: repayTarget.id,
+        date: repayForm.date,
+        amount: amt,
+        mode: repayForm.mode,
+        bank_name: repayForm.mode === 'bank' ? (repayForm.bank_name || null) : null,
+        remarks: repayForm.remarks || null,
+      });
+      addToast('Repayment recorded', 'success');
+      setRepayForm({ ...emptyRepayForm, amount: repayTarget.emi_amount ? String(repayTarget.emi_amount) : '' });
+      await loadRepayments(repayTarget.id);
+      setRepayHistory(true);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally { setRepaySaving(false); }
+  };
+
+  const handleRepayDelete = async (id: number) => {
+    if (!window.confirm('Delete this repayment?')) return;
+    if (!repayTarget) return;
+    try {
+      await api.truckEmiRepayments.delete(id);
+      addToast('Repayment deleted', 'success');
+      await loadRepayments(repayTarget.id);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Delete failed', 'error');
+    }
+  };
+
   const f = (field: keyof typeof form) => (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
     setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
@@ -185,6 +258,9 @@ export default function Trucks() {
                     <td className="px-4 py-3 text-heading/70">{row.lender_name || '—'}</td>
                     <td className="px-4 py-3">
                       <div className="flex items-center gap-1">
+                        <button type="button" onClick={() => openRepay(row)} className="rounded p-1.5 text-heading/60 hover:bg-blue-100 dark:hover:bg-blue-900/40 hover:text-blue-600 dark:text-blue-400 transition-colors" title="Repayments">
+                          <CreditCard className="h-4 w-4" />
+                        </button>
                         <button type="button" onClick={() => openEdit(row)} className="rounded p-1.5 text-heading/60 hover:bg-orange-100 dark:hover:bg-orange-900/40 hover:text-orange-600 dark:text-orange-400 transition-colors" title="Edit">
                           <Pencil className="h-4 w-4" />
                         </button>
@@ -202,6 +278,172 @@ export default function Trucks() {
           </table>
         </div>
       </div>
+
+      {/* EMI Repayments Modal */}
+      {repayTarget && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-xl rounded-xl bg-card shadow-2xl">
+            <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+              <div>
+                <h2 className="font-semibold text-heading">EMI Repayments — {repayTarget.truck_number}</h2>
+                {repayTarget.financed_amount > 0 && (
+                  <p className="text-xs text-heading/60 mt-0.5">Financed: {formatINR(Number(repayTarget.financed_amount))}</p>
+                )}
+              </div>
+              <button type="button" onClick={() => setRepayTarget(null)} className="rounded-lg p-1.5 hover:bg-card-border/50 transition-colors">
+                <X className="h-5 w-5 text-heading/60" />
+              </button>
+            </div>
+
+            {/* Tabs */}
+            <div className="flex border-b border-card-border">
+              <button
+                type="button"
+                onClick={() => setRepayHistory(false)}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${!repayHistory ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-heading/60 hover:text-heading'}`}
+              >
+                Record Payment
+              </button>
+              <button
+                type="button"
+                onClick={() => setRepayHistory(true)}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${repayHistory ? 'border-b-2 border-blue-600 text-blue-600 dark:text-blue-400' : 'text-heading/60 hover:text-heading'}`}
+              >
+                History ({repayments.length})
+              </button>
+            </div>
+
+            {!repayHistory ? (
+              <form onSubmit={handleRepaySubmit} className="p-5 flex flex-col gap-4">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-sm font-medium text-heading/80 mb-1">Date *</label>
+                    <input type="date" className="input-field" value={repayForm.date} onChange={(e) => setRepayForm((p) => ({ ...p, date: e.target.value }))} required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-heading/80 mb-1">Amount (₹) *</label>
+                    <input type="number" min="0.01" step="0.01" className="input-field" value={repayForm.amount} onChange={(e) => setRepayForm((p) => ({ ...p, amount: e.target.value }))} placeholder="0" required />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-heading/80 mb-1">Mode</label>
+                    <select className="input-field" value={repayForm.mode} onChange={(e) => setRepayForm((p) => ({ ...p, mode: e.target.value as 'bank' | 'cash' }))}>
+                      <option value="bank">Bank</option>
+                      <option value="cash">Cash</option>
+                    </select>
+                  </div>
+                  {repayForm.mode === 'bank' && (
+                    <div>
+                      <label className="block text-sm font-medium text-heading/80 mb-1">Bank Name</label>
+                      <input className="input-field" value={repayForm.bank_name} onChange={(e) => setRepayForm((p) => ({ ...p, bank_name: e.target.value }))} placeholder="e.g. SBI" />
+                    </div>
+                  )}
+                  <div className="col-span-2">
+                    <label className="block text-sm font-medium text-heading/80 mb-1">Remarks</label>
+                    <input className="input-field" value={repayForm.remarks} onChange={(e) => setRepayForm((p) => ({ ...p, remarks: e.target.value }))} placeholder="Optional notes" />
+                  </div>
+                </div>
+                {/* Progress indicator */}
+                {repayTarget.financed_amount > 0 && (
+                  <div className="rounded-lg bg-surface border border-card-border px-4 py-3 text-sm">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-heading/70">Total Repaid</span>
+                      <span className="font-semibold text-green-700 dark:text-green-300">
+                        {formatINR(repayments.reduce((s, r) => s + Number(r.amount), 0))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-heading/70">Original Financed</span>
+                      <span className="font-semibold">{formatINR(Number(repayTarget.financed_amount))}</span>
+                    </div>
+                    {(() => {
+                      const totalRepaid = repayments.reduce((s, r) => s + Number(r.amount), 0);
+                      const pct = Math.min(100, (totalRepaid / Number(repayTarget.financed_amount)) * 100);
+                      return (
+                        <div className="h-2 rounded-full bg-card-border/60">
+                          <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+                <div className="flex justify-end gap-3 pt-2">
+                  <button type="button" onClick={() => setRepayTarget(null)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface transition-colors">
+                    Cancel
+                  </button>
+                  <button type="submit" disabled={repaySaving} className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-60 transition-colors">
+                    {repaySaving ? 'Saving…' : 'Record Payment'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <div className="p-5">
+                {/* Progress indicator in history tab */}
+                {repayTarget.financed_amount > 0 && (
+                  <div className="rounded-lg bg-surface border border-card-border px-4 py-3 text-sm mb-4">
+                    <div className="flex justify-between mb-1.5">
+                      <span className="text-heading/70">Total Repaid</span>
+                      <span className="font-semibold text-green-700 dark:text-green-300">
+                        {formatINR(repayments.reduce((s, r) => s + Number(r.amount), 0))}
+                      </span>
+                    </div>
+                    <div className="flex justify-between mb-2">
+                      <span className="text-heading/70">Original Financed</span>
+                      <span className="font-semibold">{formatINR(Number(repayTarget.financed_amount))}</span>
+                    </div>
+                    {(() => {
+                      const totalRepaid = repayments.reduce((s, r) => s + Number(r.amount), 0);
+                      const pct = Math.min(100, (totalRepaid / Number(repayTarget.financed_amount)) * 100);
+                      return (
+                        <div className="h-2 rounded-full bg-card-border/60">
+                          <div className="h-2 rounded-full bg-green-500 transition-all" style={{ width: `${pct}%` }} />
+                        </div>
+                      );
+                    })()}
+                  </div>
+                )}
+                {repayLoading ? (
+                  <p className="text-center text-sm text-heading/50 py-6">Loading…</p>
+                ) : repayments.length === 0 ? (
+                  <p className="text-center text-sm text-heading/50 py-6">No repayments recorded yet.</p>
+                ) : (
+                  <div className="overflow-x-auto">
+                    <table className="w-full text-sm">
+                      <thead>
+                        <tr className="border-b border-card-border text-left text-xs font-medium text-heading/60 uppercase tracking-wider">
+                          <th className="pb-2">Date</th>
+                          <th className="pb-2 text-right">Amount</th>
+                          <th className="pb-2">Mode</th>
+                          <th className="pb-2">Bank</th>
+                          <th className="pb-2">Remarks</th>
+                          {isAdmin() && <th className="pb-2"></th>}
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-card-border">
+                        {repayments.map((r) => (
+                          <tr key={r.id} className="hover:bg-surface/50">
+                            <td className="py-2 whitespace-nowrap">{formatDate(r.date)}</td>
+                            <td className="py-2 text-right font-medium tabular-nums text-green-700 dark:text-green-300">{formatINR(Number(r.amount))}</td>
+                            <td className="py-2 capitalize">{r.mode}</td>
+                            <td className="py-2 text-heading/70">{r.bank_name || '—'}</td>
+                            <td className="py-2 text-heading/70 max-w-[120px] truncate">{r.remarks || '—'}</td>
+                            {isAdmin() && (
+                              <td className="py-2">
+                                <button type="button" onClick={() => handleRepayDelete(r.id)} className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                  <Trash2 className="h-3.5 w-3.5" />
+                                </button>
+                              </td>
+                            )}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Modal */}
       {modalOpen && (

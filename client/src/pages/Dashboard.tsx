@@ -12,6 +12,7 @@ import { Cell, Legend, Pie, PieChart, ResponsiveContainer, Tooltip } from 'recha
 interface DashboardStats {
   monthPurchases: { bags: number; amount: number };
   monthProfit: number;
+  filterMode?: 'month' | 'alltime';
   outstanding: number;
   outstandingReceivable: number;
   outstandingPayable: number;
@@ -323,6 +324,7 @@ export default function Dashboard() {
   const navigate = useNavigate();
   const [stats, setStats] = useState<DashboardStats | null>(null);
   const [charts, setCharts] = useState<DashboardCharts | null>(null);
+  const [filterMonth, setFilterMonth] = useState('');
   const [collection, setCollection] = useState<{ rows: any[]; daily: any[] } | null>(null);
   const [collectionView, setCollectionView] = useState<'daily' | 'monthly'>('daily');
   const [collectionLoading, setCollectionLoading] = useState(false);
@@ -352,7 +354,11 @@ export default function Dashboard() {
     let cancelled = false;
     setLoading(true);
     const currentMonth = new Date().toISOString().slice(0, 7);
-    Promise.all([api.dashboard.stats(), api.dashboard.charts(), api.reports.dailyCollection(currentMonth, 'daily')])
+    Promise.all([
+      api.dashboard.stats(filterMonth || undefined),
+      api.dashboard.charts(),
+      api.reports.dailyCollection(currentMonth, 'daily'),
+    ])
       .then(([s, c, col]) => {
         if (!cancelled) {
           setStats(s as DashboardStats);
@@ -365,7 +371,7 @@ export default function Dashboard() {
       })
       .finally(() => { if (!cancelled) setLoading(false); });
     return () => { cancelled = true; };
-  }, []);
+  }, [filterMonth]);
 
   const switchCollectionView = async (view: 'daily' | 'monthly') => {
     setCollectionView(view);
@@ -395,9 +401,28 @@ export default function Dashboard() {
 
   return (
     <div className="space-y-8">
-      <header>
-        <h1 className="text-2xl font-bold tracking-tight text-heading">Dashboard</h1>
-        <p className="mt-1 text-sm text-heading/60">Welcome back. Here&apos;s your business overview.</p>
+      <header className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold tracking-tight text-heading">Dashboard</h1>
+          <p className="mt-1 text-sm text-heading/60">Welcome back. Here&apos;s your business overview.</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <input
+            type="month"
+            className="rounded-md border border-card-border bg-card px-3 py-1.5 text-sm text-heading/80 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+          />
+          {filterMonth && (
+            <button
+              type="button"
+              onClick={() => setFilterMonth('')}
+              className="rounded-md border border-card-border px-3 py-1.5 text-sm text-heading/70 hover:bg-surface transition-colors"
+            >
+              All time
+            </button>
+          )}
+        </div>
       </header>
 
       {/* KPI Cards */}
@@ -407,7 +432,15 @@ export default function Dashboard() {
         ) : (
           <>
             <KPICard title="This Month's Purchases" value={formatINR(stats.monthPurchases.amount)} subtitle={`${formatNumber(stats.monthPurchases.bags)} bags purchased`} icon={TrendingUp} color="sale" />
-            <KPICard title="Net Profit" value={formatINR(stats.monthProfit)} subtitle="Stock + sales − purchases − expenses" icon={IndianRupee} color="profit" />
+            <KPICard
+              title={stats.filterMode === 'month' && filterMonth
+                ? `Profit — ${new Date(filterMonth + '-01').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}`
+                : 'Net Profit'}
+              value={formatINR(stats.monthProfit)}
+              subtitle={stats.filterMode === 'month' ? 'Sales − purchases − expenses − loan repayments' : 'Stock + sales − purchases − expenses'}
+              icon={IndianRupee}
+              color="profit"
+            />
             <KPICard title="Stock Value" value={formatINR(stats.stockValue.value)} subtitle={`${formatNumber(stats.stockValue.bags)} bags`} icon={Package} color="purchase" />
           </>
         )}

@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, Pencil, Trash2, X, IndianRupee } from 'lucide-react';
+import { Plus, Pencil, Trash2, X, IndianRupee, Droplets } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
@@ -86,6 +86,13 @@ export default function TripLog() {
   const [freightForm, setFreightForm] = useState({ freight_rate: '', quantity: '' });
   const [savingFreight, setSavingFreight] = useState(false);
 
+  // Urea charges state
+  const [ureaAmount, setUreaAmount] = useState(0);
+  const [ureaId, setUreaId] = useState<number | null>(null);
+  const [ureaModalOpen, setUreaModalOpen] = useState(false);
+  const [ureaForm, setUreaForm] = useState({ month: '', amount: '', remarks: '' });
+  const [savingUrea, setSavingUrea] = useState(false);
+
   const selectedTransporter = transporters.find((t) => String(t.id) === form.transporter_id);
   const hasGst = !!selectedTransporter?.has_gst;
   const live = computeLive(form, hasGst);
@@ -112,8 +119,23 @@ export default function TripLog() {
     } catch (_) {}
   }, []);
 
+  const loadUrea = useCallback(async (month: string) => {
+    if (!month) { setUreaAmount(0); setUreaId(null); return; }
+    try {
+      const data = await api.truckUrea.list(month);
+      if (data.length > 0) {
+        setUreaAmount(Number(data[0].amount));
+        setUreaId(data[0].id);
+      } else {
+        setUreaAmount(0);
+        setUreaId(null);
+      }
+    } catch (_) { setUreaAmount(0); setUreaId(null); }
+  }, []);
+
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadMeta(); }, [loadMeta]);
+  useEffect(() => { loadUrea(filterMonth); }, [filterMonth, loadUrea]);
 
   const openAdd = () => { setEditing(null); setForm(emptyForm); setModalOpen(true); };
 
@@ -207,6 +229,36 @@ export default function TripLog() {
     }
   };
 
+  const openUreaModal = () => {
+    if (!filterMonth) {
+      addToast('Please select a month filter first', 'error');
+      return;
+    }
+    setUreaForm({
+      month: filterMonth,
+      amount: ureaAmount > 0 ? String(ureaAmount) : '',
+      remarks: '',
+    });
+    setUreaModalOpen(true);
+  };
+
+  const saveUrea = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const amt = Number(ureaForm.amount);
+    if (!ureaForm.month || !(amt >= 0)) {
+      addToast('Month and amount are required', 'error'); return;
+    }
+    setSavingUrea(true);
+    try {
+      await api.truckUrea.upsert({ month: ureaForm.month, amount: amt, remarks: ureaForm.remarks || undefined });
+      addToast('Urea charge saved', 'success');
+      setUreaModalOpen(false);
+      await loadUrea(filterMonth);
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Save failed', 'error');
+    } finally { setSavingUrea(false); }
+  };
+
   const f = (field: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -226,14 +278,24 @@ export default function TripLog() {
           <h1 className="text-2xl font-bold text-heading">Trip Log</h1>
           <p className="text-sm text-heading/60 mt-1">{rows.length} trip{rows.length !== 1 ? 's' : ''} shown</p>
         </div>
-        <button
-          type="button"
-          onClick={openAdd}
-          className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-orange-600 transition-colors"
-        >
-          <Plus className="h-4 w-4" />
-          Add Trip
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={openUreaModal}
+            className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-blue-700 transition-colors"
+          >
+            <Droplets className="h-4 w-4" />
+            Monthly Urea
+          </button>
+          <button
+            type="button"
+            onClick={openAdd}
+            className="inline-flex items-center gap-2 rounded-lg bg-orange-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-orange-600 transition-colors"
+          >
+            <Plus className="h-4 w-4" />
+            Add Trip
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -273,7 +335,7 @@ export default function TripLog() {
 
       {/* Summary Strip */}
       {rows.length > 0 && (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-5">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-6">
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Qty</p>
             <p className="text-xl font-bold text-heading">{totalRow.quantity.toFixed(1)} T</p>
@@ -290,11 +352,24 @@ export default function TripLog() {
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Toll</p>
             <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(totalRow.total_toll)}</p>
           </div>
+          {filterMonth && ureaAmount > 0 && (
+            <div className="card p-4 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
+              <p className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Monthly Urea</p>
+              <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(ureaAmount)}</p>
+            </div>
+          )}
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Net Profit</p>
-            <p className={`text-xl font-bold ${totalRow.net_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-              {formatINR(totalRow.net_profit)}
+            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">
+              {filterMonth && ureaAmount > 0 ? 'Net Profit (after urea)' : 'Net Profit'}
             </p>
+            {(() => {
+              const netAfterUrea = (filterMonth && ureaAmount > 0) ? totalRow.net_profit - ureaAmount : totalRow.net_profit;
+              return (
+                <p className={`text-xl font-bold ${netAfterUrea >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                  {formatINR(netAfterUrea)}
+                </p>
+              );
+            })()}
           </div>
         </div>
       )}
@@ -393,6 +468,68 @@ export default function TripLog() {
           </table>
         </div>
       </div>
+
+      {/* Monthly Urea Modal */}
+      {ureaModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
+            <div className="flex items-start justify-between mb-4">
+              <h3 className="text-base font-semibold text-heading">Monthly Urea Charge</h3>
+              <button type="button" onClick={() => setUreaModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                <X className="h-5 w-5 text-heading/60" />
+              </button>
+            </div>
+            <form onSubmit={saveUrea} className="space-y-4">
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Month *</label>
+                <input
+                  type="month"
+                  className="input-field w-full"
+                  value={ureaForm.month}
+                  onChange={(e) => setUreaForm((p) => ({ ...p, month: e.target.value }))}
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="input-field w-full"
+                  value={ureaForm.amount}
+                  onChange={(e) => setUreaForm((p) => ({ ...p, amount: e.target.value }))}
+                  placeholder="0"
+                  autoFocus
+                  required
+                />
+              </div>
+              <div>
+                <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>
+                <input
+                  type="text"
+                  className="input-field w-full"
+                  value={ureaForm.remarks}
+                  onChange={(e) => setUreaForm((p) => ({ ...p, remarks: e.target.value }))}
+                  placeholder="Optional notes"
+                />
+              </div>
+              <div className="flex justify-end gap-2 border-t border-card-border pt-4">
+                <button type="button" onClick={() => setUreaModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={savingUrea}
+                  className="rounded-lg bg-blue-600 px-4 py-2 text-sm font-medium text-white hover:bg-blue-700 disabled:opacity-50"
+                >
+                  {savingUrea ? 'Saving…' : 'Save'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Set / Update Freight — small focused modal scoped to freight rate + qty.
           Re-runs the wallet pre-flight on the server side. */}

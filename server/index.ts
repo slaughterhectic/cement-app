@@ -43,6 +43,8 @@ import rlInvoicesRouter from './routes/rlInvoices';
 import rlPartnersRouter from './routes/rlPartners';
 import rlDieselPartiesRouter from './routes/rlDieselParties';
 import settingsRouter from './routes/settings';
+import truckUreaRouter from './routes/truckUrea';
+import truckEmiRepaymentsRouter from './routes/truckEmiRepayments';
 import { backfillGpsRent } from './lib/gpsRent';
 
 const app = express();
@@ -103,6 +105,8 @@ app.use('/api/rl/diesel-parties', rlDieselPartiesRouter);
 app.use('/api/rl/expenses', rlExpensesRouter);
 app.use('/api/rl/banks', rlBanksRouter);
 app.use('/api/settings', settingsRouter);
+app.use('/api/truck-urea', truckUreaRouter);
+app.use('/api/truck-emi-repayments', truckEmiRepaymentsRouter);
 
 // Godown CRUD
 app.get('/api/godowns', async (_req, res) => {
@@ -146,18 +150,39 @@ app.delete('/api/godowns/:id', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: e.message }); }
 });
 
-app.get('/api/dashboard/stats', async (_req, res) => {
+app.get('/api/dashboard/stats', async (req, res) => {
   try {
+    const filterMonth = req.query.month as string | undefined;
     const today = new Date().toISOString().split('T')[0];
     const monthStart = today.substring(0, 7) + '-01';
 
-    const monthPurchases = await getOne(
-      `SELECT COALESCE(SUM(bags), 0) as bags, COALESCE(SUM(purchase_amount), 0) as amount FROM purchases WHERE date >= $1`, [monthStart]
-    );
-    const monthSales = await getOne(
-      `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE date >= $1`, [monthStart]
-    );
-    // All-time totals for net profit
+    let monthPurchases: any;
+    let monthProfit: number;
+    let filterMode: 'month' | 'alltime';
+
+    if (filterMonth) {
+      filterMode = 'month';
+      monthPurchases = await getOne(
+        `SELECT COALESCE(SUM(bags), 0) as bags, COALESCE(SUM(purchase_amount), 0) as amount FROM purchases WHERE to_char(date::date,'YYYY-MM') = $1`, [filterMonth]
+      );
+      const mSales = await getOne(
+        `SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales WHERE to_char(date::date,'YYYY-MM') = $1`, [filterMonth]
+      );
+      const mExpenses = await getOne(
+        `SELECT COALESCE(SUM(amount), 0) as amount FROM expenses WHERE to_char(date::date,'YYYY-MM') = $1`, [filterMonth]
+      );
+      const mLoanRepayments = await getOne(
+        `SELECT COALESCE(SUM(amount), 0) as amount FROM loan_repayments WHERE to_char(date::date,'YYYY-MM') = $1`, [filterMonth]
+      );
+      monthProfit = Number(mSales.amount) - Number(monthPurchases.amount) - Number(mExpenses.amount) - Number(mLoanRepayments.amount);
+    } else {
+      filterMode = 'alltime';
+      monthPurchases = await getOne(
+        `SELECT COALESCE(SUM(bags), 0) as bags, COALESCE(SUM(purchase_amount), 0) as amount FROM purchases WHERE date >= $1`, [monthStart]
+      );
+    }
+
+    // All-time totals for net profit (alltime mode only)
     const totalSales = await getOne(`SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales`);
     const totalPurchases = await getOne(`SELECT COALESCE(SUM(purchase_amount), 0) as amount FROM purchases`);
     const totalExpenses = await getOne(`SELECT COALESCE(SUM(amount), 0) as amount FROM expenses`);
@@ -230,9 +255,12 @@ app.get('/api/dashboard/stats', async (_req, res) => {
 
     res.json({
       monthPurchases: { bags: Number(monthPurchases.bags), amount: Number(monthPurchases.amount) },
-      // Net Profit = Stock Value + Total Sales - Total Purchases - Total Expenses
-      // (stock value represents unsold inventory still held as asset)
-      monthProfit: Number(stockCalc.value) + Number(totalSales.amount) - Number(totalPurchases.amount) - Number(totalExpenses.amount),
+      // Net Profit = Stock Value + Total Sales - Total Purchases - Total Expenses (alltime)
+      // or monthly_sales - monthly_purchases - monthly_expenses - monthly_loan_repayments (month filter)
+      monthProfit: filterMode === 'month'
+        ? monthProfit!
+        : Number(stockCalc.value) + Number(totalSales.amount) - Number(totalPurchases.amount) - Number(totalExpenses.amount),
+      filterMode,
       outstanding: Number(outstandingCalc.total),
       outstandingReceivable: Number(outstandingCalc.total),
       outstandingPayable: Number(payableCalc.total),
