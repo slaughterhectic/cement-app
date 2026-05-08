@@ -1,8 +1,10 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Pencil, X, IndianRupee } from 'lucide-react';
+import { Pencil, X, IndianRupee, Plus, Minus } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
+
+interface MiscItem { description: string; amount: string; }
 
 interface TripRow {
   id: number;
@@ -21,12 +23,15 @@ interface TripRow {
   toll_expense: number;
   fastag_id: number | null;
   loading_charge: number;
+  loading_charge_description: string | null;
   unloading_charge: number;
+  unloading_charge_description: string | null;
   diesel_amount: number;
   trip_diesel_from_id: number | null;
   diesel_from_id: number | null;
   driver_payment: number;
   miscellaneous: number;
+  miscellaneous_items: MiscItem[] | null;
   odometer_start: number | null;
   odometer_end: number | null;
   total_km: number;
@@ -39,11 +44,12 @@ interface Fastag { id: number; name: string; balance: number; is_active: number 
 
 const emptyForm = {
   loading_charge: '',
+  loading_charge_description: '',
   unloading_charge: '',
+  unloading_charge_description: '',
   trip_diesel_amount: '',
   trip_diesel_from_id: '',
   driver_payment: '',
-  miscellaneous: '',
   toll_expense: '',
   fastag_id: '',
   odometer_start: '',
@@ -53,6 +59,16 @@ const emptyForm = {
 };
 
 function n(v: string) { return Number(v) || 0; }
+
+function parseMiscItems(row: TripRow): MiscItem[] {
+  if (row.miscellaneous_items && Array.isArray(row.miscellaneous_items) && row.miscellaneous_items.length > 0) {
+    return row.miscellaneous_items.map((i) => ({ description: i.description || '', amount: String(i.amount || '') }));
+  }
+  if (Number(row.miscellaneous) > 0) {
+    return [{ description: '', amount: String(row.miscellaneous) }];
+  }
+  return [{ description: '', amount: '' }];
+}
 
 export default function TripExpenses() {
   const addToast = useToastStore((s) => s.addToast);
@@ -67,7 +83,11 @@ export default function TripExpenses() {
   const [filterStatus, setFilterStatus] = useState<'all' | 'pending' | 'filed'>('pending');
   const [target, setTarget] = useState<TripRow | null>(null);
   const [form, setForm] = useState(emptyForm);
+  const [miscItems, setMiscItems] = useState<MiscItem[]>([{ description: '', amount: '' }]);
   const [saving, setSaving] = useState(false);
+
+  // Drill-down state — double-click on Trip Expense cell
+  const [drillRow, setDrillRow] = useState<TripRow | null>(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -95,7 +115,6 @@ export default function TripExpenses() {
   useEffect(() => { load(); }, [load]);
   useEffect(() => { loadMeta(); }, [loadMeta]);
 
-  // Re-fetch wallet & FastTag balances whenever the modal opens — top-ups may have happened.
   useEffect(() => {
     if (!target) return;
     api.wallet.summary().then((s) => setWalletBal(Number(s.balance) || 0)).catch(() => {});
@@ -109,13 +128,15 @@ export default function TripExpenses() {
 
   const open = (row: TripRow) => {
     setTarget(row);
+    setMiscItems(parseMiscItems(row));
     setForm({
       loading_charge: String(row.loading_charge || ''),
+      loading_charge_description: row.loading_charge_description || '',
       unloading_charge: String(row.unloading_charge || ''),
+      unloading_charge_description: row.unloading_charge_description || '',
       trip_diesel_amount: String(row.diesel_amount || ''),
       trip_diesel_from_id: row.trip_diesel_from_id ? String(row.trip_diesel_from_id) : '',
       driver_payment: String(row.driver_payment || ''),
-      miscellaneous: String(row.miscellaneous || ''),
       toll_expense: String(row.toll_expense || ''),
       fastag_id: row.fastag_id ? String(row.fastag_id) : '',
       odometer_start: row.odometer_start != null ? String(row.odometer_start) : '',
@@ -125,18 +146,18 @@ export default function TripExpenses() {
     });
   };
 
+  const miscTotal = useMemo(() => miscItems.reduce((s, i) => s + n(i.amount), 0), [miscItems]);
+
   const live = useMemo(() => {
     const diesel_amount = n(form.trip_diesel_amount);
     const tripDieselFromTransporter = !!form.trip_diesel_from_id;
-    // Wallet covers loading + unloading + driver + misc + (trip diesel only if no transporter funded it).
-    // Toll → FastTag. Trip diesel from transporter → that transporter's ledger.
     const wallet_expense = n(form.loading_charge) + n(form.unloading_charge)
-      + n(form.driver_payment) + n(form.miscellaneous)
+      + n(form.driver_payment) + miscTotal
       + (tripDieselFromTransporter ? 0 : diesel_amount);
     const total_km = form.odometer_start && form.odometer_end
       ? n(form.odometer_end) - n(form.odometer_start) : 0;
     return { diesel_amount, tripDieselFromTransporter, wallet_expense, total_km };
-  }, [form]);
+  }, [form, miscTotal]);
 
   const save = async () => {
     if (!target) return;
@@ -146,13 +167,18 @@ export default function TripExpenses() {
     }
     setSaving(true);
     try {
+      const validMiscItems = miscItems
+        .filter((i) => n(i.amount) > 0 || i.description.trim())
+        .map((i) => ({ description: i.description, amount: n(i.amount) }));
       await api.truckTrips.updateExpense(target.id, {
         loading_charge: n(form.loading_charge),
+        loading_charge_description: form.loading_charge_description || undefined,
         unloading_charge: n(form.unloading_charge),
+        unloading_charge_description: form.unloading_charge_description || undefined,
         trip_diesel_amount: n(form.trip_diesel_amount),
         trip_diesel_from_id: form.trip_diesel_from_id ? Number(form.trip_diesel_from_id) : null,
         driver_payment: n(form.driver_payment),
-        miscellaneous: n(form.miscellaneous),
+        miscellaneous_items: validMiscItems,
         toll_expense: n(form.toll_expense),
         fastag_id: form.fastag_id ? Number(form.fastag_id) : null,
         odometer_start: form.odometer_start ? n(form.odometer_start) : null,
@@ -173,6 +199,16 @@ export default function TripExpenses() {
   const f = (field: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement>) => setForm((p) => ({ ...p, [field]: e.target.value }));
 
+  const setMiscCount = (count: number) => {
+    const clamped = Math.max(1, Math.min(10, count));
+    setMiscItems((prev) => {
+      if (clamped > prev.length) {
+        return [...prev, ...Array(clamped - prev.length).fill({ description: '', amount: '' })];
+      }
+      return prev.slice(0, clamped);
+    });
+  };
+
   const totals = filtered.reduce((acc, r) => ({
     quantity: acc.quantity + Number(r.quantity),
     total_freight: acc.total_freight + Number(r.total_freight),
@@ -182,8 +218,6 @@ export default function TripExpenses() {
     pending: acc.pending + (r.expense_completed ? 0 : 1),
   }), { quantity: 0, total_freight: 0, total_fuel: 0, total_toll: 0, net_profit: 0, pending: 0 });
 
-  // Mirror the server: the trip's previously charged wallet slice excludes diesel when
-  // the existing row had a transporter funding it.
   const oldWalletExpense = target
     ? Number(target.loading_charge) + Number(target.unloading_charge)
       + Number(target.driver_payment) + Number(target.miscellaneous)
@@ -237,29 +271,21 @@ export default function TripExpenses() {
         )}
       </div>
 
-      {/* Summary Strip — same KPIs as Trip Log so the two tabs stay in sync. */}
+      {/* Summary Strip */}
       {filtered.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-5">
-          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Qty</p>
-            <p className="text-xl font-bold text-heading">{totals.quantity.toFixed(1)} T</p>
-          </div>
-          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Freight</p>
-            <p className="text-xl font-bold text-heading">{formatINR(totals.total_freight)}</p>
-          </div>
-          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Fuel</p>
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(totals.total_fuel)}</p>
-          </div>
-          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Toll</p>
-            <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(totals.total_toll)}</p>
-          </div>
-          <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
-            <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Net Profit</p>
-            <p className={`text-xl font-bold ${totals.net_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(totals.net_profit)}</p>
-          </div>
+          {[
+            { label: 'Total Qty', value: `${totals.quantity.toFixed(1)} T`, cls: 'text-heading' },
+            { label: 'Total Freight', value: formatINR(totals.total_freight), cls: 'text-heading' },
+            { label: 'Total Fuel', value: formatINR(totals.total_fuel), cls: 'text-red-600 dark:text-red-400' },
+            { label: 'Total Toll', value: formatINR(totals.total_toll), cls: 'text-red-600 dark:text-red-400' },
+            { label: 'Net Profit', value: formatINR(totals.net_profit), cls: totals.net_profit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400' },
+          ].map(({ label, value, cls }) => (
+            <div key={label} className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
+              <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">{label}</p>
+              <p className={`text-xl font-bold ${cls}`}>{value}</p>
+            </div>
+          ))}
         </div>
       )}
 
@@ -274,7 +300,10 @@ export default function TripExpenses() {
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Driver</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Route</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Freight</th>
-                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Trip Expense</th>
+                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">
+                  Trip Expense
+                  <span className="ml-1 text-[10px] font-normal text-orange-500">(dbl-click for detail)</span>
+                </th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Profit</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Status</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300">Actions</th>
@@ -298,7 +327,13 @@ export default function TripExpenses() {
                         {row.load_from && row.billed_destination ? `${row.load_from} → ${row.billed_destination}` : row.load_from || row.billed_destination || '—'}
                       </td>
                       <td className="px-4 py-3 text-right">{formatINR(Number(row.net_freight))}</td>
-                      <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{row.expense_completed ? formatINR(expense) : '—'}</td>
+                      <td
+                        className={`px-4 py-3 text-right ${row.expense_completed ? 'text-red-600 dark:text-red-400 cursor-pointer select-none' : ''}`}
+                        onDoubleClick={() => row.expense_completed && setDrillRow(row)}
+                        title={row.expense_completed ? 'Double-click to see expense breakdown' : undefined}
+                      >
+                        {row.expense_completed ? formatINR(expense) : '—'}
+                      </td>
                       <td className={`px-4 py-3 text-right font-semibold ${Number(row.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                         {row.expense_completed ? formatINR(Number(row.net_profit)) : '—'}
                       </td>
@@ -329,7 +364,63 @@ export default function TripExpenses() {
         </div>
       </div>
 
-      {/* Expense modal */}
+      {/* Expense Drill-down Modal */}
+      {drillRow && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40" onClick={() => setDrillRow(null)}>
+          <div className="flex min-h-full items-start justify-center px-4 py-8" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-sm rounded-xl bg-card shadow-2xl">
+              <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+                <div>
+                  <h2 className="font-semibold text-heading">Expense Breakdown</h2>
+                  <p className="text-xs text-heading/60 mt-0.5">{drillRow.truck_number} · {formatDate(drillRow.date)}</p>
+                </div>
+                <button type="button" onClick={() => setDrillRow(null)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                  <X className="h-5 w-5 text-heading/60" />
+                </button>
+              </div>
+              <div className="p-5 flex flex-col gap-1 text-sm">
+                {[
+                  { label: 'Loading Charge', value: Number(drillRow.loading_charge), sub: drillRow.loading_charge_description },
+                  { label: 'Unloading Charge', value: Number(drillRow.unloading_charge), sub: drillRow.unloading_charge_description },
+                  { label: 'Diesel', value: Number(drillRow.diesel_amount) },
+                  { label: 'Driver Payment', value: Number(drillRow.driver_payment) },
+                  { label: 'Toll', value: Number(drillRow.toll_expense) },
+                ].filter((i) => i.value > 0).map(({ label, value, sub }) => (
+                  <div key={label} className="flex items-start justify-between gap-2 py-1.5 border-b border-card-border/50 last:border-0">
+                    <div>
+                      <span className="text-heading/80">{label}</span>
+                      {sub && <p className="text-[11px] text-heading/50 mt-0.5">{sub}</p>}
+                    </div>
+                    <span className="font-medium text-red-600 dark:text-red-400 whitespace-nowrap">{formatINR(value)}</span>
+                  </div>
+                ))}
+                {/* Misc items */}
+                {(() => {
+                  const items = drillRow.miscellaneous_items && Array.isArray(drillRow.miscellaneous_items) && drillRow.miscellaneous_items.length > 0
+                    ? drillRow.miscellaneous_items
+                    : (Number(drillRow.miscellaneous) > 0 ? [{ description: 'Miscellaneous', amount: Number(drillRow.miscellaneous) }] : []);
+                  return items.map((item, i) => (
+                    Number(item.amount) > 0 && (
+                      <div key={i} className="flex items-start justify-between gap-2 py-1.5 border-b border-card-border/50 last:border-0">
+                        <span className="text-heading/80">{item.description || `Misc ${i + 1}`}</span>
+                        <span className="font-medium text-red-600 dark:text-red-400 whitespace-nowrap">{formatINR(Number(item.amount))}</span>
+                      </div>
+                    )
+                  ));
+                })()}
+                <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-orange-200 dark:border-orange-800 font-semibold">
+                  <span className="text-orange-700 dark:text-orange-300">Total Expense</span>
+                  <span className="text-red-600 dark:text-red-400">
+                    {formatINR(Number(drillRow.loading_charge) + Number(drillRow.unloading_charge) + Number(drillRow.diesel_amount) + Number(drillRow.driver_payment) + Number(drillRow.miscellaneous))}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Expense Filing Modal */}
       {target && (
         <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40">
           <div className="flex min-h-full items-start justify-center px-4 py-6">
@@ -347,30 +438,94 @@ export default function TripExpenses() {
               </div>
 
               <div className="p-5 flex flex-col gap-5">
+                {/* Trip Expenses */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Expenses</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Loading Charge (₹)</label>
                       <input type="number" min="0" step="0.01" className="input-field" value={form.loading_charge} onChange={f('loading_charge')} placeholder="0" />
+                      <input
+                        type="text"
+                        className="input-field mt-1.5 text-xs"
+                        value={form.loading_charge_description}
+                        onChange={(e) => setForm((p) => ({ ...p, loading_charge_description: e.target.value }))}
+                        placeholder="Description (optional)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Unloading Charge (₹)</label>
                       <input type="number" min="0" step="0.01" className="input-field" value={form.unloading_charge} onChange={f('unloading_charge')} placeholder="0" />
+                      <input
+                        type="text"
+                        className="input-field mt-1.5 text-xs"
+                        value={form.unloading_charge_description}
+                        onChange={(e) => setForm((p) => ({ ...p, unloading_charge_description: e.target.value }))}
+                        placeholder="Description (optional)"
+                      />
                     </div>
                     <div>
                       <label className="block text-xs font-medium text-heading/70 mb-1">Driver Payment (₹)</label>
                       <input type="number" min="0" step="0.01" className="input-field" value={form.driver_payment} onChange={f('driver_payment')} placeholder="0" />
                     </div>
-                    <div>
-                      <label className="block text-xs font-medium text-heading/70 mb-1">Miscellaneous (₹)</label>
-                      <input type="number" min="0" step="0.01" className="input-field" value={form.miscellaneous} onChange={f('miscellaneous')} placeholder="0" />
-                    </div>
                   </div>
                 </div>
 
-                {/* Trip Diesel — value mirrors Trip Log's Advance Diesel. The "from transporter"
-                    is set in Trip Log and only displayed here as info; not editable. */}
+                {/* Miscellaneous */}
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <p className="text-xs font-semibold uppercase tracking-wider text-orange-500">Miscellaneous</p>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-heading/60">Charges:</span>
+                      <button
+                        type="button"
+                        onClick={() => setMiscCount(miscItems.length - 1)}
+                        disabled={miscItems.length <= 1}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border border-card-border hover:bg-surface disabled:opacity-40"
+                      >
+                        <Minus className="h-3 w-3" />
+                      </button>
+                      <span className="text-sm font-medium w-4 text-center">{miscItems.length}</span>
+                      <button
+                        type="button"
+                        onClick={() => setMiscCount(miscItems.length + 1)}
+                        disabled={miscItems.length >= 10}
+                        className="flex h-6 w-6 items-center justify-center rounded-md border border-card-border hover:bg-surface disabled:opacity-40"
+                      >
+                        <Plus className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    {miscItems.map((item, i) => (
+                      <div key={i} className="grid grid-cols-[1fr_auto] gap-2 items-start">
+                        <input
+                          type="text"
+                          className="input-field text-sm"
+                          value={item.description}
+                          onChange={(e) => setMiscItems((prev) => prev.map((x, j) => j === i ? { ...x, description: e.target.value } : x))}
+                          placeholder={`Description ${miscItems.length > 1 ? i + 1 : ''}`}
+                        />
+                        <input
+                          type="number"
+                          min="0"
+                          step="0.01"
+                          className="input-field text-sm w-28"
+                          value={item.amount}
+                          onChange={(e) => setMiscItems((prev) => prev.map((x, j) => j === i ? { ...x, amount: e.target.value } : x))}
+                          placeholder="0"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                  {miscTotal > 0 && (
+                    <p className="mt-1.5 text-xs text-orange-600 dark:text-orange-400">
+                      Total misc: <strong>{formatINR(miscTotal)}</strong>
+                    </p>
+                  )}
+                </div>
+
+                {/* Trip Diesel */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Trip Diesel</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 items-end">
@@ -388,15 +543,11 @@ export default function TripExpenses() {
                       {n(form.advance_diesel_amount) > 0 && !form.diesel_from_id && (
                         <p className="mt-1 text-amber-700 dark:text-amber-300">⚠ Pick the transporter in Trip Log to credit their ledger.</p>
                       )}
-                      {n(form.advance_diesel_amount) > 0 && form.diesel_from_id && (
-                        <p className="mt-1 text-orange-700 dark:text-orange-300">{formatINR(n(form.advance_diesel_amount))} → ledger</p>
-                      )}
                     </div>
                   </div>
                 </div>
 
-                {/* Additional Diesel — optional, can be added later. Wallet-funded by default;
-                    pick a transporter to put it on their ledger instead. */}
+                {/* Additional Diesel */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Additional Diesel (optional)</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -421,6 +572,7 @@ export default function TripExpenses() {
                   </div>
                 </div>
 
+                {/* Toll */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Toll (FastTag-funded)</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -440,6 +592,7 @@ export default function TripExpenses() {
                   </div>
                 </div>
 
+                {/* Odometer */}
                 <div>
                   <p className="text-xs font-semibold uppercase tracking-wider text-orange-500 mb-3">Odometer</p>
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -457,6 +610,7 @@ export default function TripExpenses() {
                   )}
                 </div>
 
+                {/* Summary bar */}
                 <div className="rounded-lg bg-orange-50 dark:bg-orange-900/30 border border-orange-200 dark:border-orange-800 px-3 py-2 text-xs flex flex-wrap gap-3">
                   <span><span className="text-heading/60">Wallet Outflow: </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.wallet_expense)}</span></span>
                   <span><span className="text-heading/60">Toll (FastTag): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(n(form.toll_expense))}</span></span>
@@ -467,13 +621,12 @@ export default function TripExpenses() {
                     <span><span className="text-heading/60">Add. Diesel (Ledger): </span><span className="font-semibold text-orange-700 dark:text-orange-300">{formatINR(live.diesel_amount)}</span></span>
                   )}
                   {(() => {
-                    // Net Profit = total_freight − commission − advance − toll − all trip costs (loading/unloading/diesel/driver/misc).
                     const projected = Number(target.total_freight)
                       - Number(target.transporter_commission || 0)
                       - n(form.advance_diesel_amount)
                       - n(form.toll_expense)
                       - n(form.loading_charge) - n(form.unloading_charge)
-                      - live.diesel_amount - n(form.driver_payment) - n(form.miscellaneous);
+                      - live.diesel_amount - n(form.driver_payment) - miscTotal;
                     return (
                       <span><span className="text-heading/60">Projected Net Profit: </span><span className={`font-semibold ${projected >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>{formatINR(projected)}</span></span>
                     );

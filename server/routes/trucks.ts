@@ -4,22 +4,35 @@ import { friendlyError } from '../lib/userError';
 
 const router = Router();
 
-// GET /trucks/dashboard — summary stats
-router.get('/dashboard', async (_req, res) => {
+// GET /trucks/dashboard — summary stats. Accepts optional ?month=YYYY-MM.
+router.get('/dashboard', async (req, res) => {
   try {
     const today = new Date().toISOString().split('T')[0];
-    const monthStart = today.substring(0, 7) + '-01';
+    const { month } = req.query as { month?: string };
+
+    // When a specific month filter is applied use that range; otherwise default to current month for the KPI cards.
+    const kpiStart = month ? `${month}-01` : today.substring(0, 7) + '-01';
+    const kpiFilter = month
+      ? `to_char(date::date, 'YYYY-MM') = $1`
+      : `date >= $1`;
 
     const totalTrucks = await getOne('SELECT COUNT(*) as count FROM trucks WHERE is_active = 1');
-    const totalTrips = await getOne('SELECT COUNT(*) as count FROM truck_trips');
+    const totalTrips = month
+      ? await getOne(`SELECT COUNT(*) as count FROM truck_trips WHERE to_char(date::date, 'YYYY-MM') = $1`, [month])
+      : await getOne('SELECT COUNT(*) as count FROM truck_trips');
     const monthFreight = await getOne(
-      `SELECT COALESCE(SUM(net_freight), 0) as total FROM truck_trips WHERE date >= $1`,
-      [monthStart]
+      `SELECT COALESCE(SUM(net_freight), 0) as total FROM truck_trips WHERE ${kpiFilter}`,
+      [kpiStart]
     );
     const monthProfit = await getOne(
-      `SELECT COALESCE(SUM(net_profit), 0) as total FROM truck_trips WHERE date >= $1`,
-      [monthStart]
+      `SELECT COALESCE(SUM(net_profit), 0) as total FROM truck_trips WHERE ${kpiFilter}`,
+      [kpiStart]
     );
+
+    const perTruckParams: any[] = [];
+    const perTruckWhere = month
+      ? `AND to_char(tt.date::date, 'YYYY-MM') = $1` + (perTruckParams.push(month) ? '' : '')
+      : '';
 
     const perTruck = await getAll(`
       SELECT
@@ -32,10 +45,10 @@ router.get('/dashboard', async (_req, res) => {
         COALESCE((SELECT SUM(te.amount) FROM truck_expenses te WHERE te.truck_id = t.id), 0) as total_fixed_expense,
         COALESCE(SUM(tt.net_profit), 0) as net_profit
       FROM trucks t
-      LEFT JOIN truck_trips tt ON tt.truck_id = t.id
+      LEFT JOIN truck_trips tt ON tt.truck_id = t.id ${perTruckWhere}
       GROUP BY t.id, t.truck_number
       ORDER BY t.truck_number
-    `);
+    `, perTruckParams);
 
     res.json({
       totalTrucks: Number(totalTrucks.count),

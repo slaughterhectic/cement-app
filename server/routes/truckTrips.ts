@@ -244,11 +244,18 @@ router.patch('/:id/expense', async (req, res) => {
     if (!existing) return res.status(404).json({ error: 'Trip not found' });
 
     const loading_charge   = Number(req.body.loading_charge)   || 0;
+    const loading_charge_description = req.body.loading_charge_description || null;
     const unloading_charge = Number(req.body.unloading_charge) || 0;
+    const unloading_charge_description = req.body.unloading_charge_description || null;
     const diesel_amount    = Number(req.body.trip_diesel_amount) || 0;
     const tripDieselFromId = req.body.trip_diesel_from_id ? Number(req.body.trip_diesel_from_id) : null;
     const driver_payment   = Number(req.body.driver_payment)   || 0;
-    const miscellaneous    = Number(req.body.miscellaneous)    || 0;
+    // miscellaneous_items is an array of {description, amount}; miscellaneous is their sum
+    const miscellaneous_items: Array<{description: string; amount: number}> =
+      Array.isArray(req.body.miscellaneous_items) ? req.body.miscellaneous_items : [];
+    const miscellaneous = miscellaneous_items.length > 0
+      ? miscellaneous_items.reduce((s, i) => s + (Number(i.amount) || 0), 0)
+      : (Number(req.body.miscellaneous) || 0);
     const toll_expense     = Number(req.body.toll_expense)     || 0;
     const fastagId         = req.body.fastag_id ? Number(req.body.fastag_id) : null;
     // Advance diesel can also be edited from this form (optional). Falls back to whatever
@@ -312,18 +319,20 @@ router.patch('/:id/expense', async (req, res) => {
 
     const row = await getOne(
       `UPDATE truck_trips SET
-         loading_charge=$1, unloading_charge=$2,
-         diesel_amount=$3, trip_diesel_from_id=$4,
-         driver_payment=$5, miscellaneous=$6,
-         toll_expense=$7, fastag_id=$8,
-         odometer_start=$9, odometer_end=$10, total_km=$11,
-         advance_deduction=$12, diesel_from_id=$13,
-         net_freight=$14, net_profit=$15,
+         loading_charge=$1, loading_charge_description=$2,
+         unloading_charge=$3, unloading_charge_description=$4,
+         diesel_amount=$5, trip_diesel_from_id=$6,
+         driver_payment=$7, miscellaneous=$8, miscellaneous_items=$9,
+         toll_expense=$10, fastag_id=$11,
+         odometer_start=$12, odometer_end=$13, total_km=$14,
+         advance_deduction=$15, diesel_from_id=$16,
+         net_freight=$17, net_profit=$18,
          expense_completed=TRUE
-       WHERE id=$16 RETURNING *`,
-      [loading_charge, unloading_charge,
+       WHERE id=$19 RETURNING *`,
+      [loading_charge, loading_charge_description,
+       unloading_charge, unloading_charge_description,
        diesel_amount, tripDieselFromId,
-       driver_payment, miscellaneous,
+       driver_payment, miscellaneous, JSON.stringify(miscellaneous_items),
        toll_expense, fastagId,
        odometer_start, odometer_end, total_km,
        advance_deduction, advanceFromId,

@@ -46,20 +46,28 @@ export default function TruckDashboard() {
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<DashboardData | null>(null);
   const [loading, setLoading] = useState(true);
+  const [filterMonth, setFilterMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const d = await api.trucks.dashboard();
+      const d = await api.trucks.dashboard(filterMonth);
       setData(d);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load dashboard', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, filterMonth]);
 
   useEffect(() => { load(); }, [load]);
+
+  const monthLabel = filterMonth
+    ? new Date(filterMonth + '-01').toLocaleString('en-IN', { month: 'long', year: 'numeric' })
+    : 'All time';
 
   if (loading) {
     return (
@@ -73,9 +81,29 @@ export default function TruckDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-heading">TruckBook Dashboard</h1>
-        <p className="text-sm text-heading/60 mt-1">Overview of your fleet performance</p>
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-heading">TruckBook Dashboard</h1>
+          <p className="text-sm text-heading/60 mt-1">Fleet performance · {monthLabel}</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
+          <input
+            type="month"
+            className="input-field py-1.5 text-sm"
+            value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)}
+          />
+          {filterMonth && (
+            <button
+              type="button"
+              onClick={() => setFilterMonth('')}
+              className="text-sm text-orange-600 dark:text-orange-400 hover:underline font-medium whitespace-nowrap"
+            >
+              All time
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -86,20 +114,20 @@ export default function TruckDashboard() {
           color="bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
         />
         <StatCard
-          label="Total Trips"
+          label={filterMonth ? 'Trips This Month' : 'Total Trips'}
           value={String(data.totalTrips)}
-          sub="all time"
+          sub={filterMonth ? undefined : 'all time'}
           icon={Route}
           color="bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
         />
         <StatCard
-          label="This Month Freight"
+          label={filterMonth ? `${monthLabel} Freight` : 'Total Freight'}
           value={formatINR(data.monthFreight)}
           icon={IndianRupee}
           color="bg-orange-50 dark:bg-orange-900/30 text-orange-600 dark:text-orange-400"
         />
         <StatCard
-          label="This Month Profit"
+          label={filterMonth ? `${monthLabel} Profit` : 'Total Profit'}
           value={formatINR(data.monthProfit)}
           icon={TrendingUp}
           color={data.monthProfit >= 0 ? 'bg-green-50 dark:bg-green-900/30 text-green-600 dark:text-green-400' : 'bg-red-50 dark:bg-red-900/30 text-red-600 dark:text-red-400'}
@@ -125,7 +153,7 @@ export default function TruckDashboard() {
             <tbody>
               {data.perTruck.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-heading/50">No trucks yet</td>
+                  <td colSpan={6} className="px-4 py-8 text-center text-heading/50">No trips for this period</td>
                 </tr>
               ) : (
                 data.perTruck.map((t) => (

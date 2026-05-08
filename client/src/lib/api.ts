@@ -249,7 +249,7 @@ export const api = {
   },
   trucks: {
     list: () => request<any[]>('/trucks'),
-    dashboard: () => request<any>('/trucks/dashboard'),
+    dashboard: (month?: string) => request<any>(`/trucks/dashboard${month ? '?month=' + encodeURIComponent(month) : ''}`),
     create: (data: any) => request<any>('/trucks', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/trucks/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/trucks/${id}`, { method: 'DELETE' }),
@@ -298,11 +298,14 @@ export const api = {
       request<any>(`/truck-trips/${id}/freight`, { method: 'PATCH', body: JSON.stringify(data) }),
     updateExpense: (id: number, data: {
       loading_charge: number;
+      loading_charge_description?: string;
       unloading_charge: number;
+      unloading_charge_description?: string;
       trip_diesel_amount: number;
       trip_diesel_from_id: number | null;
       driver_payment: number;
-      miscellaneous: number;
+      miscellaneous?: number;
+      miscellaneous_items?: Array<{ description: string; amount: number }>;
       toll_expense: number;
       fastag_id: number | null;
       odometer_start: number | null;

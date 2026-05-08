@@ -975,6 +975,11 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_trips DROP CONSTRAINT IF EXISTS rl_trips_company_check`);
     await client.query(`ALTER TABLE rl_trips ADD CONSTRAINT rl_trips_company_check CHECK (company IN ('acc','jk'))`);
 
+    // Trip expense descriptions + multi-item miscellaneous
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS loading_charge_description TEXT`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS unloading_charge_description TEXT`);
+    await client.query(`ALTER TABLE truck_trips ADD COLUMN IF NOT EXISTS miscellaneous_items JSONB DEFAULT '[]'`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();
