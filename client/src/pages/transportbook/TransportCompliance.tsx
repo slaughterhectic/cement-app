@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ShieldCheck, Save } from 'lucide-react';
+import { MonthPicker } from '../../components/MonthPicker';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
@@ -191,12 +192,7 @@ export default function TransportCompliance() {
       <div className="card flex flex-wrap items-center gap-4 p-4">
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Period:</label>
-          <input
-            type="month"
-            className="input-field py-1.5 text-sm"
-            value={periodFilter}
-            onChange={(e) => setPeriodFilter(e.target.value)}
-          />
+          <MonthPicker value={periodFilter} onChange={setPeriodFilter} />
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Status:</label>
@@ -264,12 +260,7 @@ export default function TransportCompliance() {
                         </select>
                       </td>
                       <td className="px-3 py-2.5">
-                        <input
-                          type="month"
-                          className="input-field py-1 text-xs w-32"
-                          value={r.gstr1_period || ''}
-                          onChange={(e) => setDraft(r.id, { gstr1_period: e.target.value })}
-                        />
+                        <MonthPicker value={r.gstr1_period || ''} onChange={(v) => setDraft(r.id, { gstr1_period: v })} size="sm" />
                       </td>
                       <td className="px-3 py-2.5">
                         <select
@@ -281,12 +272,7 @@ export default function TransportCompliance() {
                         </select>
                       </td>
                       <td className="px-3 py-2.5">
-                        <input
-                          type="month"
-                          className="input-field py-1 text-xs w-32"
-                          value={r.gstr3b_period || ''}
-                          onChange={(e) => setDraft(r.id, { gstr3b_period: e.target.value })}
-                        />
+                        <MonthPicker value={r.gstr3b_period || ''} onChange={(v) => setDraft(r.id, { gstr3b_period: v })} size="sm" />
                       </td>
                       <td className="px-3 py-2.5">
                         <select
@@ -298,12 +284,7 @@ export default function TransportCompliance() {
                         </select>
                       </td>
                       <td className="px-3 py-2.5">
-                        <input
-                          type="month"
-                          className="input-field py-1 text-xs w-32"
-                          value={r.itc_period || ''}
-                          onChange={(e) => setDraft(r.id, { itc_period: e.target.value })}
-                        />
+                        <MonthPicker value={r.itc_period || ''} onChange={(v) => setDraft(r.id, { itc_period: v })} size="sm" />
                       </td>
                       <td className="px-3 py-2.5">
                         <input

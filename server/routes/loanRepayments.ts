@@ -122,4 +122,24 @@ router.get('/summary', async (_req, res) => {
   }
 });
 
+// Monthly paid total — used by Finance KPI
+router.get('/monthly-paid', async (req, res) => {
+  try {
+    const { month } = req.query as { month?: string };
+    const row = month
+      ? await (getAll as any)(
+          `SELECT COALESCE(SUM(amount),0)::float AS total_paid, COUNT(*)::int AS count
+           FROM loan_repayments WHERE to_char(date::date, 'YYYY-MM') = $1`,
+          [month]
+        )
+      : await (getAll as any)(
+          `SELECT COALESCE(SUM(amount),0)::float AS total_paid, COUNT(*)::int AS count
+           FROM loan_repayments`
+        );
+    res.json(row[0] || { total_paid: 0, count: 0 });
+  } catch (e: any) {
+    res.status(500).json({ error: friendlyError(e) });
+  }
+});
+
 export default router;

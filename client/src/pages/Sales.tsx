@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2 } from 'lucide-react';
+import { MonthPicker } from '../components/MonthPicker';
 import type { ColumnDef } from '../components/tables/DataTable';
 import { DataTable } from '../components/tables/DataTable';
 import { SaleForm, type SaleEditData } from '../components/forms/SaleForm';
@@ -428,15 +429,7 @@ export default function Sales() {
         </div>
         <div>
           <label className="mb-1 block text-xs font-medium text-heading/70">Month</label>
-          <input
-            type="month"
-            className="input-field"
-            value={monthFilter}
-            onChange={(e) => {
-              setMonthFilter(e.target.value);
-              if (e.target.value) { setStartDate(''); setEndDate(''); }
-            }}
-          />
+          <MonthPicker value={monthFilter} onChange={(v) => { setMonthFilter(v); if (v) { setStartDate(''); setEndDate(''); } }} />
         </div>
         <button
           type="button"

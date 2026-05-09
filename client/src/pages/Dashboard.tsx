@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { MonthPicker } from '../components/MonthPicker';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle, Building2, IndianRupee, Package, TrendingUp, Wallet, X } from 'lucide-react';
 import { OutstandingBarChart } from '../components/charts/OutstandingBarChart';
@@ -407,12 +408,7 @@ export default function Dashboard() {
           <p className="mt-1 text-sm text-heading/60">Welcome back. Here&apos;s your business overview.</p>
         </div>
         <div className="flex items-center gap-2">
-          <input
-            type="month"
-            className="rounded-md border border-card-border bg-card px-3 py-1.5 text-sm text-heading/80 focus:border-brand-400 focus:outline-none focus:ring-1 focus:ring-brand-300"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-          />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
           {filterMonth && (
             <button
               type="button"

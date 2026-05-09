@@ -1,4 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
+import { MonthPicker } from '../components/MonthPicker';
 import { Link } from 'react-router-dom';
 import { api } from '../lib/api';
 import { formatINR, formatDate, formatNumber } from '../lib/format';
@@ -419,15 +420,8 @@ export default function Reports() {
       {tab === 'pnl' && (
         <section className="space-y-6">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-heading/80">
-              Month
-              <input
-                type="month"
-                value={pnlMonth}
-                onChange={(e) => setPnlMonth(e.target.value)}
-                className="ml-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
-              />
-            </label>
+            <label className="text-sm font-medium text-heading/80">Month</label>
+            <MonthPicker value={pnlMonth} onChange={setPnlMonth} />
           </div>
 
           {pnlLoading ? (
@@ -609,15 +603,8 @@ export default function Reports() {
       {tab === 'daily' && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-heading/80">
-              Month
-              <input
-                type="month"
-                value={dailyMonth}
-                onChange={(e) => setDailyMonth(e.target.value)}
-                className="ml-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
-              />
-            </label>
+            <label className="text-sm font-medium text-heading/80">Month</label>
+            <MonthPicker value={dailyMonth} onChange={setDailyMonth} />
           </div>
           <DataTable<DailyRegisterRow>
             data={dailyRows}
@@ -634,15 +621,8 @@ export default function Reports() {
       {tab === 'collection' && (
         <section className="space-y-4">
           <div className="flex flex-wrap items-center gap-3">
-            <label className="text-sm font-medium text-heading/80">
-              Month
-              <input
-                type="month"
-                value={collectionMonth}
-                onChange={(e) => setCollectionMonth(e.target.value)}
-                className="ml-2 rounded-md border border-card-border bg-card px-3 py-2 text-sm outline-none ring-brand-500 focus:border-brand-400 focus:ring-2"
-              />
-            </label>
+            <label className="text-sm font-medium text-heading/80">Month</label>
+            <MonthPicker value={collectionMonth} onChange={setCollectionMonth} />
           </div>
 
           {collectionLoading ? (

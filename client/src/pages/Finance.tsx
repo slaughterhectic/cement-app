@@ -5,6 +5,7 @@ import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
 import { usePagination, PaginationBar } from '../components/tables/SimplePagination';
+import { MonthPicker } from '../components/MonthPicker';
 
 interface Loan {
   id: number;
@@ -575,6 +576,11 @@ export default function Finance() {
   const [banks, setBanks] = useState<{ bank_name: string }[]>([]);
   const [cashHandlers, setCashHandlers] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
+  const [filterMonth, setFilterMonth] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+  });
+  const [paidThisMonth, setPaidThisMonth] = useState<{ total_paid: number; count: number } | null>(null);
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<Loan | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -687,6 +693,11 @@ export default function Finance() {
 
   useEffect(() => { load(); }, [load]);
 
+  useEffect(() => {
+    if (!filterMonth) { setPaidThisMonth(null); return; }
+    api.loanRepayments.monthlyPaid(filterMonth).then(setPaidThisMonth).catch(() => {});
+  }, [filterMonth]);
+
   const openCreate = () => {
     setEditLoan(null);
     setForm(emptyForm);
@@ -772,8 +783,23 @@ export default function Finance() {
         <p className="mt-1 text-sm text-heading/60">Track principal debt, EMI obligations, and interest.</p>
       </header>
 
+      {/* Month filter */}
+      <div className="flex flex-wrap items-center gap-2">
+        <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
+        <MonthPicker value={filterMonth} onChange={setFilterMonth} />
+        {filterMonth && (
+          <button
+            type="button"
+            onClick={() => setFilterMonth('')}
+            className="text-sm text-brand-600 hover:underline font-medium whitespace-nowrap"
+          >
+            All time
+          </button>
+        )}
+      </div>
+
       {/* Summary cards */}
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <div className="rounded-xl border border-red-200 dark:border-red-800 bg-red-50/80 dark:bg-red-900/30 p-5">
           <p className="text-xs font-semibold uppercase tracking-wide text-red-700 dark:text-red-300">Total Loan Principal</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-red-800 dark:text-red-200">{formatINR(totalPrincipal)}</p>
@@ -788,6 +814,17 @@ export default function Finance() {
           <p className="text-xs font-semibold uppercase tracking-wide text-blue-700 dark:text-blue-300">Monthly EMI Obligation</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(totalMonthlyEMI)}</p>
           <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Sum of all EMIs</p>
+        </div>
+        <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/30 p-5">
+          <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
+            EMI Paid {filterMonth ? `— ${new Date(filterMonth + '-01').toLocaleString('en-IN', { month: 'short', year: 'numeric' })}` : '— All time'}
+          </p>
+          <p className="mt-2 text-2xl font-bold tabular-nums text-green-800 dark:text-green-200">
+            {paidThisMonth != null ? formatINR(paidThisMonth.total_paid) : filterMonth ? '…' : '—'}
+          </p>
+          <p className="mt-1 text-xs text-green-600 dark:text-green-400">
+            {paidThisMonth ? `${paidThisMonth.count} payment${paidThisMonth.count !== 1 ? 's' : ''}` : 'Actual EMI repayments'}
+          </p>
         </div>
         <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/30 p-5">
           <div className="flex items-center gap-2 text-amber-700 dark:text-amber-300">

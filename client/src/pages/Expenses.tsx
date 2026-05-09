@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Plus, Trash2 } from 'lucide-react';
+import { MonthPicker } from '../components/MonthPicker';
 import type { ColumnDef } from '../components/tables/DataTable';
 import { DataTable } from '../components/tables/DataTable';
 import { ExpenseForm } from '../components/forms/ExpenseForm';
@@ -202,12 +203,7 @@ export default function Expenses() {
       <div className="card flex flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm font-medium text-heading/70">Month:</label>
-          <input
-            type="month"
-            className="input-field py-1.5 text-sm"
-            value={monthFilter}
-            onChange={(e) => setMonthFilter(e.target.value)}
-          />
+          <MonthPicker value={monthFilter} onChange={setMonthFilter} />
           <button
             type="button"
             onClick={() => setMonthFilter(currentMonth())}

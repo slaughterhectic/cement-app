@@ -176,6 +176,7 @@ export const api = {
   loanRepayments: {
     list: (loanId?: number) => request<any[]>(loanId ? `/loan-repayments?loan_id=${loanId}` : '/loan-repayments'),
     summary: () => request<{ loan_id: number; count: number; total_repaid: number }[]>('/loan-repayments/summary'),
+    monthlyPaid: (month: string) => request<{ total_paid: number; count: number }>(`/loan-repayments/monthly-paid?month=${month}`),
     create: (data: any) => request<any>('/loan-repayments', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/loan-repayments/${id}`, { method: 'DELETE' }),
   },
