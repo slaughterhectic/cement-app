@@ -90,13 +90,16 @@ export default function TransportDashboard() {
   const [compliance, setCompliance] = useState<ComplianceSummary | null>(null);
   const [bankSummary, setBankSummary] = useState<{ closing: number; credits: number; debits: number; opening: number; active_banks: number } | null>(null);
   const [growth, setGrowth] = useState<Array<{ month: string; trips: number; acc_amount: number; commission: number; bilty: number; qty: number }>>([]);
+  const [monthlyPL, setMonthlyPL] = useState<Array<{ month: string; commission: number; expenses: number; net_pl: number }>>([]);
   const [loading, setLoading] = useState(true);
+  const [filterMonth, setFilterMonth] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
       const now = new Date();
-      const month = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const currentMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
+      const month = filterMonth || currentMonth;
 
       const [trips, owners, invoices, partners, ewayData, complianceData] = await Promise.all([
         api.rlTrips.list({ month }),
@@ -116,6 +119,8 @@ export default function TransportDashboard() {
       try { setBankSummary(await api.rlBanks.summary()); } catch (_) { setBankSummary(null); }
       // 12-month growth — best-effort.
       try { setGrowth(await api.rlTrips.monthlyGrowth(12)); } catch (_) { setGrowth([]); }
+      // 12-month P&L — best-effort.
+      try { setMonthlyPL(await api.rlTrips.monthlyPL(12)); } catch (_) { setMonthlyPL([]); }
 
       // "Pending Invoice Amount" combines the receivable that's already invoiced but unpaid
       // with the trip freight that hasn't been billed yet — both are money ACC/JK still owe us.
@@ -155,7 +160,7 @@ export default function TransportDashboard() {
     } finally {
       setLoading(false);
     }
-  }, [addToast]);
+  }, [addToast, filterMonth]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -174,9 +179,22 @@ export default function TransportDashboard() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div>
-        <h1 className="text-2xl font-bold text-heading">TransportBook Dashboard</h1>
-        <p className="text-sm text-heading/60 mt-1">Rudra Logistics — ACC Cement Transport Overview</p>
+      <div className="flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <h1 className="text-2xl font-bold text-heading">TransportBook Dashboard</h1>
+          <p className="text-sm text-heading/60 mt-1">Rudra Logistics — ACC Cement Transport Overview</p>
+        </div>
+        <div className="flex items-center gap-2 text-sm">
+          <label className="font-medium text-heading/70">Month:</label>
+          <input type="month" className="input-field py-1.5 text-sm" value={filterMonth}
+            onChange={(e) => setFilterMonth(e.target.value)} />
+          {filterMonth && (
+            <button type="button" onClick={() => setFilterMonth('')}
+              className="rounded-md border border-card-border px-2 py-1.5 text-xs font-medium text-heading/70 hover:bg-surface">
+              Current
+            </button>
+          )}
+        </div>
       </div>
 
       {/* Critical E-Way Alert Banner */}
@@ -279,6 +297,40 @@ export default function TransportDashboard() {
                 </LineChart>
               </ResponsiveContainer>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Month-wise P&L */}
+      {monthlyPL.filter((r) => r.commission > 0 || r.expenses > 0).length > 0 && (
+        <div className="card p-0 overflow-hidden">
+          <div className="border-b border-card-border px-5 py-4 flex items-center justify-between">
+            <h2 className="font-semibold text-heading">Month-wise P&amp;L</h2>
+            <span className="text-xs text-heading/60">Commission earned − Expenses</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-right text-xs font-medium uppercase tracking-wider">
+                  <th className="px-4 py-2 text-left text-indigo-700 dark:text-indigo-300">Month</th>
+                  <th className="px-4 py-2 text-green-700 dark:text-green-300">Commission</th>
+                  <th className="px-4 py-2 text-red-700 dark:text-red-300">Expenses</th>
+                  <th className="px-4 py-2 text-indigo-700 dark:text-indigo-300">Net P&amp;L</th>
+                </tr>
+              </thead>
+              <tbody>
+                {[...monthlyPL].reverse().filter((r) => r.commission > 0 || r.expenses > 0).map((r) => (
+                  <tr key={r.month} className="border-b border-card-border last:border-0 hover:bg-indigo-50/30 dark:hover:bg-indigo-900/20">
+                    <td className="px-4 py-2 font-medium text-heading">{r.month}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(r.commission)}</td>
+                    <td className="px-4 py-2 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(r.expenses)}</td>
+                    <td className={`px-4 py-2 text-right tabular-nums font-bold ${r.net_pl >= 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-red-700 dark:text-red-300'}`}>
+                      {formatINR(r.net_pl)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </div>
         </div>
       )}

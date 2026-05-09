@@ -30,15 +30,17 @@ async function syncBankForExpense({
   }
 }
 
-// GET /rl/expenses
-router.get('/', async (_req, res) => {
+// GET /rl/expenses?company=acc|jk
+router.get('/', async (req, res) => {
   try {
-    const rows = await getAll(`SELECT * FROM rl_expenses ORDER BY date DESC, id DESC`);
+    const company = typeof req.query.company === 'string' && ['acc', 'jk'].includes(req.query.company) ? req.query.company : null;
+    const rows = company
+      ? await getAll(`SELECT * FROM rl_expenses WHERE company=$1 ORDER BY date DESC, id DESC`, [company])
+      : await getAll(`SELECT * FROM rl_expenses ORDER BY date DESC, id DESC`);
     const monthStart = new Date().toISOString().substring(0, 7) + '-01';
-    const monthRow = await getOne(
-      `SELECT COALESCE(SUM(amount), 0) AS total FROM rl_expenses WHERE date >= $1`,
-      [monthStart]
-    );
+    const monthRow = company
+      ? await getOne(`SELECT COALESCE(SUM(amount), 0) AS total FROM rl_expenses WHERE date >= $1 AND company=$2`, [monthStart, company])
+      : await getOne(`SELECT COALESCE(SUM(amount), 0) AS total FROM rl_expenses WHERE date >= $1`, [monthStart]);
     res.json({ data: rows, monthTotal: Number(monthRow?.total ?? 0) });
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
@@ -61,11 +63,12 @@ router.post('/', async (req, res) => {
     const normalizedMode = mode || 'cash';
     const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
     const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
+    const company = req.body.company || null;
 
     const row = await getOne(
-      `INSERT INTO rl_expenses (date, category, description, amount, mode, bank_name, cash_handler, remarks)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-      [date, category || null, description || null, Number(amount), normalizedMode, bank, handler, remarks || null]
+      `INSERT INTO rl_expenses (date, category, description, amount, mode, bank_name, cash_handler, remarks, company)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+      [date, category || null, description || null, Number(amount), normalizedMode, bank, handler, remarks || null, company]
     );
 
     await Promise.all([
@@ -95,11 +98,12 @@ router.put('/:id', async (req, res) => {
     const handler = normalizedMode === 'cash' ? (cash_handler || null) : null;
     const bank    = normalizedMode === 'bank' ? (bank_name    || null) : null;
 
+    const company = req.body.company || null;
     const row = await getOne(
       `UPDATE rl_expenses
-         SET date=$1, category=$2, description=$3, amount=$4, mode=$5, bank_name=$6, cash_handler=$7, remarks=$8
-       WHERE id=$9 RETURNING *`,
-      [date, category || null, description || null, Number(amount), normalizedMode, bank, handler, remarks || null, req.params.id]
+         SET date=$1, category=$2, description=$3, amount=$4, mode=$5, bank_name=$6, cash_handler=$7, remarks=$8, company=$9
+       WHERE id=$10 RETURNING *`,
+      [date, category || null, description || null, Number(amount), normalizedMode, bank, handler, remarks || null, company, req.params.id]
     );
     if (!row) return res.status(404).json({ error: 'Expense not found' });
 

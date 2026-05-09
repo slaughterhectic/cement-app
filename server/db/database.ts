@@ -1006,6 +1006,9 @@ export async function initializeDatabase() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_truck_emi_rep_truck ON truck_emi_repayments(truck_id)`);
 
+    // Company bucket for transport expenses (ACC / JK / null = general)
+    await client.query(`ALTER TABLE rl_expenses ADD COLUMN IF NOT EXISTS company TEXT`);
+
     // Backfill rl_bank_transactions from existing bank-mode rl_expenses.
     // Idempotent: skips any expense already synced (source_table='rl_expenses').
     await client.query(`

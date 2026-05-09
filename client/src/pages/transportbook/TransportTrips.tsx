@@ -964,10 +964,6 @@ export default function TransportTrips() {
                     <p className="text-xs font-semibold uppercase tracking-wider text-indigo-500 mb-3">Additional Details</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">Petrol Slip Number</label>
-                        <input className="input-field" value={form.petrol_slip_number} onChange={f('petrol_slip_number')} placeholder="Slip number" />
-                      </div>
-                      <div>
                         <label className="block text-xs font-medium text-heading/70 mb-1">EPOD Bill Number</label>
                         <input className="input-field" value={form.epod_bill_number} onChange={f('epod_bill_number')} placeholder="EPOD number" />
                       </div>

@@ -387,7 +387,7 @@ export const api = {
       request<any>(`/rl/banks/${id}/transactions/${txId}`, { method: 'DELETE' }),
   },
   rlExpenses: {
-    list: () => request<{ data: any[]; monthTotal: number }>('/rl/expenses'),
+    list: (company?: 'acc' | 'jk') => request<{ data: any[]; monthTotal: number }>(`/rl/expenses${company ? `?company=${company}` : ''}`),
     create: (data: any) => request<any>('/rl/expenses', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) => request<any>(`/rl/expenses/${id}`, { method: 'PUT', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/rl/expenses/${id}`, { method: 'DELETE' }),
@@ -403,6 +403,8 @@ export const api = {
       request<any>(`/rl/trips/${id}/received`, { method: 'PATCH', body: JSON.stringify({ received }) }),
     monthlyGrowth: (months: number = 12) =>
       request<Array<{ month: string; trips: number; acc_amount: number; commission: number; bilty: number; qty: number }>>(`/rl/trips/monthly-growth?months=${months}`),
+    monthlyPL: (months: number = 12) =>
+      request<Array<{ month: string; commission: number; expenses: number; net_pl: number }>>(`/rl/trips/monthly-pl?months=${months}`),
     delete: (id: number) => request<any>(`/rl/trips/${id}`, { method: 'DELETE' }),
     ewayAlerts: () => request<{ atRisk: any[]; counts: { expired: number; risk: number; warning: number; ok: number } }>('/rl/trips/eway-alerts'),
   },

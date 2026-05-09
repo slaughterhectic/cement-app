@@ -158,6 +158,39 @@ router.get('/monthly-growth', async (req, res) => {
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
+// GET /rl/trips/monthly-pl — last N months P&L (commission income vs expenses)
+router.get('/monthly-pl', async (req, res) => {
+  try {
+    const monthsParam = Number((req.query as any).months);
+    const months = Number.isFinite(monthsParam) && monthsParam > 0 && monthsParam <= 36 ? Math.floor(monthsParam) : 12;
+    const rows = await getAll(`
+      WITH months AS (
+        SELECT to_char((date_trunc('month', NOW()) - (n || ' months')::interval)::date, 'YYYY-MM') AS ym
+        FROM generate_series(0, $1 - 1) AS n
+      )
+      SELECT m.ym AS month,
+        COALESCE(t.commission, 0)::float AS commission,
+        COALESCE(e.expenses, 0)::float    AS expenses,
+        (COALESCE(t.commission, 0) - COALESCE(e.expenses, 0))::float AS net_pl
+      FROM months m
+      LEFT JOIN (
+        SELECT to_char(date::date, 'YYYY-MM') AS ym,
+               SUM(qty * acc_freight_rate * commission_pct / 100) AS commission
+        FROM rl_trips
+        GROUP BY to_char(date::date, 'YYYY-MM')
+      ) t ON t.ym = m.ym
+      LEFT JOIN (
+        SELECT to_char(date::date, 'YYYY-MM') AS ym,
+               SUM(amount) AS expenses
+        FROM rl_expenses
+        GROUP BY to_char(date::date, 'YYYY-MM')
+      ) e ON e.ym = m.ym
+      ORDER BY m.ym ASC
+    `, [months]);
+    res.json(rows);
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
 router.get('/eway-alerts', async (_req, res) => {
   try {
     const rows = await getAll(

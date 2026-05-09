@@ -16,6 +16,7 @@ type ExpenseRow = {
   bank_name: string | null;
   cash_handler: string | null;
   remarks: string | null;
+  company: 'acc' | 'jk' | null;
 };
 
 const CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Freight payment', 'Travel Expense', 'Repairs', 'Other'];
@@ -29,6 +30,7 @@ const emptyForm = {
   bank_name: '',
   cash_handler: '',
   remarks: '',
+  company: '' as '' | 'acc' | 'jk',
 };
 
 function modeBadge(mode: string) {
@@ -73,17 +75,18 @@ export default function TransportExpenses() {
   const [banks, setBanks] = useState<string[]>([]);
   const [handlers, setHandlers] = useState<string[]>([]);
   const [monthFilter, setMonthFilter] = useState<string>(currentMonth());
+  const [companyFilter, setCompanyFilter] = useState<'' | 'acc' | 'jk'>('');
 
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.rlExpenses.list();
+      const res = await api.rlExpenses.list(companyFilter || undefined);
       setRows((res.data || []) as ExpenseRow[]);
       setMonthTotal(Number(res.monthTotal) || 0);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load expenses', 'error');
     } finally { setLoading(false); }
-  }, [addToast]);
+  }, [addToast, companyFilter]);
 
   useEffect(() => {
     load();
@@ -128,6 +131,7 @@ export default function TransportExpenses() {
       bank_name: row.bank_name || '',
       cash_handler: row.cash_handler || '',
       remarks: row.remarks || '',
+      company: row.company || '',
     });
     setModalOpen(true);
   };
@@ -148,6 +152,7 @@ export default function TransportExpenses() {
         bank_name: form.mode === 'bank' ? form.bank_name : null,
         cash_handler: form.mode === 'cash' ? form.cash_handler : null,
         remarks: form.remarks || null,
+        company: form.company || null,
       };
       if (editRow) {
         await api.rlExpenses.update(editRow.id, payload);
@@ -207,6 +212,16 @@ export default function TransportExpenses() {
           className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600">
           <Plus className="h-4 w-4" /> Add Expense
         </button>
+      </div>
+
+      {/* Company bucket tabs */}
+      <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 w-fit text-sm">
+        {([['', 'All Expenses'], ['acc', 'ACC Expenses'], ['jk', 'JK Expenses']] as const).map(([val, label]) => (
+          <button key={val} type="button" onClick={() => setCompanyFilter(val)}
+            className={`px-4 py-1.5 rounded-md font-medium transition-colors ${companyFilter === val ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
       {/* Month filter + breakdown */}
@@ -290,6 +305,14 @@ export default function TransportExpenses() {
                   <select className="input-field" value={form.category} onChange={(e) => setForm({ ...form, category: e.target.value })}>
                     <option value="">— None —</option>
                     {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-heading/70 mb-1">Company</label>
+                  <select className="input-field" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value as '' | 'acc' | 'jk' })}>
+                    <option value="">— General —</option>
+                    <option value="acc">ACC Cement</option>
+                    <option value="jk">JK Cement</option>
                   </select>
                 </div>
                 <div>
