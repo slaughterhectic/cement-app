@@ -6,6 +6,30 @@ import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
+// Sync a debit entry in rl_bank_transactions when an expense is paid via bank.
+// Always deletes the old synced row first, then re-inserts if still bank mode.
+async function syncBankForExpense({
+  sourceId, mode, bankName, amount, date, category, description,
+}: {
+  sourceId: number; mode: string; bankName: string | null;
+  amount: number; date: string; category: string | null; description: string | null;
+}) {
+  await query(
+    `DELETE FROM rl_bank_transactions WHERE source_table='rl_expenses' AND source_id=$1`,
+    [sourceId]
+  );
+  if (mode === 'bank' && bankName) {
+    const bank = await getOne('SELECT id FROM rl_banks WHERE name=$1', [bankName]);
+    if (bank) {
+      await query(
+        `INSERT INTO rl_bank_transactions (bank_id, date, type, amount, particulars, remarks, source_table, source_id)
+         VALUES ($1,$2,'debit',$3,$4,$5,'rl_expenses',$6)`,
+        [bank.id, date, amount, `Expense — ${category || 'General'}`, description || null, sourceId]
+      );
+    }
+  }
+}
+
 // GET /rl/expenses
 router.get('/', async (_req, res) => {
   try {
@@ -44,16 +68,19 @@ router.post('/', async (req, res) => {
       [date, category || null, description || null, Number(amount), normalizedMode, bank, handler, remarks || null]
     );
 
-    await syncImprestForCashTxn({
-      sourceTable: 'rl_expenses',
-      sourceId: row.id,
-      mode: normalizedMode,
-      cashHandler: handler,
-      amount: Number(amount),
-      date,
-      particulars: `Transport expense — ${category || 'General'}`,
-      narration: description || null,
-    });
+    await Promise.all([
+      syncImprestForCashTxn({
+        sourceTable: 'rl_expenses', sourceId: row.id,
+        mode: normalizedMode, cashHandler: handler,
+        amount: Number(amount), date,
+        particulars: `Transport expense — ${category || 'General'}`,
+        narration: description || null,
+      }),
+      syncBankForExpense({
+        sourceId: row.id, mode: normalizedMode, bankName: bank,
+        amount: Number(amount), date, category: category || null, description: description || null,
+      }),
+    ]);
 
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
@@ -76,16 +103,19 @@ router.put('/:id', async (req, res) => {
     );
     if (!row) return res.status(404).json({ error: 'Expense not found' });
 
-    await syncImprestForCashTxn({
-      sourceTable: 'rl_expenses',
-      sourceId: row.id,
-      mode: normalizedMode,
-      cashHandler: handler,
-      amount: Number(amount),
-      date,
-      particulars: `Transport expense — ${category || 'General'}`,
-      narration: description || null,
-    });
+    await Promise.all([
+      syncImprestForCashTxn({
+        sourceTable: 'rl_expenses', sourceId: row.id,
+        mode: normalizedMode, cashHandler: handler,
+        amount: Number(amount), date,
+        particulars: `Transport expense — ${category || 'General'}`,
+        narration: description || null,
+      }),
+      syncBankForExpense({
+        sourceId: row.id, mode: normalizedMode, bankName: bank,
+        amount: Number(amount), date, category: category || null, description: description || null,
+      }),
+    ]);
 
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
@@ -94,8 +124,12 @@ router.put('/:id', async (req, res) => {
 router.delete('/:id', async (req, res) => {
   try {
     if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
-    await deleteImprestForSource('rl_expenses', Number(req.params.id));
-    await query('DELETE FROM rl_expenses WHERE id=$1', [req.params.id]);
+    const id = Number(req.params.id);
+    await Promise.all([
+      deleteImprestForSource('rl_expenses', id),
+      query(`DELETE FROM rl_bank_transactions WHERE source_table='rl_expenses' AND source_id=$1`, [id]),
+    ]);
+    await query('DELETE FROM rl_expenses WHERE id=$1', [id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });

@@ -12,6 +12,8 @@ type Bank = {
   total_credits: number;
   total_debits: number;
   balance: number;
+  all_time_balance?: number;
+  day_opening?: number;
   txn_count: number;
 };
 
@@ -36,6 +38,7 @@ export default function TransportBanks() {
   const canEditTransport = useAuthStore((s) => s.canEditTransport());
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
+  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split('T')[0]);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [statements, setStatements] = useState<Record<number, Txn[]>>({});
   const [stmtLoading, setStmtLoading] = useState<Record<number, boolean>>({});
@@ -49,10 +52,10 @@ export default function TransportBanks() {
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setBanks(await api.rlBanks.list()); }
+    try { setBanks(await api.rlBanks.list(dateFilter)); }
     catch (e) { addToast(e instanceof Error ? e.message : 'Failed to load banks', 'error'); }
     finally { setLoading(false); }
-  }, [addToast]);
+  }, [addToast, dateFilter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -101,7 +104,15 @@ export default function TransportBanks() {
     finally { setTxnSaving(false); }
   };
 
-  const totalClosing = banks.filter((b) => b.is_active).reduce((s, b) => s + b.balance, 0);
+  const today = new Date().toISOString().split('T')[0];
+  const isToday = dateFilter === today;
+  const activeBanks = banks.filter((b) => b.is_active);
+  const totalOpening  = activeBanks.reduce((s, b) => s + (b.day_opening  ?? b.opening_balance), 0);
+  const totalCredits  = activeBanks.reduce((s, b) => s + b.total_credits,  0);
+  const totalDebits   = activeBanks.reduce((s, b) => s + b.total_debits,   0);
+  const totalClosing  = activeBanks.reduce((s, b) => s + b.balance, 0);
+
+  const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
 
   return (
     <div className="flex flex-col gap-6">
@@ -116,9 +127,37 @@ export default function TransportBanks() {
         </button>
       </div>
 
-      <div className="card p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
-        <p className="text-xs uppercase tracking-wider font-medium text-blue-700 dark:text-blue-300">Total closing balance (active banks)</p>
-        <p className="text-2xl font-bold text-heading mt-1">{formatINR(totalClosing)}</p>
+      {/* Date filter */}
+      <div className="card flex flex-wrap items-center gap-3 p-3">
+        <label className="text-sm font-medium text-heading/70">Date:</label>
+        <input type="date" className="input-field py-1.5 text-sm" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
+        <button type="button" onClick={() => setDateFilter(today)}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${isToday ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+          Today
+        </button>
+        <span className="ml-auto text-xs text-heading/60">
+          {isToday ? "Today's" : fmtDate(dateFilter)} opening / closing per bank
+        </span>
+      </div>
+
+      {/* Summary KPI row */}
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+        <div className="card p-3 text-center">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-heading/60">Opening</p>
+          <p className="text-lg font-bold text-heading mt-0.5">{formatINR(totalOpening)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-green-600">Credits</p>
+          <p className="text-lg font-bold text-green-700 dark:text-green-300 mt-0.5">{formatINR(totalCredits)}</p>
+        </div>
+        <div className="card p-3 text-center">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-red-600">Debits</p>
+          <p className="text-lg font-bold text-red-700 dark:text-red-300 mt-0.5">{formatINR(totalDebits)}</p>
+        </div>
+        <div className="card p-3 text-center bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800">
+          <p className="text-[11px] uppercase tracking-wider font-medium text-blue-700 dark:text-blue-300">Closing</p>
+          <p className="text-lg font-bold text-heading mt-0.5">{formatINR(totalClosing)}</p>
+        </div>
       </div>
 
       <div className="card overflow-hidden p-0">
@@ -128,8 +167,8 @@ export default function TransportBanks() {
               <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Bank</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Opening</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Credits</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Debits</th>
+                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right text-green-700 dark:text-green-300">Credits</th>
+                <th className="px-4 py-3 font-medium text-red-700 dark:text-red-300 text-right">Debits</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Closing</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
@@ -152,7 +191,7 @@ export default function TransportBanks() {
                         </button>
                         {!b.is_active && <span className="ml-2 text-[10px] uppercase rounded-full bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 text-slate-600">Inactive</span>}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.opening_balance)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.day_opening ?? b.opening_balance)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(b.total_credits)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(b.total_debits)}</td>
                       <td className={`px-4 py-3 text-right tabular-nums font-bold ${b.balance >= 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-red-700 dark:text-red-300'}`}>{formatINR(b.balance)}</td>

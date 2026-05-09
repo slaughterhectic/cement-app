@@ -374,7 +374,7 @@ export const api = {
       request<any>(`/rl/owner-advances/${id}`, { method: 'DELETE' }),
   },
   rlBanks: {
-    list: () => request<any[]>('/rl/banks'),
+    list: (date?: string) => request<any[]>(`/rl/banks${date ? `?date=${date}` : ''}`),
     summary: () => request<{ opening: number; credits: number; debits: number; closing: number; active_banks: number }>('/rl/banks/summary'),
     statement: (id: number) => request<any>(`/rl/banks/${id}/statement`),
     create: (data: { name: string; opening_balance?: number }) =>

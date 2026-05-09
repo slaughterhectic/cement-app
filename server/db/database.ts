@@ -1006,6 +1006,28 @@ export async function initializeDatabase() {
     `);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_truck_emi_rep_truck ON truck_emi_repayments(truck_id)`);
 
+    // Backfill rl_bank_transactions from existing bank-mode rl_expenses.
+    // Idempotent: skips any expense already synced (source_table='rl_expenses').
+    await client.query(`
+      INSERT INTO rl_bank_transactions (bank_id, date, type, amount, particulars, remarks, source_table, source_id)
+      SELECT
+        b.id,
+        e.date,
+        'debit',
+        e.amount,
+        CONCAT('Expense — ', COALESCE(e.category, 'General')),
+        e.description,
+        'rl_expenses',
+        e.id
+      FROM rl_expenses e
+      JOIN rl_banks b ON b.name = e.bank_name
+      WHERE e.mode = 'bank'
+        AND NOT EXISTS (
+          SELECT 1 FROM rl_bank_transactions t
+          WHERE t.source_table = 'rl_expenses' AND t.source_id = e.id
+        )
+    `);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

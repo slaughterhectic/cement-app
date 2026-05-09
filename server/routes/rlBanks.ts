@@ -6,24 +6,63 @@ import { canEditTransport } from '../lib/transportAuth';
 const router = Router();
 
 // GET /rl/banks — list with computed running balance (opening + credits − debits)
-router.get('/', async (_req, res) => {
+// Optional ?date=YYYY-MM-DD to scope credits/debits to a single day (opening = balance before that day)
+router.get('/', async (req, res) => {
   try {
-    const rows = await getAll(`
-      SELECT b.*,
-        COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit'), 0)::float AS total_credits,
-        COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'),  0)::float AS total_debits,
-        COALESCE((SELECT COUNT(*) FROM rl_bank_transactions WHERE bank_id=b.id), 0)::int AS txn_count
-      FROM rl_banks b
-      ORDER BY b.is_active DESC, b.name
-    `);
-    res.json(rows.map((r: any) => ({
-      ...r,
-      opening_balance: Number(r.opening_balance) || 0,
-      total_credits: Number(r.total_credits) || 0,
-      total_debits: Number(r.total_debits) || 0,
-      balance: (Number(r.opening_balance) || 0) + (Number(r.total_credits) || 0) - (Number(r.total_debits) || 0),
-      txn_count: Number(r.txn_count) || 0,
-    })));
+    const dateFilter = typeof req.query.date === 'string' && req.query.date ? req.query.date : null;
+
+    const rows = dateFilter
+      ? await getAll(`
+          SELECT b.*,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit' AND date < $1), 0)::float AS pre_credits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'  AND date < $1), 0)::float AS pre_debits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit' AND date = $1), 0)::float AS day_credits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'  AND date = $1), 0)::float AS day_debits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit'), 0)::float AS total_credits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'),  0)::float AS total_debits,
+            COALESCE((SELECT COUNT(*) FROM rl_bank_transactions WHERE bank_id=b.id), 0)::int AS txn_count
+          FROM rl_banks b
+          ORDER BY b.is_active DESC, b.name
+        `, [dateFilter])
+      : await getAll(`
+          SELECT b.*,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit'), 0)::float AS total_credits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'),  0)::float AS total_debits,
+            COALESCE((SELECT COUNT(*) FROM rl_bank_transactions WHERE bank_id=b.id), 0)::int AS txn_count
+          FROM rl_banks b
+          ORDER BY b.is_active DESC, b.name
+        `);
+
+    res.json(rows.map((r: any) => {
+      const ob   = Number(r.opening_balance) || 0;
+      const tc   = Number(r.total_credits)   || 0;
+      const td   = Number(r.total_debits)    || 0;
+      if (dateFilter) {
+        const preC = Number(r.pre_credits) || 0;
+        const preD = Number(r.pre_debits)  || 0;
+        const dayC = Number(r.day_credits) || 0;
+        const dayD = Number(r.day_debits)  || 0;
+        const dayOpening = ob + preC - preD;
+        return {
+          ...r,
+          opening_balance: ob,
+          day_opening: dayOpening,
+          total_credits: dayC,
+          total_debits: dayD,
+          balance: dayOpening + dayC - dayD,
+          all_time_balance: ob + tc - td,
+          txn_count: Number(r.txn_count) || 0,
+        };
+      }
+      return {
+        ...r,
+        opening_balance: ob,
+        total_credits: tc,
+        total_debits: td,
+        balance: ob + tc - td,
+        txn_count: Number(r.txn_count) || 0,
+      };
+    }));
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
