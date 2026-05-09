@@ -412,7 +412,7 @@ export default function TripExpenses() {
                 <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-orange-200 dark:border-orange-800 font-semibold">
                   <span className="text-orange-700 dark:text-orange-300">Total Expense</span>
                   <span className="text-red-600 dark:text-red-400">
-                    {formatINR(Number(drillRow.loading_charge) + Number(drillRow.unloading_charge) + Number(drillRow.diesel_amount) + Number(drillRow.driver_payment) + Number(drillRow.miscellaneous))}
+                    {formatINR(Number(drillRow.loading_charge) + Number(drillRow.unloading_charge) + Number(drillRow.diesel_amount) + Number(drillRow.driver_payment) + Number(drillRow.toll_expense) + Number(drillRow.miscellaneous))}
                   </span>
                 </div>
               </div>
