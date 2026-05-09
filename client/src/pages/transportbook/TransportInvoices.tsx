@@ -379,6 +379,7 @@ export default function TransportInvoices() {
             <div className="flex items-center gap-1 text-xs">
               <button type="button" onClick={() => setMonthFilter(mtd)} className={`rounded-md px-2 py-1 font-medium transition-colors ${monthFilter === mtd ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>MTD</button>
               <button type="button" onClick={() => setMonthFilter(prevMonth)} className={`rounded-md px-2 py-1 font-medium transition-colors ${monthFilter === prevMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>Prev</button>
+              <button type="button" onClick={() => setMonthFilter('2025-04')} className={`rounded-md px-2 py-1 font-medium transition-colors ${monthFilter && monthFilter < '2026-01' ? 'bg-amber-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>FY 25-26</button>
               <button type="button" onClick={() => setMonthFilter('')} className={`rounded-md px-2 py-1 font-medium transition-colors ${!monthFilter ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>All</button>
             </div>
           );

@@ -18,7 +18,7 @@ type ExpenseRow = {
   remarks: string | null;
 };
 
-const CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Freight payment', 'Repairs', 'Other'];
+const CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Freight payment', 'Travel Expense', 'Repairs', 'Other'];
 
 const emptyForm = {
   date: new Date().toISOString().split('T')[0],
@@ -86,7 +86,7 @@ export default function TransportExpenses() {
 
   useEffect(() => {
     load();
-    api.capital.banks().then((b: any[]) => setBanks(b.map((x) => x.bank_name))).catch(() => {});
+    api.rlBanks.list().then((b: any[]) => setBanks(b.filter((x) => x.is_active !== 0).map((x) => x.name))).catch(() => {});
     api.imprest.handlers().then((h: any[]) => setHandlers(h.map((x) => x.handler_name))).catch(() => {});
   }, [load]);
 
@@ -192,6 +192,10 @@ export default function TransportExpenses() {
           <button type="button" onClick={() => setMonthFilter(prevMonth)}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${monthFilter === prevMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
             Previous month
+          </button>
+          <button type="button" onClick={() => setMonthFilter('2025-04')}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${monthFilter && monthFilter < '2026-01' ? 'bg-amber-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+            FY 25-26
           </button>
           <button type="button" onClick={() => setMonthFilter('')}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${!monthFilter ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>

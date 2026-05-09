@@ -553,6 +553,10 @@ export default function TransportTrips() {
                   className={`rounded-md px-2 py-1 font-medium transition-colors ${filterMonth === prevMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
                   Prev
                 </button>
+                <button type="button" onClick={() => setFilterMonth('2025-04')}
+                  className={`rounded-md px-2 py-1 font-medium transition-colors ${filterMonth && filterMonth < '2026-01' ? 'bg-amber-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+                  FY 25-26
+                </button>
                 <button type="button" onClick={() => setFilterMonth('')}
                   className={`rounded-md px-2 py-1 font-medium transition-colors ${!filterMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
                   All

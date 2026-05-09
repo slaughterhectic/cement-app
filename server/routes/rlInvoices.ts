@@ -24,7 +24,11 @@ router.get('/', async (req, res) => {
     const where = company === 'acc' || company === 'jk' ? `WHERE company=$1` : '';
     const params = where ? [company] : [];
     const rows = await getAll(
-      `SELECT * FROM rl_invoices ${where} ORDER BY invoice_number DESC`,
+      `SELECT * FROM rl_invoices ${where} ORDER BY
+        CASE WHEN invoice_number ~ '/[0-9]+$'
+          THEN CAST(SPLIT_PART(invoice_number, '/', -1) AS INTEGER)
+          ELSE 0 END ASC,
+        invoice_number ASC`,
       params
     );
     res.json(rows.map((r: any) => ({
