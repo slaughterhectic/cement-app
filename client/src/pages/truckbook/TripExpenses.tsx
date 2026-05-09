@@ -318,7 +318,7 @@ export default function TripExpenses() {
               ) : (
                 filtered.map((row) => {
                   const expense = Number(row.loading_charge) + Number(row.unloading_charge)
-                    + Number(row.diesel_amount) + Number(row.driver_payment) + Number(row.toll_expense) + Number(row.miscellaneous);
+                    + Number(row.advance_deduction) + Number(row.diesel_amount) + Number(row.driver_payment) + Number(row.toll_expense) + Number(row.miscellaneous);
                   return (
                     <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 dark:hover:bg-orange-900/30 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.date)}</td>
@@ -383,6 +383,7 @@ export default function TripExpenses() {
                 {[
                   { label: 'Loading Charge', value: Number(drillRow.loading_charge), sub: drillRow.loading_charge_description },
                   { label: 'Unloading Charge', value: Number(drillRow.unloading_charge), sub: drillRow.unloading_charge_description },
+                  { label: 'Advance Diesel', value: Number(drillRow.advance_deduction) },
                   { label: 'Diesel', value: Number(drillRow.diesel_amount) },
                   { label: 'Driver Payment', value: Number(drillRow.driver_payment) },
                   { label: 'Toll', value: Number(drillRow.toll_expense) },
@@ -412,7 +413,7 @@ export default function TripExpenses() {
                 <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-orange-200 dark:border-orange-800 font-semibold">
                   <span className="text-orange-700 dark:text-orange-300">Total Expense</span>
                   <span className="text-red-600 dark:text-red-400">
-                    {formatINR(Number(drillRow.loading_charge) + Number(drillRow.unloading_charge) + Number(drillRow.diesel_amount) + Number(drillRow.driver_payment) + Number(drillRow.toll_expense) + Number(drillRow.miscellaneous))}
+                    {formatINR(Number(drillRow.loading_charge) + Number(drillRow.unloading_charge) + Number(drillRow.advance_deduction) + Number(drillRow.diesel_amount) + Number(drillRow.driver_payment) + Number(drillRow.toll_expense) + Number(drillRow.miscellaneous))}
                   </span>
                 </div>
               </div>
