@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, X } from 'lucide-react';
+import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ColumnDef } from '../../components/tables/DataTable';
 import { DataTable } from '../../components/tables/DataTable';
 import { api } from '../../lib/api';
@@ -67,6 +67,7 @@ export default function TransportExpenses() {
   const [monthTotal, setMonthTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
+  const [editRow, setEditRow] = useState<ExpenseRow | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [banks, setBanks] = useState<string[]>([]);
@@ -115,6 +116,22 @@ export default function TransportExpenses() {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
   }, []);
 
+  const openAdd = () => { setEditRow(null); setForm(emptyForm); setModalOpen(true); };
+  const openEdit = (row: ExpenseRow) => {
+    setEditRow(row);
+    setForm({
+      date: row.date,
+      category: row.category || '',
+      description: row.description || '',
+      amount: String(row.amount),
+      mode: row.mode,
+      bank_name: row.bank_name || '',
+      cash_handler: row.cash_handler || '',
+      remarks: row.remarks || '',
+    });
+    setModalOpen(true);
+  };
+
   const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.date || !form.amount) { addToast('Date and amount are required', 'error'); return; }
@@ -122,7 +139,7 @@ export default function TransportExpenses() {
     if (form.mode === 'cash' && !form.cash_handler) { addToast('Pick a cash handler', 'error'); return; }
     setSaving(true);
     try {
-      const result = await api.rlExpenses.create({
+      const payload = {
         date: form.date,
         category: form.category || null,
         description: form.description || null,
@@ -131,11 +148,18 @@ export default function TransportExpenses() {
         bank_name: form.mode === 'bank' ? form.bank_name : null,
         cash_handler: form.mode === 'cash' ? form.cash_handler : null,
         remarks: form.remarks || null,
-      });
-      if ((result as any).pending) addToast('Sent for admin approval', 'info');
-      else addToast('Expense added', 'success');
+      };
+      if (editRow) {
+        await api.rlExpenses.update(editRow.id, payload);
+        addToast('Expense updated', 'success');
+      } else {
+        const result = await api.rlExpenses.create(payload);
+        if ((result as any).pending) addToast('Sent for admin approval', 'info');
+        else addToast('Expense added', 'success');
+      }
       setModalOpen(false);
       setForm(emptyForm);
+      setEditRow(null);
       load();
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed', 'error');
@@ -158,9 +182,14 @@ export default function TransportExpenses() {
     {
       id: 'actions', header: 'Actions', enableSorting: false, enableHiding: false,
       cell: ({ row }) => canEditTransport() ? (
-        <button type="button" className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" onClick={() => handleDelete(row.original)}>
-          <Trash2 className="h-4 w-4" />
-        </button>
+        <div className="flex items-center gap-1">
+          <button type="button" className="rounded p-1.5 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30" onClick={() => openEdit(row.original)}>
+            <Pencil className="h-4 w-4" />
+          </button>
+          <button type="button" className="rounded p-1.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/30" onClick={() => handleDelete(row.original)}>
+            <Trash2 className="h-4 w-4" />
+          </button>
+        </div>
       ) : null,
     },
   ], [canEditTransport]);
@@ -174,7 +203,7 @@ export default function TransportExpenses() {
             This month: <span className="font-semibold text-heading">{formatINR(monthTotal)}</span>
           </p>
         </div>
-        <button type="button" onClick={() => { setForm(emptyForm); setModalOpen(true); }}
+        <button type="button" onClick={openAdd}
           className="inline-flex items-center gap-2 rounded-lg bg-indigo-500 px-4 py-2.5 text-sm font-medium text-white shadow-sm hover:bg-indigo-600">
           <Plus className="h-4 w-4" /> Add Expense
         </button>
@@ -231,7 +260,7 @@ export default function TransportExpenses() {
         columns={columns}
         isLoading={loading}
         emptyMessage={monthFilter ? `No expenses in ${monthLabel(monthFilter)}.` : 'No expenses yet.'}
-        emptyAction={{ label: 'Add Expense', onClick: () => setModalOpen(true) }}
+        emptyAction={{ label: 'Add Expense', onClick: openAdd }}
         exportFileName={monthFilter ? `transport_expenses_${monthFilter}` : 'transport_expenses'}
         canDelete={canEditTransport()}
         canDownload
@@ -242,8 +271,8 @@ export default function TransportExpenses() {
           <div className="flex min-h-full items-center justify-center px-4 py-6">
             <div className="w-full max-w-lg rounded-xl bg-card shadow-2xl">
               <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
-                <h2 className="font-semibold text-heading">Add Expense</h2>
-                <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                <h2 className="font-semibold text-heading">{editRow ? 'Edit Expense' : 'Add Expense'}</h2>
+                <button type="button" onClick={() => { setModalOpen(false); setEditRow(null); }} className="rounded-lg p-1.5 hover:bg-card-border/50">
                   <X className="h-5 w-5 text-heading/60" />
                 </button>
               </div>
@@ -300,9 +329,9 @@ export default function TransportExpenses() {
                   <input className="input-field" value={form.remarks} onChange={(e) => setForm({ ...form, remarks: e.target.value })} placeholder="Optional" />
                 </div>
                 <div className="sm:col-span-2 flex justify-end gap-2 pt-1">
-                  <button type="button" onClick={() => setModalOpen(false)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
+                  <button type="button" onClick={() => { setModalOpen(false); setEditRow(null); }} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
                   <button type="submit" disabled={saving} className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-60">
-                    {saving ? 'Saving…' : 'Add Expense'}
+                    {saving ? 'Saving…' : editRow ? 'Save Changes' : 'Add Expense'}
                   </button>
                 </div>
               </form>
