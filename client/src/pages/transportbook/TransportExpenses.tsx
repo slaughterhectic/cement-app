@@ -1,3 +1,4 @@
+import { MonthPicker } from '../../components/MonthPicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ColumnDef } from '../../components/tables/DataTable';
@@ -228,7 +229,7 @@ export default function TransportExpenses() {
       <div className="card flex flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
           <label className="text-sm font-medium text-heading/70">Month:</label>
-          <input type="month" className="input-field py-1.5 text-sm" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
+          <MonthPicker value={monthFilter} onChange={setMonthFilter} />
           <button type="button" onClick={() => setMonthFilter(currentMonth())}
             className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${monthFilter === currentMonth() ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
             This month

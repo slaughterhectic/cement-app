@@ -1,4 +1,5 @@
 import { useEffect, useState, useCallback } from 'react';
+import { MonthPicker } from '../../components/MonthPicker';
 import { Plus, Trash2, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { Fragment } from 'react';
 import { api } from '../../lib/api';
@@ -278,7 +279,7 @@ export default function DieselParties() {
                         <td colSpan={6} className="px-4 py-3">
                           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-heading/70">
                             <label>Month:</label>
-                            <input type="month" className="input-field py-1 text-xs" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
+                            <MonthPicker value={monthFilter} onChange={setMonthFilter} size="sm" />
                             {monthFilter && (
                               <button type="button" onClick={() => setMonthFilter('')} className="text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
                             )}

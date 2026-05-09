@@ -1,3 +1,4 @@
+import { MonthPicker } from '../../components/MonthPicker';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Check, ChevronDown, Plus, Pencil, Search, Trash2, X } from 'lucide-react';
 import { api } from '../../lib/api';
@@ -531,12 +532,7 @@ export default function TransportTrips() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
-          <input
-            type="month"
-            className="input-field py-1.5 text-sm"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-          />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
           {(() => {
             const now = new Date();
             const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;

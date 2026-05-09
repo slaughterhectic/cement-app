@@ -3,6 +3,7 @@ import { Truck, Route, TrendingUp, IndianRupee } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
+import { MonthPicker } from '../../components/MonthPicker';
 
 interface DashboardData {
   totalTrucks: number;
@@ -88,12 +89,7 @@ export default function TruckDashboard() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
-          <input
-            type="month"
-            className="input-field py-1.5 text-sm"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-          />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
           {filterMonth && (
             <button
               type="button"

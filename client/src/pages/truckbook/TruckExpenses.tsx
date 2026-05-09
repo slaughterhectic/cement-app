@@ -3,6 +3,7 @@ import { Plus, Trash2 } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
+import { MonthPicker } from '../../components/MonthPicker';
 
 interface ExpenseRow {
   id: number;
@@ -167,8 +168,7 @@ export default function TruckExpenses() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
-          <input type="month" className="input-field py-1.5 text-sm" value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)} />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
         </div>
         {(filterTruck || filterMonth) && (
           <button type="button" onClick={() => { setFilterTruck(''); setFilterMonth(''); }}

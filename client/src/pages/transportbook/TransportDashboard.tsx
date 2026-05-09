@@ -1,3 +1,4 @@
+import { MonthPicker } from '../../components/MonthPicker';
 import { useCallback, useEffect, useState } from 'react';
 import { Bar, BarChart, CartesianGrid, Legend, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts';
 import { Truck, FileText, IndianRupee, Users, TrendingUp, Clock, AlertTriangle, ShieldCheck } from 'lucide-react';
@@ -186,8 +187,7 @@ export default function TransportDashboard() {
         </div>
         <div className="flex items-center gap-2 text-sm">
           <label className="font-medium text-heading/70">Month:</label>
-          <input type="month" className="input-field py-1.5 text-sm" value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)} />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
           {filterMonth && (
             <button type="button" onClick={() => setFilterMonth('')}
               className="rounded-md border border-card-border px-2 py-1.5 text-xs font-medium text-heading/70 hover:bg-surface">

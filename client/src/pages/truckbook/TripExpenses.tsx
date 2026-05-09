@@ -3,6 +3,7 @@ import { Pencil, X, IndianRupee, Plus, Minus } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore } from '../../lib/store';
+import { MonthPicker } from '../../components/MonthPicker';
 
 interface MiscItem { description: string; amount: string; }
 
@@ -248,7 +249,7 @@ export default function TripExpenses() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
-          <input type="month" className="input-field py-1.5 text-sm" value={filterMonth} onChange={(e) => setFilterMonth(e.target.value)} />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
         </div>
         <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-sm">
           {(['pending', 'filed', 'all'] as const).map((s) => (

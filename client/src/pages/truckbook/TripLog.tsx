@@ -3,6 +3,7 @@ import { Plus, Pencil, Trash2, X, IndianRupee, Droplets } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
+import { MonthPicker } from '../../components/MonthPicker';
 
 interface TripRow {
   id: number;
@@ -315,12 +316,7 @@ export default function TripLog() {
         </div>
         <div className="flex items-center gap-2">
           <label className="text-sm font-medium text-heading/70 whitespace-nowrap">Month:</label>
-          <input
-            type="month"
-            className="input-field py-1.5 text-sm"
-            value={filterMonth}
-            onChange={(e) => setFilterMonth(e.target.value)}
-          />
+          <MonthPicker value={filterMonth} onChange={setFilterMonth} />
         </div>
         {(filterTruck || filterMonth) && (
           <button
@@ -482,13 +478,7 @@ export default function TripLog() {
             <form onSubmit={saveUrea} className="space-y-4">
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Month *</label>
-                <input
-                  type="month"
-                  className="input-field w-full"
-                  value={ureaForm.month}
-                  onChange={(e) => setUreaForm((p) => ({ ...p, month: e.target.value }))}
-                  required
-                />
+                <MonthPicker value={ureaForm.month} onChange={(v) => setUreaForm((p) => ({ ...p, month: v }))} size="md" />
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>

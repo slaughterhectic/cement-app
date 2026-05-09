@@ -1,3 +1,4 @@
+import { MonthPicker } from '../../components/MonthPicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import { Plus, Pencil, Trash2, X, CreditCard } from 'lucide-react';
@@ -368,7 +369,7 @@ export default function TransportInvoices() {
       {/* Filters */}
       <div className="card flex flex-wrap items-center gap-3 p-3">
         <label className="text-sm font-medium text-heading/70">Month:</label>
-        <input type="month" className="input-field py-1.5 text-sm" value={monthFilter} onChange={(e) => setMonthFilter(e.target.value)} />
+        <MonthPicker value={monthFilter} onChange={setMonthFilter} />
         {(() => {
           const now = new Date();
           const ym = (d: Date) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
