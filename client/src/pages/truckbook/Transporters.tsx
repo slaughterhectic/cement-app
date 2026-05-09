@@ -1,8 +1,9 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { Plus, Trash2, X, Building2, TrendingUp, TrendingDown } from 'lucide-react';
+import { Plus, Trash2, X, Building2, TrendingUp, TrendingDown, Printer } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useToastStore, useAuthStore } from '../../lib/store';
+import { openTransporterLedgerPdf } from '../../lib/transporterLedgerPdf';
 
 interface TransporterRow {
   id: number;
@@ -76,6 +77,9 @@ export default function Transporters() {
 
   // GST breakdown popup
   const [gstPopup, setGstPopup] = useState<TransporterRow | null>(null);
+
+  // Print ledger modal
+  const [showPrintModal, setShowPrintModal] = useState(false);
 
   // Filter + sort state for the transporters list
   const [searchQuery, setSearchQuery] = useState('');
@@ -179,6 +183,22 @@ export default function Transporters() {
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed', 'error');
     }
+  };
+
+  const handlePrint = (withGst: boolean) => {
+    if (!ledger) return;
+    setShowPrintModal(false);
+    const ok = openTransporterLedgerPdf({
+      transporterName: ledger.transporter.name,
+      phone: ledger.transporter.phone,
+      totalReceivable: ledger.totalEarned,
+      totalPaid: ledger.totalPaid,
+      totalReceived: ledger.totalReceived ?? 0,
+      outstanding: ledger.outstanding,
+      entries: ledger.ledger,
+      withGst,
+    });
+    if (!ok) addToast('Popup blocked — please allow popups for this site', 'error');
   };
 
   const filteredTransporters = useMemo(() => {
@@ -513,8 +533,16 @@ export default function Transporters() {
 
               {/* Ledger table */}
               <div className="card overflow-hidden p-0">
-                <div className="border-b border-card-border px-4 py-3 bg-orange-50 dark:bg-orange-900/30">
+                <div className="flex items-center justify-between border-b border-card-border px-4 py-3 bg-orange-50 dark:bg-orange-900/30">
                   <p className="font-medium text-orange-700 dark:text-orange-300 text-sm">Ledger — {ledger.transporter.name}</p>
+                  <button
+                    type="button"
+                    onClick={() => setShowPrintModal(true)}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-orange-300 dark:border-orange-700 bg-white dark:bg-orange-900/40 px-3 py-1.5 text-xs font-medium text-orange-700 dark:text-orange-300 hover:bg-orange-100 dark:hover:bg-orange-900/60 transition-colors"
+                  >
+                    <Printer className="h-3.5 w-3.5" />
+                    Print Ledger
+                  </button>
                 </div>
                 <div className="overflow-x-auto">
                   <table className="w-full text-sm">
@@ -602,6 +630,44 @@ export default function Transporters() {
           ) : null}
         </div>
       </div>
+
+      {/* Print Ledger Modal */}
+      {showPrintModal && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40" onClick={() => setShowPrintModal(false)}>
+          <div className="flex min-h-full items-center justify-center px-4 py-6" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-xs rounded-xl bg-card shadow-2xl">
+              <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+                <div>
+                  <h2 className="font-semibold text-heading">Print Ledger</h2>
+                  <p className="text-xs text-heading/60 mt-0.5">{ledger?.transporter.name}</p>
+                </div>
+                <button type="button" onClick={() => setShowPrintModal(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                  <X className="h-5 w-5 text-heading/60" />
+                </button>
+              </div>
+              <div className="p-5 flex flex-col gap-3">
+                <p className="text-sm text-heading/70">Choose print format:</p>
+                <button
+                  type="button"
+                  onClick={() => handlePrint(false)}
+                  className="w-full rounded-lg border border-card-border bg-surface px-4 py-3 text-left hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-colors"
+                >
+                  <p className="font-medium text-sm text-heading">Without GST</p>
+                  <p className="text-xs text-heading/50 mt-0.5">Print basic ledger with base amounts only</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handlePrint(true)}
+                  className="w-full rounded-lg border border-blue-300 dark:border-blue-700 bg-blue-50 dark:bg-blue-900/20 px-4 py-3 text-left hover:bg-blue-100 dark:hover:bg-blue-900/30 transition-colors"
+                >
+                  <p className="font-medium text-sm text-blue-700 dark:text-blue-300">With GST (18%)</p>
+                  <p className="text-xs text-blue-600/70 dark:text-blue-400/70 mt-0.5">Includes GST breakdown at the bottom</p>
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* GST Breakdown Popup */}
       {gstPopup && (() => {
