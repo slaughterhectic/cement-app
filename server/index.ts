@@ -186,6 +186,7 @@ app.get('/api/dashboard/stats', async (req, res) => {
     const totalSales = await getOne(`SELECT COALESCE(SUM(sale_amount), 0) as amount FROM sales`);
     const totalPurchases = await getOne(`SELECT COALESCE(SUM(purchase_amount), 0) as amount FROM purchases`);
     const totalExpenses = await getOne(`SELECT COALESCE(SUM(amount), 0) as amount FROM expenses`);
+    const totalLoanRepayments = await getOne(`SELECT COALESCE(SUM(amount), 0) as amount FROM loan_repayments`);
 
     // Outstanding receivable = NET sum of all non-supplier balances (includes overpayments)
     const outstandingCalc = await getOne(`
@@ -255,11 +256,11 @@ app.get('/api/dashboard/stats', async (req, res) => {
 
     res.json({
       monthPurchases: { bags: Number(monthPurchases.bags), amount: Number(monthPurchases.amount) },
-      // Net Profit = Stock Value + Total Sales - Total Purchases - Total Expenses (alltime)
+      // Net Profit = Stock Value + Total Sales - Total Purchases - Total Expenses - Total EMI Paid (alltime)
       // or monthly_sales - monthly_purchases - monthly_expenses - monthly_loan_repayments (month filter)
       monthProfit: filterMode === 'month'
         ? monthProfit!
-        : Number(stockCalc.value) + Number(totalSales.amount) - Number(totalPurchases.amount) - Number(totalExpenses.amount),
+        : Number(stockCalc.value) + Number(totalSales.amount) - Number(totalPurchases.amount) - Number(totalExpenses.amount) - Number(totalLoanRepayments.amount),
       filterMode,
       outstanding: Number(outstandingCalc.total),
       outstandingReceivable: Number(outstandingCalc.total),

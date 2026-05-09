@@ -433,7 +433,7 @@ export default function Dashboard() {
                 ? `Profit — ${new Date(filterMonth + '-01').toLocaleDateString('en-IN', { month: 'short', year: 'numeric' })}`
                 : 'Net Profit'}
               value={formatINR(stats.monthProfit)}
-              subtitle={stats.filterMode === 'month' ? 'Sales − purchases − expenses − loan repayments' : 'Stock + sales − purchases − expenses'}
+              subtitle={stats.filterMode === 'month' ? 'Sales − purchases − expenses − EMI paid' : 'Stock + sales − purchases − expenses − EMI paid'}
               icon={IndianRupee}
               color="profit"
             />
