@@ -89,9 +89,10 @@ export default function TripLog() {
 
   // Urea charges state
   const [ureaAmount, setUreaAmount] = useState(0);
+  const [ureaQuantity, setUreaQuantity] = useState<number | null>(null);
   const [ureaId, setUreaId] = useState<number | null>(null);
   const [ureaModalOpen, setUreaModalOpen] = useState(false);
-  const [ureaForm, setUreaForm] = useState({ month: '', amount: '', remarks: '' });
+  const [ureaForm, setUreaForm] = useState({ month: '', amount: '', quantity: '', remarks: '' });
   const [savingUrea, setSavingUrea] = useState(false);
 
   const selectedTransporter = transporters.find((t) => String(t.id) === form.transporter_id);
@@ -121,17 +122,19 @@ export default function TripLog() {
   }, []);
 
   const loadUrea = useCallback(async (month: string) => {
-    if (!month) { setUreaAmount(0); setUreaId(null); return; }
+    if (!month) { setUreaAmount(0); setUreaQuantity(null); setUreaId(null); return; }
     try {
       const data = await api.truckUrea.list(month);
       if (data.length > 0) {
         setUreaAmount(Number(data[0].amount));
+        setUreaQuantity(data[0].quantity != null ? Number(data[0].quantity) : null);
         setUreaId(data[0].id);
       } else {
         setUreaAmount(0);
+        setUreaQuantity(null);
         setUreaId(null);
       }
-    } catch (_) { setUreaAmount(0); setUreaId(null); }
+    } catch (_) { setUreaAmount(0); setUreaQuantity(null); setUreaId(null); }
   }, []);
 
   useEffect(() => { load(); }, [load]);
@@ -238,6 +241,7 @@ export default function TripLog() {
     setUreaForm({
       month: filterMonth,
       amount: ureaAmount > 0 ? String(ureaAmount) : '',
+      quantity: ureaQuantity != null ? String(ureaQuantity) : '',
       remarks: '',
     });
     setUreaModalOpen(true);
@@ -251,7 +255,8 @@ export default function TripLog() {
     }
     setSavingUrea(true);
     try {
-      await api.truckUrea.upsert({ month: ureaForm.month, amount: amt, remarks: ureaForm.remarks || undefined });
+      const qty = ureaForm.quantity !== '' ? Number(ureaForm.quantity) : null;
+      await api.truckUrea.upsert({ month: ureaForm.month, amount: amt, quantity: qty, remarks: ureaForm.remarks || undefined });
       addToast('Urea charge saved', 'success');
       setUreaModalOpen(false);
       await loadUrea(filterMonth);
@@ -351,6 +356,7 @@ export default function TripLog() {
           <div className="card p-4 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
             <p className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Monthly Urea</p>
             <p className="text-xl font-bold text-red-600 dark:text-red-400">{ureaAmount > 0 ? formatINR(ureaAmount) : '—'}</p>
+            {ureaQuantity != null && <p className="text-xs text-red-500 dark:text-red-400 mt-0.5">{ureaQuantity} buckets</p>}
           </div>
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">
@@ -478,19 +484,33 @@ export default function TripLog() {
                 <label className="mb-1 block text-xs font-medium text-heading/70">Month *</label>
                 <MonthPicker value={ureaForm.month} onChange={(v) => setUreaForm((p) => ({ ...p, month: v }))} size="md" />
               </div>
-              <div>
-                <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
-                <input
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  className="input-field w-full"
-                  value={ureaForm.amount}
-                  onChange={(e) => setUreaForm((p) => ({ ...p, amount: e.target.value }))}
-                  placeholder="0"
-                  autoFocus
-                  required
-                />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">Amount (₹) *</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    className="input-field w-full"
+                    value={ureaForm.amount}
+                    onChange={(e) => setUreaForm((p) => ({ ...p, amount: e.target.value }))}
+                    placeholder="0"
+                    autoFocus
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="mb-1 block text-xs font-medium text-heading/70">No. of Buckets</label>
+                  <input
+                    type="number"
+                    min="0"
+                    step="1"
+                    className="input-field w-full"
+                    value={ureaForm.quantity}
+                    onChange={(e) => setUreaForm((p) => ({ ...p, quantity: e.target.value }))}
+                    placeholder="e.g. 5"
+                  />
+                </div>
               </div>
               <div>
                 <label className="mb-1 block text-xs font-medium text-heading/70">Remarks</label>

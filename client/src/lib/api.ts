@@ -472,7 +472,7 @@ export const api = {
   },
   truckUrea: {
     list: (month?: string) => request<any[]>('/truck-urea' + (month ? '?month=' + encodeURIComponent(month) : '')),
-    upsert: (data: { month: string; amount: number; remarks?: string }) =>
+    upsert: (data: { month: string; amount: number; quantity?: number | null; remarks?: string }) =>
       request<any>('/truck-urea', { method: 'POST', body: JSON.stringify(data) }),
     delete: (id: number) => request<any>(`/truck-urea/${id}`, { method: 'DELETE' }),
   },

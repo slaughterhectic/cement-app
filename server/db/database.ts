@@ -1031,6 +1031,9 @@ export async function initializeDatabase() {
         )
     `);
 
+    // Add quantity (no. of buckets) to urea charges
+    await client.query(`ALTER TABLE truck_urea_charges ADD COLUMN IF NOT EXISTS quantity REAL`);
+
     // Backfill wallet_transactions from existing urea charges (idempotent).
     await client.query(`
       INSERT INTO wallet_transactions (date, type, amount, source_table, source_id, remarks)

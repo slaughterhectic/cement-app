@@ -20,7 +20,7 @@ router.get('/', async (req, res) => {
 
 // POST /api/truck-urea — upsert by month
 router.post('/', async (req, res) => {
-  const { month, amount, remarks } = req.body;
+  const { month, amount, quantity, remarks } = req.body;
   if (!month || amount === undefined || amount === null) {
     return res.status(400).json({ error: 'month and amount are required' });
   }
@@ -28,13 +28,14 @@ router.post('/', async (req, res) => {
   if (!Number.isFinite(amt) || amt < 0) {
     return res.status(400).json({ error: 'amount must be a non-negative number' });
   }
+  const qty = quantity !== undefined && quantity !== null && quantity !== '' ? Number(quantity) : null;
   try {
     const row = await getOne(
-      `INSERT INTO truck_urea_charges (month, amount, remarks)
-       VALUES ($1, $2, $3)
-       ON CONFLICT (month) DO UPDATE SET amount = $2, remarks = $3
+      `INSERT INTO truck_urea_charges (month, amount, quantity, remarks)
+       VALUES ($1, $2, $3, $4)
+       ON CONFLICT (month) DO UPDATE SET amount = $2, quantity = $3, remarks = $4
        RETURNING *`,
-      [month, amt, remarks || null]
+      [month, amt, qty, remarks || null]
     );
     await syncWalletDebitForSource('truck_urea', row.id, amt, row.month + '-01', `Monthly Urea — ${row.month}`);
     res.json(row);
