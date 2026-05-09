@@ -1,6 +1,6 @@
 import { useEffect, useState, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
-import { Pencil, Plus, Trash2, Calculator, ArrowUpRight, ArrowDownLeft, IndianRupee, ExternalLink } from 'lucide-react';
+import { Pencil, Plus, Trash2, Calculator, ArrowUpRight, ArrowDownLeft, IndianRupee, ExternalLink, X } from 'lucide-react';
 import { api } from '../lib/api';
 import { formatINR, formatDate } from '../lib/format';
 import { useAuthStore, useToastStore } from '../lib/store';
@@ -580,7 +580,8 @@ export default function Finance() {
     const now = new Date();
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`;
   });
-  const [paidThisMonth, setPaidThisMonth] = useState<{ total_paid: number; count: number } | null>(null);
+  const [paidThisMonth, setPaidThisMonth] = useState<{ total_paid: number; count: number; breakdown: any[]; entries: any[] } | null>(null);
+  const [showEmiBreakdown, setShowEmiBreakdown] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [editLoan, setEditLoan] = useState<Loan | null>(null);
   const [form, setForm] = useState(emptyForm);
@@ -694,8 +695,7 @@ export default function Finance() {
   useEffect(() => { load(); }, [load]);
 
   useEffect(() => {
-    if (!filterMonth) { setPaidThisMonth(null); return; }
-    api.loanRepayments.monthlyPaid(filterMonth).then(setPaidThisMonth).catch(() => {});
+    api.loanRepayments.monthlyPaid(filterMonth || undefined).then(setPaidThisMonth).catch(() => {});
   }, [filterMonth]);
 
   const openCreate = () => {
@@ -815,15 +815,19 @@ export default function Finance() {
           <p className="mt-2 text-2xl font-bold tabular-nums text-blue-800 dark:text-blue-200">{formatINR(totalMonthlyEMI)}</p>
           <p className="mt-1 text-xs text-blue-600 dark:text-blue-400">Sum of all EMIs</p>
         </div>
-        <div className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/30 p-5">
+        <div
+          className="rounded-xl border border-green-200 dark:border-green-800 bg-green-50/80 dark:bg-green-900/30 p-5 cursor-pointer hover:shadow-md transition-shadow"
+          onClick={() => paidThisMonth && setShowEmiBreakdown(true)}
+          title="Click for breakdown"
+        >
           <p className="text-xs font-semibold uppercase tracking-wide text-green-700 dark:text-green-300">
             EMI Paid {filterMonth ? `— ${new Date(filterMonth + '-01').toLocaleString('en-IN', { month: 'short', year: 'numeric' })}` : '— All time'}
           </p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-green-800 dark:text-green-200">
-            {paidThisMonth != null ? formatINR(paidThisMonth.total_paid) : filterMonth ? '…' : '—'}
+            {paidThisMonth != null ? formatINR(paidThisMonth.total_paid) : '…'}
           </p>
           <p className="mt-1 text-xs text-green-600 dark:text-green-400">
-            {paidThisMonth ? `${paidThisMonth.count} payment${paidThisMonth.count !== 1 ? 's' : ''}` : 'Actual EMI repayments'}
+            {paidThisMonth ? `${paidThisMonth.count} payment${paidThisMonth.count !== 1 ? 's' : ''} · tap for details` : 'Actual EMI repayments'}
           </p>
         </div>
         <div className="rounded-xl border border-amber-200 dark:border-amber-800 bg-amber-50/80 dark:bg-amber-900/30 p-5">
@@ -954,6 +958,82 @@ export default function Finance() {
 
       {/* Party Loans Section */}
       <PartyLoansSection />
+
+      {/* EMI Paid Breakdown Modal */}
+      {showEmiBreakdown && paidThisMonth && (
+        <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40" onClick={() => setShowEmiBreakdown(false)}>
+          <div className="flex min-h-full items-start justify-center px-4 py-10" onClick={(e) => e.stopPropagation()}>
+            <div className="w-full max-w-lg rounded-xl bg-card shadow-2xl">
+              <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+                <div>
+                  <h2 className="font-semibold text-heading">EMI Paid — Breakdown</h2>
+                  <p className="text-xs text-heading/60 mt-0.5">
+                    {filterMonth ? new Date(filterMonth + '-01').toLocaleString('en-IN', { month: 'long', year: 'numeric' }) : 'All time'} · {paidThisMonth.count} payment{paidThisMonth.count !== 1 ? 's' : ''}
+                  </p>
+                </div>
+                <button type="button" onClick={() => setShowEmiBreakdown(false)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                  <X className="h-5 w-5 text-heading/60" />
+                </button>
+              </div>
+
+              {/* Per-lender summary */}
+              {paidThisMonth.breakdown.length > 0 && (
+                <div className="px-5 pt-4 flex flex-col gap-2">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-green-600 dark:text-green-400 mb-1">By Lender</p>
+                  {paidThisMonth.breakdown.map((b: any) => (
+                    <div key={b.loan_id} className="flex items-center justify-between py-1.5 border-b border-card-border/50 text-sm">
+                      <div>
+                        <span className="font-medium text-heading">{b.lender_name}</span>
+                        <span className="text-xs text-heading/50 ml-2">{b.count} payment{b.count !== 1 ? 's' : ''}</span>
+                      </div>
+                      <span className="font-semibold text-green-700 dark:text-green-300">{formatINR(Number(b.paid))}</span>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-green-300 dark:border-green-700 font-bold text-sm">
+                    <span className="text-green-700 dark:text-green-300">Total EMI Paid</span>
+                    <span className="text-green-700 dark:text-green-300">{formatINR(Number(paidThisMonth.total_paid))}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Individual entries */}
+              {paidThisMonth.entries.length > 0 && (
+                <div className="px-5 py-4">
+                  <p className="text-[11px] font-semibold uppercase tracking-wider text-heading/50 mb-2">Individual Payments</p>
+                  <div className="rounded-lg border border-card-border overflow-hidden">
+                    <table className="w-full text-xs">
+                      <thead>
+                        <tr className="bg-surface border-b border-card-border">
+                          <th className="px-3 py-2 text-left font-medium text-heading/60">Date</th>
+                          <th className="px-3 py-2 text-left font-medium text-heading/60">Lender</th>
+                          <th className="px-3 py-2 text-left font-medium text-heading/60">Mode</th>
+                          <th className="px-3 py-2 text-right font-medium text-heading/60">Amount</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {paidThisMonth.entries.map((e: any, i: number) => (
+                          <tr key={e.id} className={`border-b border-card-border last:border-0 ${i % 2 === 0 ? '' : 'bg-surface/50'}`}>
+                            <td className="px-3 py-2 whitespace-nowrap text-heading/70">{formatDate(e.date)}</td>
+                            <td className="px-3 py-2 font-medium text-heading">{e.lender_name}</td>
+                            <td className="px-3 py-2 text-heading/60 capitalize">
+                              {e.mode}{e.bank_name ? ` · ${e.bank_name}` : ''}{e.cash_handler ? ` · ${e.cash_handler}` : ''}
+                            </td>
+                            <td className="px-3 py-2 text-right font-semibold text-green-700 dark:text-green-300">{formatINR(Number(e.amount))}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+
+              {paidThisMonth.count === 0 && (
+                <p className="px-5 py-8 text-center text-sm text-heading/50">No EMI payments recorded for this period.</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Add/Edit form */}
       {showForm && (

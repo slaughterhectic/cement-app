@@ -122,21 +122,47 @@ router.get('/summary', async (_req, res) => {
   }
 });
 
-// Monthly paid total — used by Finance KPI
+// Monthly paid total with per-loan breakdown — used by Finance KPI
 router.get('/monthly-paid', async (req, res) => {
   try {
     const { month } = req.query as { month?: string };
-    const row = month
-      ? await (getAll as any)(
-          `SELECT COALESCE(SUM(amount),0)::float AS total_paid, COUNT(*)::int AS count
-           FROM loan_repayments WHERE to_char(date::date, 'YYYY-MM') = $1`,
-          [month]
-        )
-      : await (getAll as any)(
-          `SELECT COALESCE(SUM(amount),0)::float AS total_paid, COUNT(*)::int AS count
-           FROM loan_repayments`
-        );
-    res.json(row[0] || { total_paid: 0, count: 0 });
+    const filter = month ? `WHERE to_char(lr.date::date, 'YYYY-MM') = $1` : '';
+    const params = month ? [month] : [];
+
+    const summary = await getAll(
+      `SELECT COALESCE(SUM(amount),0)::float AS total_paid, COUNT(*)::int AS count
+       FROM loan_repayments ${month ? `WHERE to_char(date::date, 'YYYY-MM') = $1` : ''}`,
+      params
+    );
+
+    const breakdown = await getAll(
+      `SELECT l.lender_name, lr.loan_id,
+              COALESCE(SUM(lr.amount),0)::float AS paid,
+              COUNT(*)::int AS count,
+              MIN(lr.date) AS first_date,
+              MAX(lr.date) AS last_date
+       FROM loan_repayments lr
+       JOIN loans l ON l.id = lr.loan_id
+       ${filter}
+       GROUP BY lr.loan_id, l.lender_name
+       ORDER BY paid DESC`,
+      params
+    );
+
+    const entries = await getAll(
+      `SELECT lr.id, lr.date, lr.amount, lr.mode, lr.bank_name, lr.cash_handler, lr.remarks, l.lender_name, lr.loan_id
+       FROM loan_repayments lr
+       JOIN loans l ON l.id = lr.loan_id
+       ${filter}
+       ORDER BY lr.date DESC, lr.id DESC`,
+      params
+    );
+
+    res.json({
+      ...(summary[0] || { total_paid: 0, count: 0 }),
+      breakdown,
+      entries,
+    });
   } catch (e: any) {
     res.status(500).json({ error: friendlyError(e) });
   }
