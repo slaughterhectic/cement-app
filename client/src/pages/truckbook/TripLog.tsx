@@ -348,12 +348,10 @@ export default function TripLog() {
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">Total Toll</p>
             <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(totalRow.total_toll)}</p>
           </div>
-          {filterMonth && ureaAmount > 0 && (
-            <div className="card p-4 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
-              <p className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Monthly Urea</p>
-              <p className="text-xl font-bold text-red-600 dark:text-red-400">{formatINR(ureaAmount)}</p>
-            </div>
-          )}
+          <div className="card p-4 text-center border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/30">
+            <p className="text-xs text-red-600 dark:text-red-400 font-medium uppercase tracking-wider">Monthly Urea</p>
+            <p className="text-xl font-bold text-red-600 dark:text-red-400">{ureaAmount > 0 ? formatINR(ureaAmount) : '—'}</p>
+          </div>
           <div className="card p-4 text-center border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30">
             <p className="text-xs text-orange-600 dark:text-orange-400 font-medium uppercase tracking-wider">
               {filterMonth && ureaAmount > 0 ? 'Net Profit (after urea)' : 'Net Profit'}

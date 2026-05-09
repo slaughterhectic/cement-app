@@ -318,7 +318,7 @@ export default function TripExpenses() {
               ) : (
                 filtered.map((row) => {
                   const expense = Number(row.loading_charge) + Number(row.unloading_charge)
-                    + Number(row.diesel_amount) + Number(row.driver_payment) + Number(row.miscellaneous);
+                    + Number(row.diesel_amount) + Number(row.driver_payment) + Number(row.toll_expense) + Number(row.miscellaneous);
                   return (
                     <tr key={row.id} className="border-b border-card-border last:border-0 hover:bg-orange-50/40 dark:hover:bg-orange-900/30 transition-colors">
                       <td className="px-4 py-3 whitespace-nowrap">{formatDate(row.date)}</td>

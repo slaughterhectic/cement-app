@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
+import { syncWalletDebitForSource, deleteWalletForSource } from '../lib/walletSync';
 
 const router = Router();
 
@@ -35,6 +36,7 @@ router.post('/', async (req, res) => {
        RETURNING *`,
       [month, amt, remarks || null]
     );
+    await syncWalletDebitForSource('truck_urea', row.id, amt, row.month + '-01', `Monthly Urea — ${row.month}`);
     res.json(row);
   } catch (e: any) {
     res.status(500).json({ error: friendlyError(e) });
@@ -47,6 +49,7 @@ router.delete('/:id', async (req: any, res) => {
   try {
     const row = await getOne(`SELECT id FROM truck_urea_charges WHERE id = $1`, [req.params.id]);
     if (!row) return res.status(404).json({ error: 'Not found' });
+    await deleteWalletForSource('truck_urea', Number(req.params.id));
     await query(`DELETE FROM truck_urea_charges WHERE id = $1`, [req.params.id]);
     res.json({ success: true });
   } catch (e: any) {

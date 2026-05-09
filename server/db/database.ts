@@ -1031,6 +1031,24 @@ export async function initializeDatabase() {
         )
     `);
 
+    // Backfill wallet_transactions from existing urea charges (idempotent).
+    await client.query(`
+      INSERT INTO wallet_transactions (date, type, amount, source_table, source_id, remarks)
+      SELECT
+        u.month || '-01',
+        'debit',
+        u.amount,
+        'truck_urea',
+        u.id,
+        'Monthly Urea — ' || u.month
+      FROM truck_urea_charges u
+      WHERE u.amount > 0
+        AND NOT EXISTS (
+          SELECT 1 FROM wallet_transactions w
+          WHERE w.source_table = 'truck_urea' AND w.source_id = u.id
+        )
+    `);
+
     console.log('Database schema initialized');
   } finally {
     client.release();
