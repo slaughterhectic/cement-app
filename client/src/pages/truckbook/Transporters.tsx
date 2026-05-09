@@ -74,6 +74,9 @@ export default function Transporters() {
   const [tForm, setTForm] = useState({ name: '', phone: '', has_gst: false });
   const [tSaving, setTSaving] = useState(false);
 
+  // GST breakdown popup
+  const [gstPopup, setGstPopup] = useState<TransporterRow | null>(null);
+
   // Filter + sort state for the transporters list
   const [searchQuery, setSearchQuery] = useState('');
   const [gstFilter, setGstFilter] = useState<'all' | 'gst' | 'no-gst'>('all');
@@ -151,16 +154,6 @@ export default function Transporters() {
     } catch (err) {
       addToast(err instanceof Error ? err.message : 'Failed', 'error');
     } finally { setTSaving(false); }
-  };
-
-  const handleToggleGst = async (t: TransporterRow) => {
-    try {
-      await api.transporters.update(t.id, { name: t.name, phone: t.phone || undefined, has_gst: !t.has_gst });
-      addToast(`GST ${!t.has_gst ? 'enabled' : 'disabled'} for ${t.name}`, 'success');
-      loadList();
-    } catch (err) {
-      addToast(err instanceof Error ? err.message : 'Failed', 'error');
-    }
   };
 
   const handleDeletePayment = async (entry: LedgerEntry, transporterId: number) => {
@@ -366,10 +359,10 @@ export default function Transporters() {
                   <div className="mt-1 flex items-center gap-3">
                     <button
                       type="button"
-                      onClick={(e) => { e.stopPropagation(); handleToggleGst(t); }}
+                      onClick={(e) => { e.stopPropagation(); setGstPopup(t); }}
                       className="text-xs text-blue-600 dark:text-blue-400 hover:underline"
                     >
-                      {t.has_gst ? 'Remove GST' : 'Mark GST'}
+                      GST Breakdown
                     </button>
                     {isAdmin() && (
                       <button
@@ -609,6 +602,57 @@ export default function Transporters() {
           ) : null}
         </div>
       </div>
+
+      {/* GST Breakdown Popup */}
+      {gstPopup && (() => {
+        const base = Number(gstPopup.total_commission) + Number(gstPopup.total_advance_diesel) + Number(gstPopup.total_trip_diesel);
+        const gst = base * 0.18;
+        const total = base + gst;
+        return (
+          <div className="fixed inset-0 z-50 overflow-y-auto bg-black/40" onClick={() => setGstPopup(null)}>
+            <div className="flex min-h-full items-start justify-center px-4 py-10" onClick={(e) => e.stopPropagation()}>
+              <div className="w-full max-w-xs rounded-xl bg-card shadow-2xl">
+                <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+                  <div>
+                    <h2 className="font-semibold text-heading">GST Breakdown</h2>
+                    <p className="text-xs text-heading/60 mt-0.5">{gstPopup.name}</p>
+                  </div>
+                  <button type="button" onClick={() => setGstPopup(null)} className="rounded-lg p-1.5 hover:bg-card-border/50">
+                    <X className="h-5 w-5 text-heading/60" />
+                  </button>
+                </div>
+                <div className="p-5 flex flex-col gap-1 text-sm">
+                  <div className="flex items-center justify-between py-1.5 border-b border-card-border/50">
+                    <span className="text-heading/70">Commission</span>
+                    <span className="font-medium text-heading">{formatINR(Number(gstPopup.total_commission))}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 border-b border-card-border/50">
+                    <span className="text-heading/70">Trip Diesel</span>
+                    <span className="font-medium text-heading">{formatINR(Number(gstPopup.total_advance_diesel))}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 border-b border-card-border/50">
+                    <span className="text-heading/70">Add. Diesel</span>
+                    <span className="font-medium text-heading">{formatINR(Number(gstPopup.total_trip_diesel))}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 border-b border-card-border/50 font-medium">
+                    <span className="text-heading/80">Base Total</span>
+                    <span className="text-heading">{formatINR(base)}</span>
+                  </div>
+                  <div className="flex items-center justify-between py-1.5 border-b border-card-border/50 text-blue-600 dark:text-blue-400">
+                    <span>GST @ 18%</span>
+                    <span className="font-medium">{formatINR(gst)}</span>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 mt-1 border-t-2 border-orange-200 dark:border-orange-800 font-semibold">
+                    <span className="text-orange-700 dark:text-orange-300">Total with GST</span>
+                    <span className="text-orange-600 dark:text-orange-400">{formatINR(total)}</span>
+                  </div>
+                  <p className="mt-3 text-[11px] text-heading/40 text-center">Calculation only — not saved</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
 
       {/* Add Transporter Modal */}
       {modalOpen && (
