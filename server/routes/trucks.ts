@@ -7,59 +7,65 @@ const router = Router();
 // GET /trucks/dashboard — summary stats. Accepts optional ?month=YYYY-MM.
 router.get('/dashboard', async (req, res) => {
   try {
-    const today = new Date().toISOString().split('T')[0];
     const { month } = req.query as { month?: string };
 
-    const kpiStart = month ? `${month}-01` : today.substring(0, 7) + '-01';
-    const kpiFilter = month ? `to_char(date::date, 'YYYY-MM') = $1` : `date >= $1`;
-    const expFilter = month ? `to_char(date::date, 'YYYY-MM') = $1` : `date >= $1`;
-    const expParams: any[] = month ? [month] : [today.substring(0, 7) + '-01'];
+    const mp = month ? [month] : [];  // params for month-filtered queries
 
     const totalTrucks = await getOne('SELECT COUNT(*) as count FROM trucks WHERE is_active = 1');
     const totalTrips = month
-      ? await getOne(`SELECT COUNT(*) as count FROM truck_trips WHERE to_char(date::date, 'YYYY-MM') = $1`, [month])
+      ? await getOne(`SELECT COUNT(*) as count FROM truck_trips WHERE to_char(date::date, 'YYYY-MM') = $1`, mp)
       : await getOne('SELECT COUNT(*) as count FROM truck_trips');
 
-    // Gross freight earned (total_freight, not net)
+    // Gross freight earned
     const monthFreight = await getOne(
-      `SELECT COALESCE(SUM(total_freight), 0) as total FROM truck_trips WHERE ${kpiFilter}`,
-      [kpiStart]
+      month
+        ? `SELECT COALESCE(SUM(total_freight), 0) as total FROM truck_trips WHERE to_char(date::date, 'YYYY-MM') = $1`
+        : `SELECT COALESCE(SUM(total_freight), 0) as total FROM truck_trips`,
+      mp
     );
 
-    // Trip-level net profit (already accounts for all per-trip deductions)
+    // Trip-level net profit (all per-trip deductions already included)
     const tripNetProfit = await getOne(
-      `SELECT COALESCE(SUM(net_profit), 0) as total FROM truck_trips WHERE ${kpiFilter}`,
-      [kpiStart]
+      month
+        ? `SELECT COALESCE(SUM(net_profit), 0) as total FROM truck_trips WHERE to_char(date::date, 'YYYY-MM') = $1`
+        : `SELECT COALESCE(SUM(net_profit), 0) as total FROM truck_trips`,
+      mp
     );
 
     // Fixed expenses (truck_expenses) filtered by period
     const fixedExpRow = await getOne(
-      `SELECT COALESCE(SUM(amount), 0) as total FROM truck_expenses WHERE ${expFilter}`,
-      expParams
+      month
+        ? `SELECT COALESCE(SUM(amount), 0) as total FROM truck_expenses WHERE to_char(date::date, 'YYYY-MM') = $1`
+        : `SELECT COALESCE(SUM(amount), 0) as total FROM truck_expenses`,
+      mp
     );
 
     // Fixed expense breakdown by category for the popup
     const fixedBreakdown = await getAll(
-      `SELECT COALESCE(category, 'General') as category, COALESCE(SUM(amount), 0) as total
-       FROM truck_expenses WHERE ${expFilter}
-       GROUP BY category ORDER BY total DESC`,
-      expParams
+      month
+        ? `SELECT COALESCE(category, 'General') as category, COALESCE(SUM(amount), 0) as total
+           FROM truck_expenses WHERE to_char(date::date, 'YYYY-MM') = $1
+           GROUP BY category ORDER BY total DESC`
+        : `SELECT COALESCE(category, 'General') as category, COALESCE(SUM(amount), 0) as total
+           FROM truck_expenses GROUP BY category ORDER BY total DESC`,
+      mp
     );
 
     // Urea charge for the period
-    const ureaRow = month
-      ? await getOne(`SELECT COALESCE(SUM(amount), 0) as total FROM truck_urea_charges WHERE month = $1`, [month])
-      : await getOne(`SELECT COALESCE(SUM(amount), 0) as total FROM truck_urea_charges WHERE month >= $1`,
-          [today.substring(0, 7)]);
+    const ureaRow = await getOne(
+      month
+        ? `SELECT COALESCE(SUM(amount), 0) as total FROM truck_urea_charges WHERE month = $1`
+        : `SELECT COALESCE(SUM(amount), 0) as total FROM truck_urea_charges`,
+      mp
+    );
 
     const totalFixedExpense = Number(fixedExpRow.total);
     const totalUrea = Number(ureaRow?.total ?? 0);
     const monthProfit = Number(tripNetProfit.total) - totalFixedExpense - totalUrea;
 
-    // Per-truck: trip expense = all wallet/fastag/ledger costs; fixed expense filtered by month
+    // Per-truck: trip expense = all wallet/fastag/ledger costs; net_profit = sum of trip-level profits
     const perTruckParams: any[] = month ? [month] : [];
     const tripMonthFilter = month ? `AND to_char(tt.date::date, 'YYYY-MM') = $1` : '';
-    const fixedMonthFilter = month ? `AND to_char(te.date::date, 'YYYY-MM') = $1` : '';
 
     const perTruck = await getAll(`
       SELECT
@@ -74,14 +80,7 @@ router.get('/dashboard', async (req, res) => {
           COALESCE(tt.driver_payment,0) + COALESCE(tt.miscellaneous,0) +
           COALESCE(tt.toll_expense,0)
         ), 0) as total_trip_expense,
-        COALESCE((
-          SELECT SUM(te.amount) FROM truck_expenses te
-          WHERE te.truck_id = t.id ${fixedMonthFilter}
-        ), 0) as total_fixed_expense,
-        COALESCE(SUM(tt.net_profit), 0) - COALESCE((
-          SELECT SUM(te.amount) FROM truck_expenses te
-          WHERE te.truck_id = t.id ${fixedMonthFilter}
-        ), 0) as net_profit
+        COALESCE(SUM(tt.net_profit), 0) as net_profit
       FROM trucks t
       LEFT JOIN truck_trips tt ON tt.truck_id = t.id ${tripMonthFilter}
       GROUP BY t.id, t.truck_number

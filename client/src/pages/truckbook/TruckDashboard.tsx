@@ -20,7 +20,6 @@ interface DashboardData {
     total_freight: number;
     net_freight: number;
     total_trip_expense: number;
-    total_fixed_expense: number;
     net_profit: number;
   }>;
 }
@@ -89,7 +88,6 @@ export default function TruckDashboard() {
   if (!data) return null;
 
   const totalFixedAndUrea = Number(data.totalFixedExpense) + Number(data.totalUrea);
-  const totalTripExpense = data.perTruck.reduce((s, t) => s + Number(t.total_trip_expense), 0);
 
   return (
     <div className="flex flex-col gap-6">
@@ -164,14 +162,13 @@ export default function TruckDashboard() {
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Trips</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Total Freight</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Trip Expense</th>
-                <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Fixed Expense</th>
                 <th className="px-4 py-3 font-medium text-orange-700 dark:text-orange-300 text-right">Net Profit</th>
               </tr>
             </thead>
             <tbody>
               {data.perTruck.length === 0 ? (
                 <tr>
-                  <td colSpan={6} className="px-4 py-8 text-center text-heading/50">No trips for this period</td>
+                  <td colSpan={5} className="px-4 py-8 text-center text-heading/50">No trips for this period</td>
                 </tr>
               ) : (
                 data.perTruck.map((t) => (
@@ -180,7 +177,6 @@ export default function TruckDashboard() {
                     <td className="px-4 py-3 text-right">{t.trip_count}</td>
                     <td className="px-4 py-3 text-right">{formatINR(Number(t.total_freight))}</td>
                     <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(Number(t.total_trip_expense))}</td>
-                    <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(Number(t.total_fixed_expense))}</td>
                     <td className={`px-4 py-3 text-right font-semibold ${Number(t.net_profit) >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
                       {formatINR(Number(t.net_profit))}
                     </td>
@@ -188,28 +184,22 @@ export default function TruckDashboard() {
                 ))
               )}
             </tbody>
-            {data.perTruck.length > 0 && (() => {
-              const totNetProfit = data.perTruck.reduce((s, t) => s + Number(t.net_profit), 0) - Number(data.totalUrea);
-              return (
-                <tfoot>
-                  <tr className="bg-orange-50 dark:bg-orange-900/30 font-semibold border-t-2 border-orange-200 dark:border-orange-800">
-                    <td className="px-4 py-3 text-orange-700 dark:text-orange-300">Total</td>
-                    <td className="px-4 py-3 text-right">{data.perTruck.reduce((s, t) => s + Number(t.trip_count), 0)}</td>
-                    <td className="px-4 py-3 text-right">{formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_freight), 0))}</td>
-                    <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(totalTripExpense)}</td>
-                    <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">
-                      {formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_fixed_expense), 0))}
-                      {Number(data.totalUrea) > 0 && (
-                        <span className="block text-[11px] font-normal text-red-500">+{formatINR(Number(data.totalUrea))} urea</span>
-                      )}
-                    </td>
-                    <td className={`px-4 py-3 text-right ${totNetProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
-                      {formatINR(totNetProfit)}
-                    </td>
-                  </tr>
-                </tfoot>
-              );
-            })()}
+            {data.perTruck.length > 0 && (
+              <tfoot>
+                <tr className="bg-orange-50 dark:bg-orange-900/30 font-semibold border-t-2 border-orange-200 dark:border-orange-800">
+                  <td className="px-4 py-3 text-orange-700 dark:text-orange-300">Total</td>
+                  <td className="px-4 py-3 text-right">{data.perTruck.reduce((s, t) => s + Number(t.trip_count), 0)}</td>
+                  <td className="px-4 py-3 text-right">{formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_freight), 0))}</td>
+                  <td className="px-4 py-3 text-right text-red-600 dark:text-red-400">{formatINR(data.perTruck.reduce((s, t) => s + Number(t.total_trip_expense), 0))}</td>
+                  <td className={`px-4 py-3 text-right ${data.monthProfit >= 0 ? 'text-green-600 dark:text-green-400' : 'text-red-600 dark:text-red-400'}`}>
+                    {formatINR(data.monthProfit)}
+                    {(Number(data.totalFixedExpense) > 0 || Number(data.totalUrea) > 0) && (
+                      <span className="block text-[11px] font-normal text-heading/50">after fixed+urea</span>
+                    )}
+                  </td>
+                </tr>
+              </tfoot>
+            )}
           </table>
         </div>
       </div>
