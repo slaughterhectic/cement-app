@@ -1,4 +1,3 @@
-import { MonthPicker } from '../../components/MonthPicker';
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pencil, Plus, Trash2, X } from 'lucide-react';
 import type { ColumnDef } from '../../components/tables/DataTable';
@@ -61,10 +60,8 @@ function categoryBadge(category: string | null) {
   );
 }
 
-function currentMonth(): string {
-  const d = new Date();
-  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-}
+const todayDate = new Date().toISOString().split('T')[0];
+const firstOfThisMonth = todayDate.substring(0, 7) + '-01';
 
 function monthLabel(ym: string): string {
   if (!ym) return '';
@@ -86,7 +83,8 @@ export default function TransportExpenses() {
   const [banks, setBanks] = useState<string[]>([]);
   const [handlers, setHandlers] = useState<string[]>([]);
   const [dieselParties, setDieselParties] = useState<{ id: number; name: string }[]>([]);
-  const [monthFilter, setMonthFilter] = useState<string>(currentMonth());
+  const [fromDate, setFromDate] = useState<string>(firstOfThisMonth);
+  const [toDate, setToDate] = useState<string>(todayDate);
   const [companyFilter, setCompanyFilter] = useState<'' | 'acc' | 'jk'>('');
 
   const load = useCallback(async () => {
@@ -108,8 +106,11 @@ export default function TransportExpenses() {
   }, [load]);
 
   const monthRows = useMemo(
-    () => (monthFilter ? rows.filter((r) => String(r.date).startsWith(monthFilter)) : rows),
-    [rows, monthFilter]
+    () => rows.filter((r) => {
+      const d = String(r.date);
+      return (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
+    }),
+    [rows, fromDate, toDate]
   );
   // Advances and Diesel payments are tracked separately — not counted in operational expense totals.
   const advanceRows = useMemo(() => monthRows.filter((r) => r.category === 'Advance'), [monthRows]);
@@ -133,10 +134,14 @@ export default function TransportExpenses() {
     return Array.from(m.entries()).map(([category, v]) => ({ category, ...v })).sort((a, b) => b.total - a.total);
   }, [expenseRows]);
 
-  const prevMonth = useMemo(() => {
-    const d = new Date(); d.setMonth(d.getMonth() - 1);
-    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-  }, []);
+  const monthBreakdown = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const r of expenseRows) {
+      const ym = String(r.date).substring(0, 7);
+      m.set(ym, (m.get(ym) || 0) + (Number(r.amount) || 0));
+    }
+    return Array.from(m.entries()).sort((a, b) => b[0].localeCompare(a[0]));
+  }, [expenseRows]);
 
   const openAdd = () => { setEditRow(null); setForm(emptyForm); setModalOpen(true); };
   const openEdit = (row: ExpenseRow) => {
@@ -270,30 +275,23 @@ export default function TransportExpenses() {
         ))}
       </div>
 
-      {/* Month filter + breakdown */}
+      {/* Date range filter + breakdown */}
       <div className="card flex flex-col gap-4 p-4">
         <div className="flex flex-wrap items-center gap-3">
-          <label className="text-sm font-medium text-heading/70">Month:</label>
-          <MonthPicker value={monthFilter} onChange={setMonthFilter} />
-          <button type="button" onClick={() => setMonthFilter(currentMonth())}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${monthFilter === currentMonth() ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
-            This month
+          <label className="text-sm font-medium text-heading/70">From:</label>
+          <input type="date" className="input-field py-1.5 text-sm" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+          <label className="text-sm font-medium text-heading/70">To:</label>
+          <input type="date" className="input-field py-1.5 text-sm" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+          <button type="button" onClick={() => { setFromDate(firstOfThisMonth); setToDate(todayDate); }}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${fromDate === firstOfThisMonth && toDate === todayDate ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+            This Month
           </button>
-          <button type="button" onClick={() => setMonthFilter(prevMonth)}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${monthFilter === prevMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
-            Previous month
-          </button>
-          <button type="button" onClick={() => setMonthFilter('2025-04')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${monthFilter && monthFilter < '2026-01' ? 'bg-amber-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
-            FY 25-26
-          </button>
-          <button type="button" onClick={() => setMonthFilter('')}
-            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${!monthFilter ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
-            All time
+          <button type="button" onClick={() => { setFromDate(''); setToDate(''); }}
+            className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${!fromDate && !toDate ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+            All Time
           </button>
           <span className="ml-auto text-sm text-heading/70">
-            {monthFilter ? `${monthLabel(monthFilter)} expenses: ` : 'All-time expenses: '}
-            <span className="font-semibold text-heading">{formatINR(monthRowsTotal)}</span>
+            Expenses: <span className="font-semibold text-heading">{formatINR(monthRowsTotal)}</span>
             <span className="text-xs text-heading/50"> · {expenseRows.length} rows</span>
             {dieselTotal > 0 && (
               <span className="ml-3 text-cyan-600 dark:text-cyan-400 font-medium">
@@ -374,6 +372,23 @@ export default function TransportExpenses() {
             </div>
           </div>
         )}
+        {monthBreakdown.length > 1 && (
+          <div>
+            <p className="text-xs font-semibold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 mb-2">Monthly Sub-Totals (Expenses only)</p>
+            <div className="flex flex-wrap gap-2">
+              {monthBreakdown.map(([ym, total]) => (
+                <div key={ym} className="rounded-lg border border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 px-3 py-2 text-xs">
+                  <p className="font-medium text-indigo-900 dark:text-indigo-100">{monthLabel(ym)}</p>
+                  <p className="mt-0.5 font-semibold text-heading">{formatINR(total)}</p>
+                </div>
+              ))}
+              <div className="rounded-lg border border-indigo-300 dark:border-indigo-700 bg-indigo-100 dark:bg-indigo-900/50 px-3 py-2 text-xs font-semibold flex flex-col justify-center">
+                <p className="text-indigo-700 dark:text-indigo-300">Total</p>
+                <p className="text-heading">{formatINR(monthRowsTotal)}</p>
+              </div>
+            </div>
+          </div>
+        )}
         {categoryBreakdown.length > 0 && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-heading/60 mb-2">Category breakdown</p>
@@ -397,9 +412,9 @@ export default function TransportExpenses() {
         data={monthRows}
         columns={columns}
         isLoading={loading}
-        emptyMessage={monthFilter ? `No entries in ${monthLabel(monthFilter)}.` : 'No entries yet.'}
+        emptyMessage={fromDate || toDate ? `No entries in selected date range.` : 'No entries yet.'}
         emptyAction={{ label: 'Add Expense', onClick: openAdd }}
-        exportFileName={monthFilter ? `transport_expenses_${monthFilter}` : 'transport_expenses'}
+        exportFileName={fromDate ? `transport_expenses_${fromDate}_${toDate || 'onwards'}` : 'transport_expenses'}
         canDelete={canEditTransport()}
         canDownload
       />

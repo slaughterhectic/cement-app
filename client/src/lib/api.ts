@@ -375,7 +375,13 @@ export const api = {
       request<any>(`/rl/owner-advances/${id}`, { method: 'DELETE' }),
   },
   rlBanks: {
-    list: (date?: string) => request<any[]>(`/rl/banks${date ? `?date=${date}` : ''}`),
+    list: (from?: string, to?: string) => {
+      const p = new URLSearchParams();
+      if (from) p.set('from', from);
+      if (to) p.set('to', to);
+      const q = p.toString();
+      return request<any[]>(`/rl/banks${q ? `?${q}` : ''}`);
+    },
     summary: () => request<{ opening: number; credits: number; debits: number; closing: number; active_banks: number }>('/rl/banks/summary'),
     statement: (id: number) => request<any>(`/rl/banks/${id}/statement`),
     create: (data: { name: string; opening_balance?: number }) =>
@@ -384,6 +390,8 @@ export const api = {
     delete: (id: number) => request<any>(`/rl/banks/${id}`, { method: 'DELETE' }),
     addTransaction: (id: number, data: any) =>
       request<any>(`/rl/banks/${id}/transactions`, { method: 'POST', body: JSON.stringify(data) }),
+    updateTransaction: (id: number, txId: number, data: any) =>
+      request<any>(`/rl/banks/${id}/transactions/${txId}`, { method: 'PUT', body: JSON.stringify(data) }),
     deleteTransaction: (id: number, txId: number) =>
       request<any>(`/rl/banks/${id}/transactions/${txId}`, { method: 'DELETE' }),
   },

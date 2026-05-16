@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, X, Trash2, ChevronDown, ChevronRight, ArrowDown, ArrowUp } from 'lucide-react';
+import { Plus, X, Trash2, ChevronDown, ChevronRight, ArrowDown, ArrowUp, Pencil } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useAuthStore, useToastStore } from '../../lib/store';
@@ -13,7 +13,7 @@ type Bank = {
   total_debits: number;
   balance: number;
   all_time_balance?: number;
-  day_opening?: number;
+  range_opening?: number;
   txn_count: number;
 };
 
@@ -30,15 +30,19 @@ type Txn = {
   balance: number;
 };
 
+const todayStr = new Date().toISOString().split('T')[0];
+const firstOfMonthStr = todayStr.substring(0, 7) + '-01';
+
 const emptyForm = { name: '', opening_balance: '' };
-const emptyTxn = { date: new Date().toISOString().split('T')[0], type: 'credit' as 'credit' | 'debit', amount: '', particulars: '', remarks: '' };
+const emptyTxn = { date: todayStr, type: 'credit' as 'credit' | 'debit', amount: '', particulars: '', remarks: '' };
 
 export default function TransportBanks() {
   const addToast = useToastStore((s) => s.addToast);
   const canEditTransport = useAuthStore((s) => s.canEditTransport());
   const [banks, setBanks] = useState<Bank[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dateFilter, setDateFilter] = useState<string>(new Date().toISOString().split('T')[0]);
+  const [fromDate, setFromDate] = useState<string>(firstOfMonthStr);
+  const [toDate, setToDate] = useState<string>(todayStr);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [statements, setStatements] = useState<Record<number, Txn[]>>({});
   const [stmtLoading, setStmtLoading] = useState<Record<number, boolean>>({});
@@ -49,26 +53,33 @@ export default function TransportBanks() {
   const [txnTarget, setTxnTarget] = useState<Bank | null>(null);
   const [txnForm, setTxnForm] = useState(emptyTxn);
   const [txnSaving, setTxnSaving] = useState(false);
+  const [editTxn, setEditTxn] = useState<Txn | null>(null);
+  const [editTxnForm, setEditTxnForm] = useState(emptyTxn);
+  const [editTxnSaving, setEditTxnSaving] = useState(false);
 
   const load = useCallback(async () => {
     setLoading(true);
-    try { setBanks(await api.rlBanks.list(dateFilter)); }
+    try { setBanks(await api.rlBanks.list(fromDate || undefined, toDate || undefined)); }
     catch (e) { addToast(e instanceof Error ? e.message : 'Failed to load banks', 'error'); }
     finally { setLoading(false); }
-  }, [addToast, dateFilter]);
+  }, [addToast, fromDate, toDate]);
 
   useEffect(() => { load(); }, [load]);
+
+  const reloadStatement = async (bankId: number) => {
+    setStmtLoading((p) => ({ ...p, [bankId]: true }));
+    try {
+      const data = await api.rlBanks.statement(bankId);
+      setStatements((p) => ({ ...p, [bankId]: data.ledger || [] }));
+    } catch (e) { addToast(e instanceof Error ? e.message : 'Failed to load statement', 'error'); }
+    finally { setStmtLoading((p) => ({ ...p, [bankId]: false })); }
+  };
 
   const toggle = async (id: number) => {
     if (expanded === id) { setExpanded(null); return; }
     setExpanded(id);
     if (statements[id]) return;
-    setStmtLoading((p) => ({ ...p, [id]: true }));
-    try {
-      const data = await api.rlBanks.statement(id);
-      setStatements((p) => ({ ...p, [id]: data.ledger || [] }));
-    } catch (e) { addToast(e instanceof Error ? e.message : 'Failed to load statement', 'error'); }
-    finally { setStmtLoading((p) => ({ ...p, [id]: false })); }
+    reloadStatement(id);
   };
 
   const submit = async (e: React.FormEvent) => {
@@ -95,24 +106,108 @@ export default function TransportBanks() {
       });
       if ((result as any).pending) addToast('Sent for admin approval', 'info');
       else addToast('Transaction added', 'success');
+      const targetId = txnTarget.id;
       setTxnTarget(null); setTxnForm(emptyTxn);
-      // refresh both list and the expanded statement
       load();
-      setStatements((p) => { const c = { ...p }; delete c[txnTarget.id]; return c; });
-      if (expanded === txnTarget.id) toggle(txnTarget.id);
+      reloadStatement(targetId);
     } catch (e) { addToast(e instanceof Error ? e.message : 'Save failed', 'error'); }
     finally { setTxnSaving(false); }
   };
 
-  const today = new Date().toISOString().split('T')[0];
-  const isToday = dateFilter === today;
-  const activeBanks = banks.filter((b) => b.is_active);
-  const totalOpening  = activeBanks.reduce((s, b) => s + (b.day_opening  ?? b.opening_balance), 0);
-  const totalCredits  = activeBanks.reduce((s, b) => s + b.total_credits,  0);
-  const totalDebits   = activeBanks.reduce((s, b) => s + b.total_debits,   0);
-  const totalClosing  = activeBanks.reduce((s, b) => s + b.balance, 0);
+  const submitEditTxn = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editTxn || !editTxnForm.amount) return;
+    setEditTxnSaving(true);
+    try {
+      await api.rlBanks.updateTransaction(editTxn.bank_id, editTxn.id, {
+        date: editTxnForm.date, type: editTxnForm.type, amount: Number(editTxnForm.amount),
+        particulars: editTxnForm.particulars || null, remarks: editTxnForm.remarks || null,
+      });
+      addToast('Transaction updated', 'success');
+      const bankId = editTxn.bank_id;
+      setEditTxn(null); setEditTxnForm(emptyTxn);
+      load();
+      reloadStatement(bankId);
+    } catch (e) { addToast(e instanceof Error ? e.message : 'Update failed', 'error'); }
+    finally { setEditTxnSaving(false); }
+  };
 
-  const fmtDate = (d: string) => new Date(d + 'T00:00:00').toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+  const deleteTxn = async (bankId: number, txId: number) => {
+    if (!window.confirm('Delete this transaction?')) return;
+    try {
+      await api.rlBanks.deleteTransaction(bankId, txId);
+      addToast('Deleted', 'success');
+      load();
+      reloadStatement(bankId);
+    } catch (e) { addToast(e instanceof Error ? e.message : 'Delete failed', 'error'); }
+  };
+
+  const isThisMonth = fromDate === firstOfMonthStr && toDate === todayStr;
+  const isAllTime   = !fromDate && !toDate;
+  const activeBanks = banks.filter((b) => b.is_active);
+  const totalOpening = activeBanks.reduce((s, b) => s + (b.range_opening ?? b.opening_balance), 0);
+  const totalCredits = activeBanks.reduce((s, b) => s + b.total_credits, 0);
+  const totalDebits  = activeBanks.reduce((s, b) => s + b.total_debits,  0);
+  const totalClosing = activeBanks.reduce((s, b) => s + b.balance, 0);
+
+  const TxnForm = ({ formData, onChange, onSubmit, saving: isSaving, onCancel, title, subtitle }: {
+    formData: typeof emptyTxn;
+    onChange: (f: typeof emptyTxn) => void;
+    onSubmit: (e: React.FormEvent) => void;
+    saving: boolean;
+    onCancel: () => void;
+    title: string;
+    subtitle?: string;
+  }) => (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
+      <div className="w-full max-w-md rounded-xl bg-card shadow-2xl">
+        <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
+          <div>
+            <h2 className="font-semibold text-heading">{title}</h2>
+            {subtitle && <p className="text-xs text-heading/60">{subtitle}</p>}
+          </div>
+          <button type="button" onClick={onCancel} className="rounded-lg p-1.5 hover:bg-card-border/50"><X className="h-5 w-5 text-heading/60" /></button>
+        </div>
+        <form onSubmit={onSubmit} className="p-5 flex flex-col gap-4">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
+              <input type="date" className="input-field" value={formData.date} onChange={(e) => onChange({ ...formData, date: e.target.value })} required />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-heading/70 mb-1">Amount (₹) *</label>
+              <input type="number" min="0" step="0.01" className="input-field" value={formData.amount} onChange={(e) => onChange({ ...formData, amount: e.target.value })} required />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heading/70 mb-1">Direction *</label>
+            <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-sm">
+              {(['credit', 'debit'] as const).map((t) => (
+                <button key={t} type="button" onClick={() => onChange({ ...formData, type: t })}
+                  className={`flex-1 px-3 py-1.5 rounded-md font-medium capitalize transition-colors ${formData.type === t ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
+                  {t === 'credit' ? 'Credit (money in)' : 'Debit (money out)'}
+                </button>
+              ))}
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heading/70 mb-1">Particulars</label>
+            <input className="input-field" value={formData.particulars} onChange={(e) => onChange({ ...formData, particulars: e.target.value })} placeholder="e.g. Payment received from ACC" />
+          </div>
+          <div>
+            <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
+            <input className="input-field" value={formData.remarks} onChange={(e) => onChange({ ...formData, remarks: e.target.value })} placeholder="Optional" />
+          </div>
+          <div className="flex justify-end gap-2 pt-1">
+            <button type="button" onClick={onCancel} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
+            <button type="submit" disabled={isSaving} className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-60">
+              {isSaving ? 'Saving…' : title}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 
   return (
     <div className="flex flex-col gap-6">
@@ -127,16 +222,22 @@ export default function TransportBanks() {
         </button>
       </div>
 
-      {/* Date filter */}
+      {/* Date range filter */}
       <div className="card flex flex-wrap items-center gap-3 p-3">
-        <label className="text-sm font-medium text-heading/70">Date:</label>
-        <input type="date" className="input-field py-1.5 text-sm" value={dateFilter} onChange={(e) => setDateFilter(e.target.value)} />
-        <button type="button" onClick={() => setDateFilter(today)}
-          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${isToday ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
-          Today
+        <label className="text-sm font-medium text-heading/70">From:</label>
+        <input type="date" className="input-field py-1.5 text-sm" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+        <label className="text-sm font-medium text-heading/70">To:</label>
+        <input type="date" className="input-field py-1.5 text-sm" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+        <button type="button" onClick={() => { setFromDate(firstOfMonthStr); setToDate(todayStr); }}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${isThisMonth ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+          This Month
+        </button>
+        <button type="button" onClick={() => { setFromDate(''); setToDate(''); }}
+          className={`rounded-md px-3 py-1.5 text-xs font-medium transition-colors ${isAllTime ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+          All Time
         </button>
         <span className="ml-auto text-xs text-heading/60">
-          {isToday ? "Today's" : fmtDate(dateFilter)} opening / closing per bank
+          {fromDate && toDate ? `${fromDate} → ${toDate}` : isAllTime ? 'All time' : fromDate ? `From ${fromDate}` : `Up to ${toDate}`}
         </span>
       </div>
 
@@ -167,7 +268,7 @@ export default function TransportBanks() {
               <tr className="border-b border-card-border bg-indigo-50 dark:bg-indigo-900/30 text-left">
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Bank</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Opening</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right text-green-700 dark:text-green-300">Credits</th>
+                <th className="px-4 py-3 font-medium text-green-700 dark:text-green-300 text-right">Credits</th>
                 <th className="px-4 py-3 font-medium text-red-700 dark:text-red-300 text-right">Debits</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Closing</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
@@ -191,7 +292,7 @@ export default function TransportBanks() {
                         </button>
                         {!b.is_active && <span className="ml-2 text-[10px] uppercase rounded-full bg-slate-200 dark:bg-slate-700 px-1.5 py-0.5 text-slate-600">Inactive</span>}
                       </td>
-                      <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.day_opening ?? b.opening_balance)}</td>
+                      <td className="px-4 py-3 text-right tabular-nums text-heading/70">{formatINR(b.range_opening ?? b.opening_balance)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(b.total_credits)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(b.total_debits)}</td>
                       <td className={`px-4 py-3 text-right tabular-nums font-bold ${b.balance >= 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-red-700 dark:text-red-300'}`}>{formatINR(b.balance)}</td>
@@ -231,6 +332,7 @@ export default function TransportBanks() {
                                     <th className="px-3 py-2 text-right">Credit</th>
                                     <th className="px-3 py-2 text-right">Debit</th>
                                     <th className="px-3 py-2 text-right">Balance</th>
+                                    {canEditTransport && <th className="px-3 py-2 w-16"></th>}
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-card-border">
@@ -247,10 +349,32 @@ export default function TransportBanks() {
                                       <td className="px-3 py-2 text-heading/80">
                                         {t.particulars || '—'}
                                         {t.remarks && <p className="text-[11px] text-heading/50">{t.remarks}</p>}
+                                        {t.source_table && t.source_table !== 'manual' && (
+                                          <p className="text-[10px] text-heading/40 italic">via {t.source_table.replace('rl_', '')}</p>
+                                        )}
                                       </td>
                                       <td className="px-3 py-2 text-right tabular-nums text-green-700 dark:text-green-300">{t.type === 'credit' ? formatINR(t.amount) : '—'}</td>
                                       <td className="px-3 py-2 text-right tabular-nums text-red-700 dark:text-red-300">{t.type === 'debit' ? formatINR(t.amount) : '—'}</td>
                                       <td className="px-3 py-2 text-right tabular-nums font-medium">{formatINR(t.balance)}</td>
+                                      {canEditTransport && (
+                                        <td className="px-3 py-2">
+                                          {t.source_table === 'manual' ? (
+                                            <div className="flex items-center gap-1">
+                                              <button type="button" title="Edit" onClick={() => {
+                                                setEditTxn(t);
+                                                setEditTxnForm({ date: t.date, type: t.type, amount: String(t.amount), particulars: t.particulars || '', remarks: t.remarks || '' });
+                                              }} className="rounded p-1 text-indigo-500 hover:bg-indigo-50 dark:hover:bg-indigo-900/30">
+                                                <Pencil className="h-3 w-3" />
+                                              </button>
+                                              <button type="button" title="Delete" onClick={() => deleteTxn(b.id, t.id)} className="rounded p-1 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30">
+                                                <Trash2 className="h-3 w-3" />
+                                              </button>
+                                            </div>
+                                          ) : (
+                                            <span className="text-[10px] text-heading/40">auto</span>
+                                          )}
+                                        </td>
+                                      )}
                                     </tr>
                                   ))}
                                 </tbody>
@@ -268,6 +392,7 @@ export default function TransportBanks() {
         </div>
       </div>
 
+      {/* Add/Edit Bank Modal */}
       {addOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
           <div className="w-full max-w-md rounded-xl bg-card shadow-2xl">
@@ -293,53 +418,30 @@ export default function TransportBanks() {
         </div>
       )}
 
+      {/* Add Transaction Modal */}
       {txnTarget && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 px-4">
-          <div className="w-full max-w-md rounded-xl bg-card shadow-2xl">
-            <div className="flex items-center justify-between border-b border-card-border px-5 py-4">
-              <div>
-                <h2 className="font-semibold text-heading">Add Transaction</h2>
-                <p className="text-xs text-heading/60">{txnTarget.name}</p>
-              </div>
-              <button type="button" onClick={() => setTxnTarget(null)} className="rounded-lg p-1.5 hover:bg-card-border/50"><X className="h-5 w-5 text-heading/60" /></button>
-            </div>
-            <form onSubmit={submitTxn} className="p-5 flex flex-col gap-4">
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-xs font-medium text-heading/70 mb-1">Date *</label>
-                  <input type="date" className="input-field" value={txnForm.date} onChange={(e) => setTxnForm({ ...txnForm, date: e.target.value })} required />
-                </div>
-                <div>
-                  <label className="block text-xs font-medium text-heading/70 mb-1">Amount (₹) *</label>
-                  <input type="number" min="0" step="0.01" className="input-field" value={txnForm.amount} onChange={(e) => setTxnForm({ ...txnForm, amount: e.target.value })} required />
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-heading/70 mb-1">Direction *</label>
-                <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-sm">
-                  {(['credit', 'debit'] as const).map((t) => (
-                    <button key={t} type="button" onClick={() => setTxnForm({ ...txnForm, type: t })}
-                      className={`flex-1 px-3 py-1.5 rounded-md font-medium capitalize transition-colors ${txnForm.type === t ? 'bg-indigo-500 text-white' : 'text-heading/70 hover:bg-card-border/40'}`}>
-                      {t === 'credit' ? 'Credit (money in)' : 'Debit (money out)'}
-                    </button>
-                  ))}
-                </div>
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-heading/70 mb-1">Particulars</label>
-                <input className="input-field" value={txnForm.particulars} onChange={(e) => setTxnForm({ ...txnForm, particulars: e.target.value })} placeholder="e.g. Payment received from ACC" />
-              </div>
-              <div>
-                <label className="block text-xs font-medium text-heading/70 mb-1">Remarks</label>
-                <input className="input-field" value={txnForm.remarks} onChange={(e) => setTxnForm({ ...txnForm, remarks: e.target.value })} placeholder="Optional" />
-              </div>
-              <div className="flex justify-end gap-2 pt-1">
-                <button type="button" onClick={() => setTxnTarget(null)} className="rounded-lg border border-card-border px-4 py-2 text-sm font-medium text-heading/80 hover:bg-surface">Cancel</button>
-                <button type="submit" disabled={txnSaving} className="rounded-lg bg-indigo-500 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-600 disabled:opacity-60">{txnSaving ? 'Saving…' : 'Add Transaction'}</button>
-              </div>
-            </form>
-          </div>
-        </div>
+        <TxnForm
+          title="Add Transaction"
+          subtitle={txnTarget.name}
+          formData={txnForm}
+          onChange={setTxnForm}
+          onSubmit={submitTxn}
+          saving={txnSaving}
+          onCancel={() => setTxnTarget(null)}
+        />
+      )}
+
+      {/* Edit Transaction Modal */}
+      {editTxn && (
+        <TxnForm
+          title="Save Changes"
+          subtitle="Edit manual transaction"
+          formData={editTxnForm}
+          onChange={setEditTxnForm}
+          onSubmit={submitEditTxn}
+          saving={editTxnSaving}
+          onCancel={() => setEditTxn(null)}
+        />
       )}
     </div>
   );

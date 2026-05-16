@@ -1,5 +1,4 @@
 import { useEffect, useState, useCallback } from 'react';
-import { MonthPicker } from '../../components/MonthPicker';
 import { Plus, Trash2, ChevronDown, ChevronRight, Pencil } from 'lucide-react';
 import { Fragment } from 'react';
 import { api } from '../../lib/api';
@@ -45,7 +44,10 @@ export default function DieselParties() {
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [txns, setTxns] = useState<Record<number, Txn[]>>({});
-  const [monthFilter, setMonthFilter] = useState<string>('');
+  const todayDiesel = new Date().toISOString().split('T')[0];
+  const firstOfMonthDiesel = todayDiesel.substring(0, 7) + '-01';
+  const [fromDate, setFromDate] = useState<string>(firstOfMonthDiesel);
+  const [toDate, setToDate] = useState<string>(todayDiesel);
 
   const [showAdd, setShowAdd] = useState(false);
   const [addForm, setAddForm] = useState(emptyAdd);
@@ -93,12 +95,16 @@ export default function DieselParties() {
 
   const totalAcrossPumps = rows.reduce((s, r) => s + r.balance, 0);
 
-  // Month-filtered totals across all expanded pumps — recalculated from loaded txns.
-  const monthTotals = (() => {
+  const isThisMonthDiesel = fromDate === firstOfMonthDiesel && toDate === todayDiesel;
+
+  // Date-range-filtered totals across all expanded pumps — recalculated from loaded txns.
+  const rangeTotals = (() => {
     let credits = 0, debits = 0;
     for (const list of Object.values(txns)) {
       for (const t of list) {
-        if (monthFilter && !String(t.date || '').startsWith(monthFilter)) continue;
+        const d = String(t.date || '');
+        if (fromDate && d < fromDate) continue;
+        if (toDate && d > toDate) continue;
         if (t.type === 'credit') credits += Number(t.amount) || 0;
         else debits += Number(t.amount) || 0;
       }
@@ -231,25 +237,30 @@ export default function DieselParties() {
         </div>
         <div className="rounded-xl border border-card-border bg-card p-5 flex flex-col gap-3">
           <div className="flex items-center justify-between gap-2 flex-wrap">
-            <p className="text-xs font-semibold uppercase tracking-wide text-heading/60">
-              {monthFilter ? `${monthFilter} Summary` : 'All-Time (Expand a pump)'}
-            </p>
-            <div className="flex items-center gap-2">
-              <MonthPicker value={monthFilter} onChange={setMonthFilter} size="sm" />
-              {monthFilter && (
-                <button type="button" onClick={() => setMonthFilter('')} className="text-xs text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
-              )}
+            <p className="text-xs font-semibold uppercase tracking-wide text-heading/60">Period Summary</p>
+            <div className="flex flex-wrap items-center gap-2">
+              <input type="date" className="input-field py-1 text-xs" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+              <span className="text-xs text-heading/50">to</span>
+              <input type="date" className="input-field py-1 text-xs" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+              <button type="button" onClick={() => { setFromDate(firstOfMonthDiesel); setToDate(todayDiesel); }}
+                className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${isThisMonthDiesel ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+                This Month
+              </button>
+              <button type="button" onClick={() => { setFromDate(''); setToDate(''); }}
+                className={`rounded px-2 py-1 text-[11px] font-medium transition-colors ${!fromDate && !toDate ? 'bg-indigo-500 text-white' : 'border border-card-border text-heading/70 hover:bg-surface'}`}>
+                All
+              </button>
             </div>
           </div>
           {Object.keys(txns).length > 0 ? (
             <div className="flex gap-4 text-sm">
               <div>
                 <p className="text-xs text-heading/60">Credits (paid in)</p>
-                <p className="font-bold tabular-nums text-green-700 dark:text-green-300">{formatINR(monthTotals.credits)}</p>
+                <p className="font-bold tabular-nums text-green-700 dark:text-green-300">{formatINR(rangeTotals.credits)}</p>
               </div>
               <div>
                 <p className="text-xs text-heading/60">Debits (via trips)</p>
-                <p className="font-bold tabular-nums text-amber-700 dark:text-amber-300">{formatINR(monthTotals.debits)}</p>
+                <p className="font-bold tabular-nums text-amber-700 dark:text-amber-300">{formatINR(rangeTotals.debits)}</p>
               </div>
             </div>
           ) : (
@@ -313,20 +324,22 @@ export default function DieselParties() {
                       </td>
                     </tr>
                     {isOpen && (() => {
-                      const filtered = monthFilter ? list.filter((t) => String(t.date || '').startsWith(monthFilter)) : list;
+                      const filtered = list.filter((t) => {
+                        const d = String(t.date || '');
+                        return (!fromDate || d >= fromDate) && (!toDate || d <= toDate);
+                      });
                       return (
                       <tr className="bg-surface/60">
                         <td colSpan={6} className="px-4 py-3">
                           <div className="mb-2 flex flex-wrap items-center gap-2 text-xs text-heading/70">
-                            <label>Month:</label>
-                            <MonthPicker value={monthFilter} onChange={setMonthFilter} size="sm" />
-                            {monthFilter && (
-                              <button type="button" onClick={() => setMonthFilter('')} className="text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
-                            )}
-                            <span className="ml-2">{filtered.length} of {list.length}</span>
+                            <span className="font-medium">Range:</span>
+                            <input type="date" className="input-field py-0.5 text-xs" value={fromDate} onChange={(e) => setFromDate(e.target.value)} />
+                            <span>to</span>
+                            <input type="date" className="input-field py-0.5 text-xs" value={toDate} onChange={(e) => setToDate(e.target.value)} />
+                            <span className="ml-2">{filtered.length} of {list.length} rows</span>
                           </div>
                           {filtered.length === 0 ? (
-                            <p className="py-4 text-center text-xs text-heading/60">{monthFilter ? `No transactions in ${monthFilter}.` : 'No transactions yet.'}</p>
+                            <p className="py-4 text-center text-xs text-heading/60">{fromDate || toDate ? 'No transactions in selected date range.' : 'No transactions yet.'}</p>
                           ) : (
                             <div className="max-h-96 overflow-y-auto rounded-lg border border-card-border bg-card">
                               <table className="min-w-full text-xs">

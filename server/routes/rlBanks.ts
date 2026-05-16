@@ -6,24 +6,26 @@ import { canEditTransport } from '../lib/transportAuth';
 const router = Router();
 
 // GET /rl/banks — list with computed running balance (opening + credits − debits)
-// Optional ?date=YYYY-MM-DD to scope credits/debits to a single day (opening = balance before that day)
+// Optional ?from=YYYY-MM-DD&to=YYYY-MM-DD to scope credits/debits to a date range
 router.get('/', async (req, res) => {
   try {
-    const dateFilter = typeof req.query.date === 'string' && req.query.date ? req.query.date : null;
+    const fromDate = typeof req.query.from === 'string' && req.query.from ? req.query.from : null;
+    const toDate   = typeof req.query.to   === 'string' && req.query.to   ? req.query.to   : null;
+    const hasRange = fromDate && toDate;
 
-    const rows = dateFilter
+    const rows = hasRange
       ? await getAll(`
           SELECT b.*,
             COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit' AND date < $1), 0)::float AS pre_credits,
             COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'  AND date < $1), 0)::float AS pre_debits,
-            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit' AND date = $1), 0)::float AS day_credits,
-            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'  AND date = $1), 0)::float AS day_debits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit' AND date >= $1 AND date <= $2), 0)::float AS range_credits,
+            COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'  AND date >= $1 AND date <= $2), 0)::float AS range_debits,
             COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit'), 0)::float AS total_credits,
             COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='debit'),  0)::float AS total_debits,
             COALESCE((SELECT COUNT(*) FROM rl_bank_transactions WHERE bank_id=b.id), 0)::int AS txn_count
           FROM rl_banks b
           ORDER BY b.is_active DESC, b.name
-        `, [dateFilter])
+        `, [fromDate, toDate])
       : await getAll(`
           SELECT b.*,
             COALESCE((SELECT SUM(amount) FROM rl_bank_transactions WHERE bank_id=b.id AND type='credit'), 0)::float AS total_credits,
@@ -34,22 +36,22 @@ router.get('/', async (req, res) => {
         `);
 
     res.json(rows.map((r: any) => {
-      const ob   = Number(r.opening_balance) || 0;
-      const tc   = Number(r.total_credits)   || 0;
-      const td   = Number(r.total_debits)    || 0;
-      if (dateFilter) {
-        const preC = Number(r.pre_credits) || 0;
-        const preD = Number(r.pre_debits)  || 0;
-        const dayC = Number(r.day_credits) || 0;
-        const dayD = Number(r.day_debits)  || 0;
-        const dayOpening = ob + preC - preD;
+      const ob  = Number(r.opening_balance) || 0;
+      const tc  = Number(r.total_credits)   || 0;
+      const td  = Number(r.total_debits)    || 0;
+      if (hasRange) {
+        const preC = Number(r.pre_credits)   || 0;
+        const preD = Number(r.pre_debits)    || 0;
+        const ranC = Number(r.range_credits) || 0;
+        const ranD = Number(r.range_debits)  || 0;
+        const rangeOpening = ob + preC - preD;
         return {
           ...r,
           opening_balance: ob,
-          day_opening: dayOpening,
-          total_credits: dayC,
-          total_debits: dayD,
-          balance: dayOpening + dayC - dayD,
+          range_opening: rangeOpening,
+          total_credits: ranC,
+          total_debits: ranD,
+          balance: rangeOpening + ranC - ranD,
           all_time_balance: ob + tc - td,
           txn_count: Number(r.txn_count) || 0,
         };
@@ -170,6 +172,25 @@ router.post('/:id/transactions', async (req, res) => {
        VALUES ($1,$2,$3,$4,$5,$6,'manual') RETURNING *`,
       [req.params.id, date, type, Number(amount), particulars?.trim() || null, remarks?.trim() || null]
     );
+    res.json(row);
+  } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
+});
+
+// PUT /rl/banks/:id/transactions/:txId — edit a manual transaction (source_table='manual' only)
+router.put('/:id/transactions/:txId', async (req, res) => {
+  try {
+    if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
+    const { date, type, amount, particulars, remarks } = req.body;
+    if (!date || !amount) return res.status(400).json({ error: 'date and amount required' });
+    if (type !== 'credit' && type !== 'debit') return res.status(400).json({ error: "type must be 'credit' or 'debit'" });
+    const row = await getOne(
+      `UPDATE rl_bank_transactions
+         SET date=$1, type=$2, amount=$3, particulars=$4, remarks=$5
+       WHERE id=$6 AND bank_id=$7 AND source_table='manual'
+       RETURNING *`,
+      [date, type, Number(amount), particulars?.trim() || null, remarks?.trim() || null, req.params.txId, req.params.id]
+    );
+    if (!row) return res.status(404).json({ error: 'Transaction not found or not editable' });
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
