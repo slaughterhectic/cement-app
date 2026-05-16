@@ -1052,6 +1052,19 @@ export async function initializeDatabase() {
         )
     `);
 
+    // Advance tracking in rl_expenses: who received the advance (free text, syncs to
+    // rl_owner_advances when the name matches a known truck owner).
+    await client.query(`ALTER TABLE rl_expenses ADD COLUMN IF NOT EXISTS advance_party TEXT`);
+
+    // Diesel party linkage on expenses: when category='Diesel' and this is set, the
+    // payment syncs as a credit into the diesel party's ledger (rl_diesel_transactions).
+    await client.query(`ALTER TABLE rl_expenses ADD COLUMN IF NOT EXISTS diesel_party_id INTEGER REFERENCES rl_diesel_parties(id) ON DELETE SET NULL`);
+
+    // Source tracking on rl_owner_advances so expense-sourced advances can be
+    // cleaned up idempotently on edit/delete of the parent expense row.
+    await client.query(`ALTER TABLE rl_owner_advances ADD COLUMN IF NOT EXISTS source_table TEXT DEFAULT 'manual'`);
+    await client.query(`ALTER TABLE rl_owner_advances ADD COLUMN IF NOT EXISTS source_id INTEGER`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

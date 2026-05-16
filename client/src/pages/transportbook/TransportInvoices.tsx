@@ -89,7 +89,7 @@ export default function TransportInvoices() {
     // Receivable strip is best-effort — if /billing-summary or the rl_trips.company column
     // isn't deployed yet on the backend, just hide the strip instead of breaking the page.
     try {
-      const summary = await api.rlInvoices.billingSummary(company);
+      const summary = await api.rlInvoices.billingSummary(company, monthFilter || undefined);
       setBilling({
         trip_acc_total: summary.trip_acc_total,
         invoiced: summary.invoiced,
@@ -98,7 +98,7 @@ export default function TransportInvoices() {
     } catch (_) {
       setBilling(null);
     }
-  }, [addToast, company]);
+  }, [addToast, company, monthFilter]);
 
   const heading = useMemo(() => company === 'jk' ? 'JK Billing' : 'ACC Billing', [company]);
 
@@ -320,7 +320,7 @@ export default function TransportInvoices() {
           <div className={`card p-4 text-center ${company === 'jk' ? 'bg-emerald-50 dark:bg-emerald-900/30 border-emerald-200 dark:border-emerald-800' : 'bg-indigo-50 dark:bg-indigo-900/30 border-indigo-200 dark:border-indigo-800'}`}>
             <p className={`text-xs font-medium uppercase tracking-wider ${company === 'jk' ? 'text-emerald-600 dark:text-emerald-400' : 'text-indigo-600 dark:text-indigo-400'}`}>Trip {company.toUpperCase()} Receivable</p>
             <p className="text-xl font-bold text-heading">{formatINR(billing.trip_acc_total)}</p>
-            <p className="text-[10px] text-heading/50 mt-0.5">from Trip Log ({company.toUpperCase()} trips)</p>
+            <p className="text-[10px] text-heading/50 mt-0.5">from Trip Log ({company.toUpperCase()} trips{monthFilter ? ` · ${monthFilter}` : ' · all time'})</p>
           </div>
           <div className="card p-4 bg-blue-50 dark:bg-blue-900/30 border-blue-200 dark:border-blue-800 text-center">
             <p className="text-xs text-blue-600 dark:text-blue-400 font-medium uppercase tracking-wider">Already Invoiced</p>

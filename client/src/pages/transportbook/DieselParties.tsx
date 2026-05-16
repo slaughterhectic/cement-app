@@ -68,11 +68,11 @@ export default function DieselParties() {
     try {
       const [list, bks, hs] = await Promise.all([
         api.rlDieselParties.list(),
-        api.capital.banks().catch(() => []),
+        api.rlBanks.list().catch(() => []),
         api.imprest.handlers().catch(() => []),
       ]);
       setRows(list as DieselParty[]);
-      setBanks((bks as any[]).map((b) => b.bank_name));
+      setBanks((bks as any[]).filter((b) => b.is_active !== 0).map((b) => b.name));
       setHandlers((hs as any[]).map((h) => h.handler_name));
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load', 'error');
@@ -92,6 +92,19 @@ export default function DieselParties() {
   };
 
   const totalAcrossPumps = rows.reduce((s, r) => s + r.balance, 0);
+
+  // Month-filtered totals across all expanded pumps — recalculated from loaded txns.
+  const monthTotals = (() => {
+    let credits = 0, debits = 0;
+    for (const list of Object.values(txns)) {
+      for (const t of list) {
+        if (monthFilter && !String(t.date || '').startsWith(monthFilter)) continue;
+        if (t.type === 'credit') credits += Number(t.amount) || 0;
+        else debits += Number(t.amount) || 0;
+      }
+    }
+    return { credits, debits };
+  })();
 
   const openEdit = (r: DieselParty) => {
     setEditTarget(r);
@@ -215,6 +228,33 @@ export default function DieselParties() {
           <p className="text-xs font-semibold uppercase tracking-wide text-indigo-700 dark:text-indigo-300">Total Across Pumps</p>
           <p className="mt-2 text-2xl font-bold tabular-nums text-indigo-800 dark:text-indigo-200">{formatINR(totalAcrossPumps)}</p>
           <p className="mt-1 text-xs text-indigo-600 dark:text-indigo-400">{rows.length} pump{rows.length === 1 ? '' : 's'}</p>
+        </div>
+        <div className="rounded-xl border border-card-border bg-card p-5 flex flex-col gap-3">
+          <div className="flex items-center justify-between gap-2 flex-wrap">
+            <p className="text-xs font-semibold uppercase tracking-wide text-heading/60">
+              {monthFilter ? `${monthFilter} Summary` : 'All-Time (Expand a pump)'}
+            </p>
+            <div className="flex items-center gap-2">
+              <MonthPicker value={monthFilter} onChange={setMonthFilter} size="sm" />
+              {monthFilter && (
+                <button type="button" onClick={() => setMonthFilter('')} className="text-xs text-orange-600 dark:text-orange-400 hover:underline">Clear</button>
+              )}
+            </div>
+          </div>
+          {Object.keys(txns).length > 0 ? (
+            <div className="flex gap-4 text-sm">
+              <div>
+                <p className="text-xs text-heading/60">Credits (paid in)</p>
+                <p className="font-bold tabular-nums text-green-700 dark:text-green-300">{formatINR(monthTotals.credits)}</p>
+              </div>
+              <div>
+                <p className="text-xs text-heading/60">Debits (via trips)</p>
+                <p className="font-bold tabular-nums text-amber-700 dark:text-amber-300">{formatINR(monthTotals.debits)}</p>
+              </div>
+            </div>
+          ) : (
+            <p className="text-xs text-heading/50">Expand a pump below to load its transactions.</p>
+          )}
         </div>
       </div>
 

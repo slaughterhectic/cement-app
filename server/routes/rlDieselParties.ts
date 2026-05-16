@@ -3,6 +3,29 @@ import { getAll, getOne, query } from '../db/database';
 import { friendlyError } from '../lib/userError';
 import { dieselPartyBalance } from '../lib/walletSync';
 import { canEditTransport } from '../lib/transportAuth';
+import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
+
+async function syncBankForDieselCredit({
+  sourceId, mode, bankName, amount, date, partyName,
+}: {
+  sourceId: number; mode: string; bankName: string | null;
+  amount: number; date: string; partyName: string;
+}) {
+  await query(
+    `DELETE FROM rl_bank_transactions WHERE source_table='rl_diesel_credit' AND source_id=$1`,
+    [sourceId]
+  );
+  if (mode === 'bank' && bankName) {
+    const bank = await getOne('SELECT id FROM rl_banks WHERE name=$1', [bankName]);
+    if (bank) {
+      await query(
+        `INSERT INTO rl_bank_transactions (bank_id, date, type, amount, particulars, source_table, source_id)
+         VALUES ($1,$2,'debit',$3,$4,'rl_diesel_credit',$5)`,
+        [bank.id, date, amount, `Diesel Payment — ${partyName}`, sourceId]
+      );
+    }
+  }
+}
 
 const router = Router();
 
@@ -91,13 +114,18 @@ router.post('/:id/credit', async (req, res) => {
   if (m === 'bank' && !bank_name?.trim()) return res.status(400).json({ error: 'Pick a bank' });
   if (m === 'cash' && !cash_handler?.trim()) return res.status(400).json({ error: 'Pick a cash handler' });
   try {
-    const party = await getOne(`SELECT id FROM rl_diesel_parties WHERE id=$1`, [req.params.id]);
+    const party = await getOne(`SELECT id, name FROM rl_diesel_parties WHERE id=$1`, [req.params.id]);
     if (!party) return res.status(404).json({ error: 'Diesel party not found' });
     const row = await getOne(
       `INSERT INTO rl_diesel_transactions (diesel_party_id, date, type, amount, mode, bank_name, cash_handler, source_table, remarks)
        VALUES ($1,$2,'credit',$3,$4,$5,$6,'manual',$7) RETURNING *`,
       [req.params.id, date, amt, m, m === 'bank' ? bank_name.trim() : null, m === 'cash' ? cash_handler.trim() : null, remarks?.trim() || null]
     );
+    // Auto-debit transport book bank / cash handler so the payment shows in the bank ledger.
+    await Promise.all([
+      syncBankForDieselCredit({ sourceId: row.id, mode: m, bankName: m === 'bank' ? bank_name.trim() : null, amount: amt, date, partyName: party.name }),
+      syncImprestForCashTxn({ sourceTable: 'rl_diesel_credit', sourceId: row.id, mode: m, cashHandler: m === 'cash' ? cash_handler?.trim() : null, amount: amt, date, particulars: `Diesel Payment — ${party.name}`, narration: remarks?.trim() || null }),
+    ]);
     res.json(row);
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
@@ -106,9 +134,14 @@ router.post('/:id/credit', async (req, res) => {
 router.delete('/:id/transactions/:txId', async (req: any, res) => {
   if (!await canEditTransport(req)) return res.status(403).json({ error: 'Admin only' });
   try {
+    const txId = Number(req.params.txId);
+    await Promise.all([
+      query(`DELETE FROM rl_bank_transactions WHERE source_table='rl_diesel_credit' AND source_id=$1`, [txId]),
+      deleteImprestForSource('rl_diesel_credit', txId),
+    ]);
     await query(
       `DELETE FROM rl_diesel_transactions WHERE id=$1 AND diesel_party_id=$2`,
-      [req.params.txId, req.params.id]
+      [txId, req.params.id]
     );
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }

@@ -605,7 +605,7 @@ export default function TransportTrips() {
 
       {/* Summary Strip */}
       {visibleRows.length > 0 && (
-        <div className="grid grid-cols-3 gap-4 lg:grid-cols-7">
+        <div className="grid grid-cols-3 gap-4 lg:grid-cols-8">
           <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Total Qty</p>
             <p className="text-lg font-bold text-heading">{totals.qty.toFixed(2)} T</p>
@@ -613,6 +613,12 @@ export default function TransportTrips() {
           <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
             <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">ACC Amount</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.acc_amount)}</p>
+          </div>
+          <div className="card p-3 text-center border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/30">
+            <p className="text-xs text-violet-600 dark:text-violet-400 font-medium">Avg Freight</p>
+            <p className="text-lg font-bold text-heading">
+              {totals.qty > 0 ? `₹${(totals.acc_amount / totals.qty).toFixed(0)}/T` : '—'}
+            </p>
           </div>
           <div className="card p-3 text-center border-amber-200 dark:border-amber-800 bg-amber-50 dark:bg-amber-900/30">
             <p className="text-xs text-amber-600 dark:text-amber-400 font-medium">Commission</p>
