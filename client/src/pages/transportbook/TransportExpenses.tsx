@@ -21,7 +21,7 @@ type ExpenseRow = {
   diesel_party_id: number | null;
 };
 
-const EXPENSE_CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Freight payment', 'Travel Expense', 'Repairs', 'Other'];
+const EXPENSE_CATEGORIES = ['Salary', 'Office Rent', 'Stationery', 'Utilities', 'Freight payment', 'Travel Expense', 'Unloading Charge', 'Repairs', 'Other'];
 const CATEGORIES = ['Advance', 'Diesel', ...EXPENSE_CATEGORIES];
 
 const emptyForm = {
@@ -347,12 +347,31 @@ export default function TransportExpenses() {
         {advanceRows.length > 0 && (
           <div>
             <p className="text-xs font-semibold uppercase tracking-wider text-orange-600 dark:text-orange-400 mb-2">Advances (not counted in expenses)</p>
+            {/* Company sub-totals row */}
+            {(() => {
+              const byCompany = new Map<string, number>();
+              for (const r of advanceRows) {
+                const key = r.company === 'acc' ? 'ACC' : r.company === 'jk' ? 'JK' : 'General';
+                byCompany.set(key, (byCompany.get(key) || 0) + (Number(r.amount) || 0));
+              }
+              const entries = Array.from(byCompany.entries());
+              if (entries.length <= 1 && byCompany.has('General')) return null;
+              return (
+                <div className="flex flex-wrap gap-2 mb-2">
+                  {entries.map(([co, total]) => (
+                    <span key={co} className="rounded-full border border-orange-300 dark:border-orange-700 bg-orange-100 dark:bg-orange-900/40 px-3 py-0.5 text-xs font-semibold text-orange-800 dark:text-orange-200">
+                      {co}: {formatINR(total)}
+                    </span>
+                  ))}
+                </div>
+              );
+            })()}
             <div className="flex flex-wrap gap-2">
               {(() => {
-                const byParty = new Map<string, { total: number; count: number }>();
+                const byParty = new Map<string, { total: number; count: number; company: string | null }>();
                 for (const r of advanceRows) {
                   const key = r.advance_party?.trim() || r.description?.trim() || 'Unknown party';
-                  const cur = byParty.get(key) || { total: 0, count: 0 };
+                  const cur = byParty.get(key) || { total: 0, count: 0, company: r.company };
                   cur.total += Number(r.amount) || 0;
                   cur.count += 1;
                   byParty.set(key, cur);
@@ -361,7 +380,10 @@ export default function TransportExpenses() {
                   <div key={party} className="rounded-lg border border-orange-200 dark:border-orange-800 bg-orange-50 dark:bg-orange-900/30 px-3 py-2 text-xs">
                     <p className="font-medium text-orange-900 dark:text-orange-100">{party}</p>
                     <p className="mt-0.5 font-semibold text-heading">{formatINR(v.total)}</p>
-                    <p className="text-[11px] text-heading/60">{v.count} entr{v.count === 1 ? 'y' : 'ies'}</p>
+                    <p className="text-[11px] text-heading/60">
+                      {v.count} entr{v.count === 1 ? 'y' : 'ies'}
+                      {v.company ? ` · ${v.company.toUpperCase()}` : ''}
+                    </p>
                   </div>
                 ));
               })()}
@@ -479,9 +501,11 @@ export default function TransportExpenses() {
                     {form.diesel_party_id && <p className="mt-1 text-[10px] text-heading/50">Payment will reflect as a credit in this diesel party's ledger.</p>}
                   </div>
                 )}
-                {form.category !== 'Advance' && form.category !== 'Diesel' && (
+                {form.category !== 'Diesel' && (
                   <div>
-                    <label className="block text-xs font-medium text-heading/70 mb-1">Company</label>
+                    <label className="block text-xs font-medium text-heading/70 mb-1">
+                      {form.category === 'Advance' ? 'Advance For (Company)' : 'Company'}
+                    </label>
                     <select className="input-field" value={form.company} onChange={(e) => setForm({ ...form, company: e.target.value as '' | 'acc' | 'jk' })}>
                       <option value="">— General —</option>
                       <option value="acc">ACC Cement</option>
@@ -489,7 +513,7 @@ export default function TransportExpenses() {
                     </select>
                   </div>
                 )}
-                <div className={form.category === 'Advance' || form.category === 'Diesel' ? '' : 'sm:col-span-2 sm:col-start-1'}>
+                <div className={form.category === 'Diesel' ? 'sm:col-span-2 sm:col-start-1' : form.category !== 'Advance' ? 'sm:col-span-2 sm:col-start-1' : ''}>
                   <label className="block text-xs font-medium text-heading/70 mb-1">Mode *</label>
                   <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-sm">
                     {(['cash', 'bank'] as const).map((m) => (
