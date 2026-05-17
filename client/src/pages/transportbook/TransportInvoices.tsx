@@ -70,6 +70,7 @@ export default function TransportInvoices() {
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
   const [billing, setBilling] = useState<{ trip_acc_total: number; invoiced: number; pending_to_invoice: number } | null>(null);
+  const [otherCompanyCount, setOtherCompanyCount] = useState<number>(0);
   const [pmtTarget, setPmtTarget] = useState<InvoiceRow | null>(null);
   const [pmtList, setPmtList] = useState<Array<{ id: number; date: string; amount: number; mode: string; bank_name: string | null; reference: string | null; remarks: string | null }>>([]);
   const [pmtLoading, setPmtLoading] = useState(false);
@@ -79,8 +80,12 @@ export default function TransportInvoices() {
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      const data = await api.rlInvoices.list(company);
+      const [data, otherData] = await Promise.all([
+        api.rlInvoices.list(company),
+        api.rlInvoices.list(company === 'jk' ? 'acc' : 'jk'),
+      ]);
       setRows(data);
+      setOtherCompanyCount(otherData.length);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load invoices', 'error');
     } finally {
@@ -229,6 +234,17 @@ export default function TransportInvoices() {
     }
   };
 
+  const moveToCompany = async (row: InvoiceRow, target: Company) => {
+    if (!window.confirm(`Move invoice "${row.invoice_number}" to ${target.toUpperCase()} Billing?`)) return;
+    try {
+      await api.rlInvoices.update(row.id, { ...row, company: target });
+      addToast(`Moved to ${target.toUpperCase()} Billing`, 'success');
+      load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Move failed', 'error');
+    }
+  };
+
   const f = (field: keyof typeof emptyForm) =>
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
@@ -344,6 +360,17 @@ export default function TransportInvoices() {
         </div>
       )}
 
+      {/* Warning banner: 0 invoices on current tab but other tab has some */}
+      {!loading && rows.length === 0 && otherCompanyCount > 0 && (
+        <div className="rounded-xl border border-amber-300 dark:border-amber-700 bg-amber-50 dark:bg-amber-900/30 px-4 py-3 text-sm text-amber-800 dark:text-amber-200">
+          <p className="font-semibold mb-1">No {company.toUpperCase()} invoices found — but {otherCompanyCount} invoice{otherCompanyCount !== 1 ? 's' : ''} exist{otherCompanyCount === 1 ? 's' : ''} under {company === 'jk' ? 'ACC' : 'JK'} Billing.</p>
+          <p className="text-xs text-amber-700 dark:text-amber-300">
+            Old invoices were saved under {company === 'jk' ? 'ACC' : 'JK'} before company tagging was added.
+            Switch to <button type="button" onClick={() => setCompany(company === 'jk' ? 'acc' : 'jk')} className="underline font-medium">{company === 'jk' ? 'ACC' : 'JK'} Billing</button> and use the <strong>→ {company.toUpperCase()}</strong> button to move each invoice here.
+          </p>
+        </div>
+      )}
+
       {/* Summary Cards */}
       {rows.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 lg:grid-cols-4">
@@ -456,14 +483,24 @@ export default function TransportInvoices() {
                             <Pencil className="h-4 w-4" />
                           </button>
                           {canEditTransport() && (
-                            <button
-                              type="button"
-                              onClick={() => handleDelete(row)}
-                              className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
-                              title="Delete"
-                            >
-                              <Trash2 className="h-4 w-4" />
-                            </button>
+                            <>
+                              <button
+                                type="button"
+                                onClick={() => moveToCompany(row, company === 'jk' ? 'acc' : 'jk')}
+                                className="rounded px-1.5 py-0.5 text-[11px] font-medium border border-indigo-300 dark:border-indigo-700 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-900/30 transition-colors"
+                                title={`Move to ${company === 'jk' ? 'ACC' : 'JK'} Billing`}
+                              >
+                                → {company === 'jk' ? 'ACC' : 'JK'}
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => handleDelete(row)}
+                                className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30 transition-colors"
+                                title="Delete"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </button>
+                            </>
                           )}
                         </div>
                       </td>

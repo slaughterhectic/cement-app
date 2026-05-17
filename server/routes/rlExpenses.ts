@@ -1,5 +1,5 @@
 import { Router } from 'express';
-import { query, getOne } from '../db/database';
+import { getAll, query, getOne } from '../db/database';
 import { friendlyError } from '../lib/userError';
 import { syncImprestForCashTxn, deleteImprestForSource } from '../lib/imprestSync';
 import { canEditTransport } from '../lib/transportAuth';
