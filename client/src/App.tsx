@@ -51,6 +51,7 @@ import TransportPartners from './pages/transportbook/TransportPartners';
 import TransportSettings from './pages/transportbook/TransportSettings';
 import TransportCompliance from './pages/transportbook/TransportCompliance';
 import DieselParties from './pages/transportbook/DieselParties';
+import TransportCash from './pages/transportbook/TransportCash';
 import { Building2, Truck, LogOut } from 'lucide-react';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -172,6 +173,7 @@ export default function App() {
           <Route path="/transportbook/diesel" element={<BookGuard permission="access_transportbook" fallback="/no-access"><DieselParties /></BookGuard>} />
           <Route path="/transportbook/expenses" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportExpenses /></BookGuard>} />
           <Route path="/transportbook/bank" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportBanks /></BookGuard>} />
+          <Route path="/transportbook/cash" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportCash /></BookGuard>} />
           {/* CementBook requests/approvals */}
           <Route path="/requests" element={<Requests source="cementbook" />} />
           <Route path="/pending-approvals" element={<PendingApprovals source="cementbook" />} />

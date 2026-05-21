@@ -454,6 +454,18 @@ export const api = {
       request<any>(`/rl/diesel-parties/${id}/transactions/${txId}`, { method: 'DELETE' }),
     balance: (id: number) => request<{ balance: number }>(`/rl/diesel-parties/${id}/balance`),
   },
+  rlDashboard: {
+    get: (month?: string) => {
+      const q = month ? `?month=${encodeURIComponent(month)}` : '';
+      return request<any>(`/rl/dashboard${q}`);
+    },
+  },
+  rlCashHandler: {
+    get: (params?: { handler?: string; month?: string }) => {
+      const q = params ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v).map(([k, v]) => [k, String(v)])).toString() : '';
+      return request<{ transactions: any[]; handlers: string[]; summary: any[] }>(`/rl/cash-handler${q}`);
+    },
+  },
   rlPartners: {
     list: () => request<any[]>('/rl/partners'),
     create: (data: any) => request<any>('/rl/partners', { method: 'POST', body: JSON.stringify(data) }),

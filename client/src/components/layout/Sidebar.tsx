@@ -97,6 +97,7 @@ const transportNavItems = [
   { to: '/transportbook/diesel', label: 'Diesel', icon: Fuel },
   { to: '/transportbook/expenses', label: 'Expenses', icon: Receipt },
   { to: '/transportbook/bank', label: 'Bank', icon: Landmark },
+  { to: '/transportbook/cash', label: 'Cash Handler', icon: Wallet },
   { to: '/transportbook/compliance', label: 'Compliance', icon: ShieldCheck },
   { to: '/transportbook/partners', label: 'Partners', icon: Users },
   { to: '/transportbook/rates', label: 'Rates', icon: Settings, permission: 'manage_transport_rates' },
