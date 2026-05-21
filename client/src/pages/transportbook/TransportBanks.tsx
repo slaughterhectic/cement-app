@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Plus, X, Trash2, ChevronDown, ChevronRight, ArrowDown, ArrowUp, Pencil } from 'lucide-react';
+import { Plus, X, Trash2, ChevronDown, ChevronRight, ArrowDown, ArrowUp, Pencil, Download } from 'lucide-react';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
 import { useAuthStore, useToastStore } from '../../lib/store';
@@ -50,9 +50,6 @@ export default function TransportBanks() {
   const [editing, setEditing] = useState<Bank | null>(null);
   const [form, setForm] = useState(emptyForm);
   const [saving, setSaving] = useState(false);
-  const [txnTarget, setTxnTarget] = useState<Bank | null>(null);
-  const [txnForm, setTxnForm] = useState(emptyTxn);
-  const [txnSaving, setTxnSaving] = useState(false);
   const [editTxn, setEditTxn] = useState<Txn | null>(null);
   const [editTxnForm, setEditTxnForm] = useState(emptyTxn);
   const [editTxnSaving, setEditTxnSaving] = useState(false);
@@ -95,23 +92,25 @@ export default function TransportBanks() {
     finally { setSaving(false); }
   };
 
-  const submitTxn = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!txnTarget || !txnForm.amount) return;
-    setTxnSaving(true);
-    try {
-      const result = await api.rlBanks.addTransaction(txnTarget.id, {
-        date: txnForm.date, type: txnForm.type, amount: Number(txnForm.amount),
-        particulars: txnForm.particulars || null, remarks: txnForm.remarks || null,
-      });
-      if ((result as any).pending) addToast('Sent for admin approval', 'info');
-      else addToast('Transaction added', 'success');
-      const targetId = txnTarget.id;
-      setTxnTarget(null); setTxnForm(emptyTxn);
-      load();
-      reloadStatement(targetId);
-    } catch (e) { addToast(e instanceof Error ? e.message : 'Save failed', 'error'); }
-    finally { setTxnSaving(false); }
+  const downloadCSV = (bank: Bank, txns: Txn[]) => {
+    const header = ['Date', 'Type', 'Particulars', 'Remarks', 'Credit', 'Debit', 'Balance'];
+    const rows = [...txns].reverse().map((t) => [
+      t.date,
+      t.type,
+      t.particulars || '',
+      t.remarks || '',
+      t.type === 'credit' ? t.amount : '',
+      t.type === 'debit'  ? t.amount : '',
+      t.balance,
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${bank.name.replace(/\s+/g, '_')}_statement.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
   };
 
   const submitEditTxn = async (e: React.FormEvent) => {
@@ -271,14 +270,13 @@ export default function TransportBanks() {
                 <th className="px-4 py-3 font-medium text-green-700 dark:text-green-300 text-right">Credits</th>
                 <th className="px-4 py-3 font-medium text-red-700 dark:text-red-300 text-right">Debits</th>
                 <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Closing</th>
-                <th className="px-4 py-3 font-medium text-indigo-700 dark:text-indigo-300">Actions</th>
               </tr>
             </thead>
             <tbody>
               {loading ? (
-                <tr><td colSpan={6} className="px-4 py-8 text-center text-heading/50">Loading…</td></tr>
+                <tr><td colSpan={5} className="px-4 py-8 text-center text-heading/50">Loading…</td></tr>
               ) : banks.length === 0 ? (
-                <tr><td colSpan={6} className="px-4 py-12 text-center text-heading/50">No banks yet. Add one above.</td></tr>
+                <tr><td colSpan={5} className="px-4 py-12 text-center text-heading/50">No banks yet. Add one above.</td></tr>
               ) : banks.map((b) => {
                 const open = expanded === b.id;
                 const list = statements[b.id] || [];
@@ -296,35 +294,28 @@ export default function TransportBanks() {
                       <td className="px-4 py-3 text-right tabular-nums text-green-700 dark:text-green-300">{formatINR(b.total_credits)}</td>
                       <td className="px-4 py-3 text-right tabular-nums text-red-700 dark:text-red-300">{formatINR(b.total_debits)}</td>
                       <td className={`px-4 py-3 text-right tabular-nums font-bold ${b.balance >= 0 ? 'text-indigo-700 dark:text-indigo-300' : 'text-red-700 dark:text-red-300'}`}>{formatINR(b.balance)}</td>
-                      <td className="px-4 py-3">
-                        <div className="flex items-center gap-1">
-                          <button type="button" onClick={() => { setTxnForm(emptyTxn); setTxnTarget(b); }}
-                            className="rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600">+ Txn</button>
-                          {canEditTransport && (
-                            <>
-                              <button type="button" onClick={() => { setEditing(b); setForm({ name: b.name, opening_balance: String(b.opening_balance) }); setAddOpen(true); }}
-                                className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40">Edit</button>
-                              <button type="button" onClick={async () => {
-                                if (!window.confirm(`Delete bank "${b.name}"? All its transactions will be deleted too.`)) return;
-                                try { await api.rlBanks.delete(b.id); addToast('Deleted'); load(); }
-                                catch (e) { addToast(e instanceof Error ? e.message : 'Failed', 'error'); }
-                              }} className="rounded p-1.5 text-red-500 hover:bg-red-50 dark:hover:bg-red-900/30"><Trash2 className="h-3.5 w-3.5" /></button>
-                            </>
-                          )}
-                        </div>
-                      </td>
                     </tr>
                     {open && (
                       <tr key={`${b.id}-stmt`} className="bg-surface/60">
-                        <td colSpan={6} className="px-4 py-3">
+                        <td colSpan={5} className="px-4 py-3">
                           {stmtLoading[b.id] ? (
                             <p className="py-4 text-center text-xs text-heading/60">Loading statement…</p>
                           ) : list.length === 0 ? (
                             <p className="py-4 text-center text-xs text-heading/60">No transactions yet.</p>
                           ) : (
                             <div className="max-h-[480px] overflow-y-auto rounded-lg border border-card-border bg-card">
+                              <div className="sticky top-0 flex items-center justify-between border-b border-card-border bg-surface px-3 py-2">
+                                <span className="text-xs font-medium text-heading/60">{list.length} transactions</span>
+                                <button
+                                  type="button"
+                                  onClick={() => downloadCSV(b, list)}
+                                  className="inline-flex items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 py-1 text-xs font-medium text-heading/70 hover:bg-surface transition-colors"
+                                >
+                                  <Download className="h-3 w-3" /> Download CSV
+                                </button>
+                              </div>
                               <table className="min-w-full text-xs">
-                                <thead className="sticky top-0 bg-surface">
+                                <thead className="sticky top-[33px] bg-surface">
                                   <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-heading/60">
                                     <th className="px-3 py-2">Date</th>
                                     <th className="px-3 py-2">Type</th>
@@ -416,19 +407,6 @@ export default function TransportBanks() {
             </form>
           </div>
         </div>
-      )}
-
-      {/* Add Transaction Modal */}
-      {txnTarget && (
-        <TxnForm
-          title="Add Transaction"
-          subtitle={txnTarget.name}
-          formData={txnForm}
-          onChange={setTxnForm}
-          onSubmit={submitTxn}
-          saving={txnSaving}
-          onCancel={() => setTxnTarget(null)}
-        />
       )}
 
       {/* Edit Transaction Modal */}
