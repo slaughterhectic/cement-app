@@ -5,6 +5,28 @@ import { canEditTransport } from '../lib/transportAuth';
 
 const router = Router();
 
+async function syncBankForPayment({
+  sourceId, mode, bankName, amount, date, ownerName,
+}: {
+  sourceId: number; mode: string; bankName: string | null;
+  amount: number; date: string; ownerName: string;
+}) {
+  await query(
+    `DELETE FROM rl_bank_transactions WHERE source_table='rl_owner_payments' AND source_id=$1`,
+    [sourceId]
+  );
+  if (mode === 'bank' && bankName) {
+    const bank = await getOne('SELECT id FROM rl_banks WHERE name=$1', [bankName]);
+    if (bank) {
+      await query(
+        `INSERT INTO rl_bank_transactions (bank_id, date, type, amount, particulars, source_table, source_id)
+         VALUES ($1,$2,'debit',$3,$4,'rl_owner_payments',$5)`,
+        [bank.id, date, amount, `Owner Payment — ${ownerName}`, sourceId]
+      );
+    }
+  }
+}
+
 // GET /rl/owner-payments?owner_name=NAME
 router.get('/', async (req, res) => {
   try {
@@ -54,6 +76,10 @@ router.post('/', async (req, res) => {
         remarks?.trim() || null,
       ]
     );
+    await syncBankForPayment({
+      sourceId: row.id, mode: row.mode, bankName: row.bank_name,
+      amount: amt, date, ownerName: owner_name.trim(),
+    });
     res.json({ ...row, amount: Number(row.amount) });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }
 });
@@ -61,6 +87,10 @@ router.post('/', async (req, res) => {
 // DELETE /rl/owner-payments/:id
 router.delete('/:id', async (req, res) => {
   try {
+    await query(
+      `DELETE FROM rl_bank_transactions WHERE source_table='rl_owner_payments' AND source_id=$1`,
+      [req.params.id]
+    );
     await query('DELETE FROM rl_owner_payments WHERE id=$1', [req.params.id]);
     res.json({ success: true });
   } catch (e: any) { res.status(400).json({ error: friendlyError(e) }); }

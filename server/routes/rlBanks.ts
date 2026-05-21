@@ -102,6 +102,7 @@ router.get('/:id/statement', async (req, res) => {
       [req.params.id]
     );
 
+    // Compute running balance oldest→newest, then reverse for newest-first display.
     let running = Number(bank.opening_balance) || 0;
     const ledger = txns.map((t: any) => {
       const amt = Number(t.amount) || 0;
@@ -111,7 +112,7 @@ router.get('/:id/statement', async (req, res) => {
 
     res.json({
       bank: { ...bank, opening_balance: Number(bank.opening_balance) || 0 },
-      ledger,
+      ledger: ledger.reverse(),
       closing: running,
     });
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
