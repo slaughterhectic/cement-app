@@ -64,6 +64,7 @@ export default function TransportInvoices() {
   const [rows, setRows] = useState<InvoiceRow[]>([]);
   const [monthFilter, setMonthFilter] = useState<string>('');
   const [statusFilter, setStatusFilter] = useState<'all' | 'pending' | 'partial' | 'done'>('all');
+  const [search, setSearch] = useState('');
   const [loading, setLoading] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [editing, setEditing] = useState<InvoiceRow | null>(null);
@@ -249,20 +250,22 @@ export default function TransportInvoices() {
     (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) =>
       setForm((prev) => ({ ...prev, [field]: e.target.value }));
 
-  // Apply month + status filters and sort ASC by invoice date (oldest → newest).
+  // Apply month + status + search filters, sort newest → oldest.
   const visibleRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
     return [...rows]
       .filter((r) => {
         if (monthFilter && !(r.invoice_date || '').startsWith(monthFilter)) return false;
         if (statusFilter !== 'all' && r.status !== statusFilter) return false;
+        if (q && !r.invoice_number.toLowerCase().includes(q)) return false;
         return true;
       })
       .sort((a, b) => {
         const da = a.invoice_date || '';
         const db = b.invoice_date || '';
-        return da.localeCompare(db) || a.id - b.id;
+        return db.localeCompare(da) || b.id - a.id;
       });
-  }, [rows, monthFilter, statusFilter]);
+  }, [rows, monthFilter, statusFilter, search]);
 
   const totals = visibleRows.reduce(
     (acc, r) => ({
@@ -412,6 +415,13 @@ export default function TransportInvoices() {
             </div>
           );
         })()}
+        <input
+          type="text"
+          placeholder="Search invoice #…"
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="rounded-lg border border-card-border bg-card px-3 py-1.5 text-sm text-heading placeholder-heading/40 focus:outline-none focus:ring-2 focus:ring-indigo-500 w-44"
+        />
         <label className="text-sm font-medium text-heading/70 ml-2">Status:</label>
         <div className="flex items-center gap-1 rounded-lg border border-card-border bg-surface p-0.5 text-xs">
           {(['all', 'pending', 'partial', 'done'] as const).map((s) => (
@@ -421,7 +431,7 @@ export default function TransportInvoices() {
             </button>
           ))}
         </div>
-        <span className="ml-auto text-xs text-heading/60">{visibleRows.length} of {rows.length} · oldest → newest</span>
+        <span className="ml-auto text-xs text-heading/60">{visibleRows.length} of {rows.length} · newest → oldest</span>
       </div>
 
       {/* Table */}
