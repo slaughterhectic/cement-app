@@ -96,7 +96,7 @@ export default function TransportBanks() {
     const header = ['Date', 'Type', 'Particulars', 'Remarks', 'Credit', 'Debit', 'Balance'];
     const rows = [...txns].reverse().map((t) => [
       t.date,
-      t.type,
+      t.type === 'credit' ? 'Credit' : 'Debit',
       t.particulars || '',
       t.remarks || '',
       t.type === 'credit' ? t.amount : '',
@@ -111,6 +111,49 @@ export default function TransportBanks() {
     a.download = `${bank.name.replace(/\s+/g, '_')}_statement.csv`;
     a.click();
     URL.revokeObjectURL(url);
+  };
+
+  const downloadPDF = (bank: Bank, txns: Txn[]) => {
+    const ordered = [...txns].reverse();
+    const rows = ordered.map((t) => `
+      <tr>
+        <td>${t.date}</td>
+        <td><span class="${t.type === 'credit' ? 'credit' : 'debit'}">${t.type === 'credit' ? 'Credit' : 'Debit'}</span></td>
+        <td>${t.particulars || '—'}${t.remarks ? `<br/><small>${t.remarks}</small>` : ''}${t.source_table && t.source_table !== 'manual' ? `<br/><small class="muted">via ${t.source_table.replace('rl_', '')}</small>` : ''}</td>
+        <td class="num green">${t.type === 'credit' ? '₹' + t.amount.toLocaleString('en-IN') : '—'}</td>
+        <td class="num red">${t.type === 'debit' ? '₹' + t.amount.toLocaleString('en-IN') : '—'}</td>
+        <td class="num">${t.balance < 0 ? '−' : ''}₹${Math.abs(t.balance).toLocaleString('en-IN')}</td>
+      </tr>`).join('');
+
+    const html = `<!DOCTYPE html><html><head><meta charset="utf-8"/>
+      <title>${bank.name} — Statement</title>
+      <style>
+        body { font-family: Arial, sans-serif; font-size: 12px; color: #111; margin: 24px; }
+        h1 { font-size: 18px; margin-bottom: 4px; }
+        .meta { color: #666; font-size: 11px; margin-bottom: 16px; }
+        table { width: 100%; border-collapse: collapse; }
+        th { background: #f0f4ff; text-align: left; padding: 7px 8px; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; border-bottom: 2px solid #c7d2fe; }
+        td { padding: 6px 8px; border-bottom: 1px solid #e5e7eb; vertical-align: top; }
+        .num { text-align: right; font-variant-numeric: tabular-nums; }
+        .green { color: #15803d; font-weight: 600; }
+        .red   { color: #b91c1c; font-weight: 600; }
+        .credit { background:#dcfce7; color:#15803d; padding:1px 6px; border-radius:999px; font-size:10px; }
+        .debit  { background:#fee2e2; color:#b91c1c; padding:1px 6px; border-radius:999px; font-size:10px; }
+        .muted { color:#9ca3af; }
+        small { display:block; color:#6b7280; font-size:10px; }
+        @media print { button { display:none; } }
+      </style></head><body>
+      <h1>${bank.name}</h1>
+      <p class="meta">Bank Statement · ${txns.length} transactions · Generated ${new Date().toLocaleDateString('en-IN')}</p>
+      <table>
+        <thead><tr><th>Date</th><th>Type</th><th>Particulars</th><th class="num">Credit</th><th class="num">Debit</th><th class="num">Balance</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+      <script>window.onload=()=>window.print();<\/script>
+    </body></html>`;
+
+    const w = window.open('', '_blank');
+    if (w) { w.document.write(html); w.document.close(); }
   };
 
   const submitEditTxn = async (e: React.FormEvent) => {
@@ -306,13 +349,22 @@ export default function TransportBanks() {
                             <div className="max-h-[480px] overflow-y-auto rounded-lg border border-card-border bg-card">
                               <div className="sticky top-0 flex items-center justify-between border-b border-card-border bg-surface px-3 py-2">
                                 <span className="text-xs font-medium text-heading/60">{list.length} transactions</span>
-                                <button
-                                  type="button"
-                                  onClick={() => downloadCSV(b, list)}
-                                  className="inline-flex items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 py-1 text-xs font-medium text-heading/70 hover:bg-surface transition-colors"
-                                >
-                                  <Download className="h-3 w-3" /> Download CSV
-                                </button>
+                                <div className="flex items-center gap-2">
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadCSV(b, list)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-card-border bg-card px-3 py-1 text-xs font-medium text-heading/70 hover:bg-surface transition-colors"
+                                  >
+                                    <Download className="h-3 w-3" /> CSV
+                                  </button>
+                                  <button
+                                    type="button"
+                                    onClick={() => downloadPDF(b, list)}
+                                    className="inline-flex items-center gap-1.5 rounded-lg border border-red-200 dark:border-red-800 bg-red-50 dark:bg-red-900/20 px-3 py-1 text-xs font-medium text-red-700 dark:text-red-400 hover:bg-red-100 dark:hover:bg-red-900/40 transition-colors"
+                                  >
+                                    <Download className="h-3 w-3" /> PDF
+                                  </button>
+                                </div>
                               </div>
                               <table className="min-w-full text-xs">
                                 <thead className="sticky top-[33px] bg-surface">

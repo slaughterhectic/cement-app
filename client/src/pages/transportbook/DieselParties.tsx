@@ -255,11 +255,11 @@ export default function DieselParties() {
           {Object.keys(txns).length > 0 ? (
             <div className="flex gap-4 text-sm">
               <div>
-                <p className="text-xs text-heading/60">Credits (paid in)</p>
+                <p className="text-xs text-heading/60">Paid to Pumps</p>
                 <p className="font-bold tabular-nums text-green-700 dark:text-green-300">{formatINR(rangeTotals.credits)}</p>
               </div>
               <div>
-                <p className="text-xs text-heading/60">Debits (via trips)</p>
+                <p className="text-xs text-heading/60">Diesel Drawn (via trips)</p>
                 <p className="font-bold tabular-nums text-amber-700 dark:text-amber-300">{formatINR(rangeTotals.debits)}</p>
               </div>
             </div>
@@ -283,8 +283,8 @@ export default function DieselParties() {
               <tr className="bg-surface text-left text-xs font-medium uppercase tracking-wide text-heading/60">
                 <th className="px-4 py-3">Name</th>
                 <th className="px-4 py-3 text-right">Opening (₹)</th>
-                <th className="px-4 py-3 text-right">+ Credits (₹)</th>
-                <th className="px-4 py-3 text-right">− Debits (₹)</th>
+                <th className="px-4 py-3 text-right">Paid to Pump (₹)</th>
+                <th className="px-4 py-3 text-right">Diesel Drawn (₹)</th>
                 <th className="px-4 py-3 text-right">Balance (₹)</th>
                 <th className="px-4 py-3"></th>
               </tr>
@@ -310,7 +310,7 @@ export default function DieselParties() {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-1">
                           <button type="button" onClick={() => setCreditTarget(r)} className="inline-flex items-center gap-1 rounded bg-indigo-500 px-2 py-1 text-xs font-medium text-white hover:bg-indigo-600">
-                            <Plus className="h-3 w-3" /> Credit
+                            <Plus className="h-3 w-3" /> Pay Pump
                           </button>
                           <button type="button" onClick={() => openEdit(r)} className="rounded p-1.5 text-heading/60 hover:bg-indigo-100 dark:hover:bg-indigo-900/40 hover:text-indigo-600 dark:text-indigo-400" title="Edit">
                             <Pencil className="h-3.5 w-3.5" />
@@ -346,11 +346,11 @@ export default function DieselParties() {
                                 <thead className="sticky top-0 bg-surface">
                                   <tr className="text-left text-[11px] font-medium uppercase tracking-wide text-heading/60">
                                     <th className="px-3 py-2">Date</th>
-                                    <th className="px-3 py-2">Type</th>
+                                    <th className="px-3 py-2">Entry</th>
                                     <th className="px-3 py-2">Vehicle</th>
                                     <th className="px-3 py-2">Source</th>
-                                    <th className="px-3 py-2 text-right">Credit (₹)</th>
-                                    <th className="px-3 py-2 text-right">Debit (₹)</th>
+                                    <th className="px-3 py-2 text-right">Paid to Pump (₹)</th>
+                                    <th className="px-3 py-2 text-right">Diesel Drawn (₹)</th>
                                     <th className="px-3 py-2">Remarks</th>
                                     {canEditTransport && <th className="px-3 py-2"></th>}
                                   </tr>
@@ -359,7 +359,12 @@ export default function DieselParties() {
                                   {filtered.map((t) => (
                                     <tr key={t.id} className="hover:bg-surface/70">
                                       <td className="px-3 py-2 whitespace-nowrap">{formatDate(t.date)}</td>
-                                      <td className="px-3 py-2">{t.type === 'credit' ? 'Credit' : 'Debit'}</td>
+                                      <td className="px-3 py-2">
+                                        {t.type === 'credit'
+                                          ? <span className="inline-flex items-center rounded-full bg-green-100 dark:bg-green-900/40 px-2 py-0.5 text-[10px] font-medium text-green-700 dark:text-green-300">Payment</span>
+                                          : <span className="inline-flex items-center rounded-full bg-amber-100 dark:bg-amber-900/40 px-2 py-0.5 text-[10px] font-medium text-amber-700 dark:text-amber-300">Diesel</span>
+                                        }
+                                      </td>
                                       <td className="px-3 py-2 font-medium text-heading">
                                         {t.source_table === 'rl_trip' && t.truck_number ? t.truck_number : <span className="text-heading/40">—</span>}
                                       </td>
@@ -435,8 +440,8 @@ export default function DieselParties() {
       {creditTarget && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
           <div className="w-full max-w-md rounded-xl bg-card p-6 shadow-xl">
-            <h3 className="mb-1 text-base font-semibold text-heading">Credit {creditTarget.name}</h3>
-            <p className="mb-4 text-xs text-heading/60">Top-ups can come from a bank or a cash handler — pick whichever you used to pay this pump.</p>
+            <h3 className="mb-1 text-base font-semibold text-heading">Pay Pump — {creditTarget.name}</h3>
+            <p className="mb-4 text-xs text-heading/60">Record a payment made to this pump — from bank transfer or cash handler.</p>
             <div className="space-y-4">
               <div className="grid grid-cols-2 gap-3">
                 <div>
