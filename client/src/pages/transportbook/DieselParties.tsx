@@ -71,11 +71,11 @@ export default function DieselParties() {
       const [list, bks, hs] = await Promise.all([
         api.rlDieselParties.list(),
         api.rlBanks.list().catch(() => []),
-        api.imprest.handlers().catch(() => []),
+        api.rlCashHandler.listHandlers().catch(() => []),
       ]);
       setRows(list as DieselParty[]);
       setBanks((bks as any[]).filter((b) => b.is_active !== 0).map((b) => b.name));
-      setHandlers((hs as any[]).map((h) => h.handler_name));
+      setHandlers((hs as any[]).filter((h) => h.is_active !== 0).map((h) => h.name));
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load', 'error');
     } finally { setLoading(false); }

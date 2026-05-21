@@ -1065,6 +1065,37 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE rl_owner_advances ADD COLUMN IF NOT EXISTS source_table TEXT DEFAULT 'manual'`);
     await client.query(`ALTER TABLE rl_owner_advances ADD COLUMN IF NOT EXISTS source_id INTEGER`);
 
+    // TransportBook-local cash handlers — separate from the shared imprest_handlers so
+    // the expense / diesel-payment forms in TransportBook only show transport-relevant people.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_cash_handlers (
+        id SERIAL PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        opening_balance REAL DEFAULT 0,
+        is_active INTEGER DEFAULT 1,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+
+    // TransportBook owner payments — records money paid to truck owners (settlements).
+    // Separate from rl_owner_advances (which are pre-trip cash) to allow a clean
+    // "Payments" ledger distinct from "Advances" while both reduce outstanding.
+    await client.query(`
+      CREATE TABLE IF NOT EXISTS rl_owner_payments (
+        id SERIAL PRIMARY KEY,
+        owner_name TEXT NOT NULL,
+        date TEXT NOT NULL,
+        amount REAL NOT NULL CHECK(amount > 0),
+        mode TEXT CHECK(mode IN ('cash','bank')) DEFAULT 'bank',
+        bank_name TEXT,
+        cash_handler TEXT,
+        remarks TEXT,
+        created_at TIMESTAMPTZ DEFAULT NOW()
+      );
+    `);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_owner_payments_name ON rl_owner_payments(owner_name)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_rl_owner_payments_date ON rl_owner_payments(date)`);
+
     console.log('Database schema initialized');
   } finally {
     client.release();

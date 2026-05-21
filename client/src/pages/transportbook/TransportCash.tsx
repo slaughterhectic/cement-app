@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { Wallet, User, TrendingDown, TrendingUp, Calendar } from 'lucide-react';
+import { Wallet, User, TrendingDown, TrendingUp, Calendar, Plus, Trash2, X } from 'lucide-react';
 import { MonthPicker } from '../../components/MonthPicker';
 import { api } from '../../lib/api';
 import { formatINR, formatDate } from '../../lib/format';
@@ -26,6 +26,13 @@ interface HandlerSummary {
   balance: number;
 }
 
+interface LocalHandler {
+  id: number;
+  name: string;
+  opening_balance: number;
+  is_active: number;
+}
+
 function sourceLabel(src: string): string {
   if (src === 'rl_expenses') return 'Expense';
   if (src === 'rl_diesel_credit') return 'Diesel Payment';
@@ -35,9 +42,23 @@ function sourceLabel(src: string): string {
 export default function TransportCash() {
   const addToast = useToastStore((s) => s.addToast);
   const [data, setData] = useState<{ transactions: CashTxn[]; handlers: string[]; summary: HandlerSummary[] } | null>(null);
+  const [localHandlers, setLocalHandlers] = useState<LocalHandler[]>([]);
   const [loading, setLoading] = useState(true);
   const [filterHandler, setFilterHandler] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
+
+  // Add handler form
+  const [showAddHandler, setShowAddHandler] = useState(false);
+  const [newHandlerName, setNewHandlerName] = useState('');
+  const [newHandlerOB, setNewHandlerOB] = useState('');
+  const [savingHandler, setSavingHandler] = useState(false);
+
+  const loadHandlers = useCallback(async () => {
+    try {
+      const hs = await api.rlCashHandler.listHandlers();
+      setLocalHandlers(hs);
+    } catch { /* silent */ }
+  }, []);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -54,7 +75,32 @@ export default function TransportCash() {
     }
   }, [addToast, filterHandler, filterMonth]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => { load(); loadHandlers(); }, [load, loadHandlers]);
+
+  const handleAddHandler = async () => {
+    if (!newHandlerName.trim()) { addToast('Name is required', 'error'); return; }
+    setSavingHandler(true);
+    try {
+      await api.rlCashHandler.addHandler({ name: newHandlerName.trim(), opening_balance: Number(newHandlerOB) || 0 });
+      addToast('Handler added', 'success');
+      setNewHandlerName(''); setNewHandlerOB(''); setShowAddHandler(false);
+      await loadHandlers();
+      await load();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Failed to add handler', 'error');
+    } finally { setSavingHandler(false); }
+  };
+
+  const handleDeleteHandler = async (name: string) => {
+    if (!confirm(`Deactivate "${name}"?`)) return;
+    try {
+      await api.rlCashHandler.deleteHandler(name);
+      addToast('Handler deactivated', 'success');
+      await loadHandlers();
+    } catch (e) {
+      addToast(e instanceof Error ? e.message : 'Failed to deactivate handler', 'error');
+    }
+  };
 
   return (
     <div className="flex flex-col gap-6">
@@ -65,7 +111,14 @@ export default function TransportCash() {
           <p className="text-sm text-heading/60 mt-1">TransportBook cash flows via imprest handlers</p>
         </div>
         <div className="flex flex-wrap items-center gap-2 text-sm">
-          <label className="font-medium text-heading/70">Month:</label>
+          <button
+            type="button"
+            onClick={() => setShowAddHandler(true)}
+            className="inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-indigo-700 transition-colors"
+          >
+            <Plus className="h-4 w-4" /> Add Handler
+          </button>
+          <label className="font-medium text-heading/70 ml-2">Month:</label>
           <MonthPicker value={filterMonth} onChange={setFilterMonth} />
           {filterMonth && (
             <button type="button" onClick={() => setFilterMonth('')}
@@ -90,6 +143,89 @@ export default function TransportCash() {
           )}
         </div>
       </div>
+
+      {/* Add Handler Modal */}
+      {showAddHandler && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 backdrop-blur-sm p-4">
+          <div className="bg-card rounded-2xl shadow-xl w-full max-w-sm p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="font-semibold text-heading">Add Cash Handler</h2>
+              <button type="button" onClick={() => setShowAddHandler(false)}>
+                <X className="h-4 w-4 text-heading/60" />
+              </button>
+            </div>
+            <div className="flex flex-col gap-3">
+              <div>
+                <label className="block text-xs font-medium text-heading/70 mb-1">Handler Name *</label>
+                <input
+                  className="input-field"
+                  value={newHandlerName}
+                  onChange={(e) => setNewHandlerName(e.target.value)}
+                  placeholder="e.g. Raju"
+                  autoFocus
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-heading/70 mb-1">Opening Balance (₹)</label>
+                <input
+                  type="number"
+                  min="0"
+                  step="0.01"
+                  className="input-field"
+                  value={newHandlerOB}
+                  onChange={(e) => setNewHandlerOB(e.target.value)}
+                  placeholder="0"
+                />
+              </div>
+              <div className="flex gap-2 mt-2">
+                <button
+                  type="button"
+                  onClick={handleAddHandler}
+                  disabled={savingHandler}
+                  className="flex-1 rounded-lg bg-indigo-600 py-2 text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
+                >
+                  {savingHandler ? 'Adding…' : 'Add Handler'}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setShowAddHandler(false)}
+                  className="flex-1 rounded-lg border border-card-border py-2 text-sm font-medium text-heading/70 hover:bg-surface"
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Local Handlers Management */}
+      {localHandlers.length > 0 && (
+        <div className="card p-4">
+          <h2 className="font-semibold text-heading mb-3 text-sm">Registered Handlers</h2>
+          <div className="flex flex-wrap gap-2">
+            {localHandlers.map((h) => (
+              <div key={h.id} className={`flex items-center gap-2 rounded-full border px-3 py-1.5 text-xs ${h.is_active ? 'border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' : 'border-card-border bg-surface text-heading/40'}`}>
+                <User className="h-3 w-3" />
+                <span className="font-medium">{h.name}</span>
+                {h.opening_balance > 0 && (
+                  <span className="text-indigo-500 dark:text-indigo-400">(OB: {formatINR(h.opening_balance)})</span>
+                )}
+                {!h.is_active && <span className="text-heading/40">(inactive)</span>}
+                {h.is_active ? (
+                  <button
+                    type="button"
+                    onClick={() => handleDeleteHandler(h.name)}
+                    className="ml-1 text-heading/40 hover:text-red-500 transition-colors"
+                  >
+                    <Trash2 className="h-3 w-3" />
+                  </button>
+                ) : null}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* Handler Summary Cards */}
       {data && data.summary.length > 0 && (

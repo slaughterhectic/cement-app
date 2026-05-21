@@ -611,7 +611,7 @@ export default function TransportTrips() {
             <p className="text-lg font-bold text-heading">{totals.qty.toFixed(2)} T</p>
           </div>
           <div className="card p-3 text-center border-indigo-200 dark:border-indigo-800 bg-indigo-50 dark:bg-indigo-900/30">
-            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">ACC Amount</p>
+            <p className="text-xs text-indigo-600 dark:text-indigo-400 font-medium">Freight Amount</p>
             <p className="text-lg font-bold text-heading">{formatINR(totals.acc_amount)}</p>
           </div>
           <div className="card p-3 text-center border-violet-200 dark:border-violet-800 bg-violet-50 dark:bg-violet-900/30">
@@ -655,7 +655,7 @@ export default function TransportTrips() {
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">Party</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300">DCH</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Qty (T)</th>
-                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">ACC Amt</th>
+                <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Freight Amt</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Handling</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Commission</th>
                 <th className="px-3 py-3 font-medium text-indigo-700 dark:text-indigo-300 text-right">Bilty</th>
@@ -899,8 +899,8 @@ export default function TransportTrips() {
                         <input type="number" min="0" step="0.01" className="input-field" value={form.qty} onChange={f('qty')} placeholder="0" required />
                       </div>
                       <div>
-                        <label className="block text-xs font-medium text-heading/70 mb-1">ACC Freight Rate (₹/T) *</label>
-                        <input type="number" min="0" step="0.01" className="input-field" value={form.acc_freight_rate} onChange={f('acc_freight_rate')} placeholder="0" required />
+                        <label className="block text-xs font-medium text-heading/70 mb-1">{form.company === 'jk' ? 'JK' : 'ACC'} Freight Rate (₹/T)</label>
+                        <input type="number" min="0" step="0.01" className="input-field" value={form.acc_freight_rate} onChange={f('acc_freight_rate')} placeholder="0" />
                       </div>
                       <div className="flex items-end">
                         <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs w-full">
@@ -915,7 +915,7 @@ export default function TransportTrips() {
                       </div>
                       <div className="flex items-end">
                         <div className="rounded-lg bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 dark:border-indigo-800 px-3 py-2 text-xs w-full">
-                          <p className="text-heading/60">ACC Amount</p>
+                          <p className="text-heading/60">Freight Amount</p>
                           <p className="font-bold text-indigo-700 dark:text-indigo-300 text-sm">{formatINR(live.acc_amount)}</p>
                         </div>
                       </div>
@@ -1019,7 +1019,7 @@ export default function TransportTrips() {
                     <p className="text-xs font-semibold uppercase tracking-wider mb-3 opacity-80">Live Computation</p>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm sm:grid-cols-4">
                       <div className="bg-card/10 rounded-lg p-2">
-                        <p className="text-xs opacity-70">ACC Amount</p>
+                        <p className="text-xs opacity-70">Freight Amount</p>
                         <p className="font-bold">{formatINR(live.acc_amount)}</p>
                       </div>
                       <div className="bg-card/10 rounded-lg p-2">

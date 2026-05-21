@@ -92,6 +92,7 @@ const transportNavItems = [
   { to: '/transportbook/owners', label: 'Owners', icon: Users },
   { to: '/transportbook/trucks', label: 'Trucks', icon: Truck },
   { to: '/transportbook/trips', label: 'Trip Log', icon: FileText },
+  { to: '/transportbook/payments', label: 'Payments', icon: CreditCard },
   { to: '/transportbook/invoices', label: 'ACC Billing', icon: Receipt },
   { to: '/transportbook/invoices?company=jk', label: 'JK Billing', icon: Receipt },
   { to: '/transportbook/diesel', label: 'Diesel', icon: Fuel },

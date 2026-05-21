@@ -363,6 +363,14 @@ export const api = {
   rlOwners: {
     list: () => request<any[]>('/rl/owners'),
     ledger: (name: string) => request<any>(`/rl/owners/by-name/${encodeURIComponent(name)}/ledger`),
+    paymentsSummary: () => request<any[]>('/rl/owners/payments-summary'),
+  },
+  rlOwnerPayments: {
+    list: (ownerName?: string) =>
+      request<any[]>(`/rl/owner-payments${ownerName ? `?owner_name=${encodeURIComponent(ownerName)}` : ''}`),
+    create: (data: { owner_name: string; date: string; amount: number; mode?: 'bank' | 'cash'; bank_name?: string | null; cash_handler?: string | null; remarks?: string | null }) =>
+      request<any>('/rl/owner-payments', { method: 'POST', body: JSON.stringify(data) }),
+    delete: (id: number) => request<any>(`/rl/owner-payments/${id}`, { method: 'DELETE' }),
   },
   rlOwnerAdvances: {
     list: (ownerName: string) =>
@@ -465,6 +473,11 @@ export const api = {
       const q = params ? '?' + new URLSearchParams(Object.entries(params).filter(([, v]) => v).map(([k, v]) => [k, String(v)])).toString() : '';
       return request<{ transactions: any[]; handlers: string[]; summary: any[] }>(`/rl/cash-handler${q}`);
     },
+    listHandlers: () => request<{ id: number; name: string; opening_balance: number; is_active: number }[]>('/rl/cash-handler/handlers'),
+    addHandler: (data: { name: string; opening_balance?: number }) =>
+      request<any>('/rl/cash-handler/handlers', { method: 'POST', body: JSON.stringify(data) }),
+    deleteHandler: (name: string) =>
+      request<any>(`/rl/cash-handler/handlers/${encodeURIComponent(name)}`, { method: 'DELETE' }),
   },
   rlPartners: {
     list: () => request<any[]>('/rl/partners'),

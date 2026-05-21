@@ -52,6 +52,7 @@ import TransportSettings from './pages/transportbook/TransportSettings';
 import TransportCompliance from './pages/transportbook/TransportCompliance';
 import DieselParties from './pages/transportbook/DieselParties';
 import TransportCash from './pages/transportbook/TransportCash';
+import TransportPayments from './pages/transportbook/TransportPayments';
 import { Building2, Truck, LogOut } from 'lucide-react';
 
 function Protected({ children }: { children: ReactNode }) {
@@ -166,6 +167,7 @@ export default function App() {
           <Route path="/transportbook/owners" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportOwners /></BookGuard>} />
           <Route path="/transportbook/owners/:name" element={<BookGuard permission="access_transportbook" fallback="/no-access"><OwnerLedger /></BookGuard>} />
           <Route path="/transportbook/trips" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportTrips /></BookGuard>} />
+          <Route path="/transportbook/payments" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportPayments /></BookGuard>} />
           <Route path="/transportbook/invoices" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportInvoices /></BookGuard>} />
           <Route path="/transportbook/partners" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportPartners /></BookGuard>} />
           <Route path="/transportbook/rates" element={<BookGuard permission="access_transportbook" fallback="/no-access"><TransportSettings /></BookGuard>} />

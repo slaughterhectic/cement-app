@@ -101,7 +101,7 @@ export default function TransportExpenses() {
   useEffect(() => {
     load();
     api.rlBanks.list().then((b: any[]) => setBanks(b.filter((x) => x.is_active !== 0).map((x) => x.name))).catch(() => {});
-    api.imprest.handlers().then((h: any[]) => setHandlers(h.map((x) => x.handler_name))).catch(() => {});
+    api.rlCashHandler.listHandlers().then((h) => setHandlers(h.filter((x) => x.is_active !== 0).map((x) => x.name))).catch(() => {});
     api.rlDieselParties.list().then((d: any[]) => setDieselParties(d.filter((x) => x.is_active).map((x) => ({ id: x.id, name: x.name })))).catch(() => {});
   }, [load]);
 

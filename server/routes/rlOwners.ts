@@ -58,6 +58,74 @@ router.get('/', async (_req, res) => {
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });
 
+// GET /rl/owners/payments-summary — all owners with outstanding balance for the Payments page
+router.get('/payments-summary', async (_req, res) => {
+  try {
+    const settings = await getAllSettingsMap();
+    const biltyRate = Number(settings.bilty_per_mt) || 10;
+
+    const rows = await getAll(`
+      WITH owner_trips AS (
+        SELECT o.owner_name,
+          COUNT(*)::int AS trip_count,
+          COALESCE(SUM(
+            t.qty * t.acc_freight_rate
+            - t.qty * t.acc_freight_rate * t.commission_pct / 100
+            - t.qty * $1
+            - t.diesel_advance
+            - t.cash_advance
+          ), 0)::float AS total_payable
+        FROM rl_trips t
+        JOIN rl_truck_owners o ON o.id = t.truck_owner_id
+        GROUP BY o.owner_name
+      ),
+      owner_advances AS (
+        SELECT owner_name, COALESCE(SUM(amount),0)::float AS advances
+        FROM rl_owner_advances GROUP BY owner_name
+      ),
+      owner_payments AS (
+        SELECT owner_name, COALESCE(SUM(amount),0)::float AS payments
+        FROM rl_owner_payments GROUP BY owner_name
+      ),
+      owner_gps AS (
+        SELECT o.owner_name, COALESCE(SUM(g.amount),0)::float AS gps_rent
+        FROM rl_gps_rent_debits g
+        JOIN rl_truck_owners o ON o.id = g.truck_owner_id
+        GROUP BY o.owner_name
+      )
+      SELECT
+        base.owner_name,
+        COALESCE(ot.trip_count, 0)    AS trip_count,
+        COALESCE(ot.total_payable, 0) AS total_payable,
+        COALESCE(oa.advances, 0)      AS advances_paid,
+        COALESCE(op.payments, 0)      AS payments_made,
+        COALESCE(og.gps_rent, 0)      AS gps_rent,
+        (
+          COALESCE(ot.total_payable, 0)
+          - COALESCE(oa.advances, 0)
+          - COALESCE(op.payments, 0)
+          - COALESCE(og.gps_rent, 0)
+        ) AS outstanding
+      FROM (SELECT DISTINCT owner_name FROM rl_truck_owners) base
+      LEFT JOIN owner_trips  ot ON ot.owner_name  = base.owner_name
+      LEFT JOIN owner_advances oa ON oa.owner_name = base.owner_name
+      LEFT JOIN owner_payments op ON op.owner_name = base.owner_name
+      LEFT JOIN owner_gps    og ON og.owner_name  = base.owner_name
+      ORDER BY base.owner_name
+    `, [biltyRate]);
+
+    res.json(rows.map((r: any) => ({
+      owner_name:     r.owner_name,
+      trip_count:     Number(r.trip_count),
+      total_payable:  Number(r.total_payable),
+      advances_paid:  Number(r.advances_paid),
+      payments_made:  Number(r.payments_made),
+      gps_rent:       Number(r.gps_rent),
+      outstanding:    Number(r.outstanding),
+    })));
+  } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
+});
+
 // GET /rl/owners/by-name/:name/ledger — aggregated ledger across all trucks of an owner
 router.get('/by-name/:name/ledger', async (req, res) => {
   try {
