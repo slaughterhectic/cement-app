@@ -278,6 +278,11 @@ export default function Sales() {
         cell: ({ getValue }) => getValue() ?? '—',
       },
       {
+        accessorKey: 'truck_number',
+        header: 'Truck No.',
+        cell: ({ getValue }) => getValue() ?? '—',
+      },
+      {
         accessorKey: 'invoice_number',
         header: 'Invoice No.',
         cell: ({ getValue }) => {
