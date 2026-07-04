@@ -24,6 +24,7 @@ const baseSchema = z
     bank_name: z.string().optional(),
     cash_handler: z.string().optional(),
     suspense_party_id: z.coerce.number().int().optional(),
+    wallet_supplier_id: z.coerce.number().int().optional(),
     remarks: z.string().optional(),
   })
   .superRefine((data, ctx) => {
@@ -82,6 +83,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
       bank_name: '' as string,
       cash_handler: '' as string,
       suspense_party_id: 0,
+      wallet_supplier_id: 0,
       remarks: '',
     }),
     []
@@ -107,6 +109,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
   // Regular parties shown in the party picker; suspense routed separately via dropdown
   const parties = useMemo(() => allParties.filter((p) => p.type !== 'suspense'), [allParties]);
   const suspenseParties = useMemo(() => allParties.filter((p) => p.type === 'suspense'), [allParties]);
+  const supplierFirms = useMemo(() => allParties.filter((p) => p.type === 'supplier'), [allParties]);
 
   const selectedParty = useMemo(
     () => allParties.find((p) => p.id === Number(partyId)),
@@ -216,6 +219,7 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
         bank_name: values.mode === 'bank' ? (values.bank_name || null) : null,
         cash_handler: values.mode === 'cash' ? (values.cash_handler || null) : null,
         suspense_party_id: values.mode === 'suspense' ? (values.suspense_party_id || null) : null,
+        wallet_supplier_id: selectedParty?.type !== 'supplier' ? (values.wallet_supplier_id || null) : null,
         remarks: values.remarks?.trim() || null,
         direction,
       });
@@ -441,6 +445,21 @@ export default function PaymentForm({ isOpen, onClose, onSuccess, partyId: prese
             </select>
             {errors.suspense_party_id && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{errors.suspense_party_id.message}</p>}
             <p className="mt-1 text-xs text-heading/60">No bank or cash will move — the entry posts to both the party's and the suspense ledger.</p>
+          </div>
+        )}
+
+        {selectedParty != null && selectedParty.type !== 'supplier' && supplierFirms.length > 0 && (
+          <div>
+            <label className="mb-1 block text-sm font-medium text-heading">Firm wallet (optional)</label>
+            <select className="input-field w-full" {...register('wallet_supplier_id')}>
+              <option value={0}>Not attributed</option>
+              {supplierFirms.map((s) => (
+                <option key={s.id} value={s.id}>{s.name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-xs text-heading/60">
+              Attribute this {isPay ? 'payment' : 'receipt'} to the supplier firm whose stock it relates to — it will show under that firm's wallet.
+            </p>
           </div>
         )}
 

@@ -198,10 +198,16 @@ router.post('/:id/approve', async (req, res) => {
       const mode = data.mode || 'cash';
       const handler = mode === 'cash' ? (data.cash_handler || null) : null;
       const bank    = mode === 'bank' ? (data.bank_name    || null) : null;
+      // Firm wallet tag: only valid when it points at a supplier party different from the payee
+      let walletId = Number(data.wallet_supplier_id) || null;
+      if (walletId) {
+        const firm = await getOne(`SELECT type FROM parties WHERE id=$1`, [walletId]);
+        if (!firm || firm.type !== 'supplier' || walletId === Number(data.party_id)) walletId = null;
+      }
       result = await getOne(
-        `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, remarks, direction)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING *`,
-        [data.date, data.party_id, data.amount, mode, bank, handler, data.remarks, dir]
+        `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, remarks, direction, wallet_supplier_id)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+        [data.date, data.party_id, data.amount, mode, bank, handler, data.remarks, dir, walletId]
       );
       const party = await getOne(`SELECT name FROM parties WHERE id=$1`, [data.party_id]);
       await syncImprestForCashTxn({

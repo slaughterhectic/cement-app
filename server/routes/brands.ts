@@ -29,7 +29,8 @@ router.get('/truck-batches', async (_req, res) => {
                SUM(bags)::int AS purchased_bags,
                SUM(bags * (purchase_rate + COALESCE(freight_rate,0)))::float / NULLIF(SUM(bags),0) AS landed_rate,
                MIN(date) AS first_date,
-               MAX(date) AS last_date
+               MAX(date) AS last_date,
+               STRING_AGG(DISTINCT NULLIF(TRIM(supplier_name), ''), ', ') AS supplier_names
         FROM purchases
         GROUP BY brand_id, COALESCE(NULLIF(TRIM(truck_number), ''), '—')
       ),
@@ -61,7 +62,7 @@ router.get('/truck-batches', async (_req, res) => {
         FROM after_direct ad
       )
       SELECT
-        f.brand_id, f.truck_number, f.purchased_bags, f.landed_rate, f.last_date,
+        f.brand_id, f.truck_number, f.purchased_bags, f.landed_rate, f.last_date, f.supplier_names,
         GREATEST(0,
           f.remaining_after_direct - GREATEST(0,
             LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.remaining_after_direct)
@@ -83,6 +84,7 @@ router.get('/truck-batches', async (_req, res) => {
       landed_rate: Number(r.landed_rate),
       available_bags: Number(r.available_bags),
       last_date: r.last_date,
+      supplier_names: r.supplier_names ?? null,
     })));
   } catch (e: any) { res.status(500).json({ error: friendlyError(e) }); }
 });

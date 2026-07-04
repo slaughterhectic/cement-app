@@ -299,7 +299,8 @@ export async function initializeDatabase() {
     await client.query(`UPDATE truck_trips SET expense_completed = TRUE WHERE expense_completed IS NOT TRUE AND (loading_charge>0 OR unloading_charge>0 OR diesel_amount>0 OR driver_payment>0 OR miscellaneous>0);`);
     // Freight is income, not a wallet outflow — drop legacy debits keyed by source_table='truck_trip'.
     // New cost-side debits use source_table='truck_trip_expense'.
-    await client.query(`DELETE FROM wallet_transactions WHERE source_table='truck_trip';`);
+    // Guarded: wallet_transactions is created further down, so skip on a fresh database.
+    await client.query(`DO $$ BEGIN IF to_regclass('wallet_transactions') IS NOT NULL THEN DELETE FROM wallet_transactions WHERE source_table='truck_trip'; END IF; END $$;`);
     // Trip diesel collapsed from (litres × rate) into a single amount stored in diesel_amount.
     // Trip diesel can optionally be sourced from a transporter (trip_diesel_from_id) — when set,
     // the cost posts to that transporter's ledger instead of debiting the wallet, mirroring
@@ -346,7 +347,9 @@ export async function initializeDatabase() {
     // Backfill wallet debits for trips that were marked expense_completed via the earlier
     // migration but never went through the new PATCH /:id/expense (so the wallet was never
     // touched for them). Idempotent — only inserts where no truck_trip_expense row exists yet.
+    // Guarded: wallet_transactions is created further down, so skip on a fresh database.
     await client.query(`
+      DO $$ BEGIN IF to_regclass('wallet_transactions') IS NOT NULL THEN
       INSERT INTO wallet_transactions (date, type, amount, source_table, source_id, remarks)
       SELECT t.date, 'debit',
              (t.loading_charge + t.unloading_charge + t.diesel_amount + t.driver_payment + t.miscellaneous),
@@ -359,6 +362,7 @@ export async function initializeDatabase() {
           SELECT 1 FROM wallet_transactions w
           WHERE w.source_table='truck_trip_expense' AND w.source_id=t.id
         );
+      END IF; END $$;
     `);
     // transporter_payments new columns
     await client.query(`ALTER TABLE transporter_payments ADD COLUMN IF NOT EXISTS payment_type TEXT DEFAULT 'paid';`);
@@ -582,6 +586,9 @@ export async function initializeDatabase() {
     await client.query(`ALTER TABLE payments ADD CONSTRAINT payments_mode_check CHECK(mode IN ('bank','cash','suspense'))`);
     await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS suspense_party_id INTEGER REFERENCES parties(id)`);
     await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_suspense ON payments(suspense_party_id) WHERE suspense_party_id IS NOT NULL`);
+    // Firm wallet: optionally attribute a receipt to the supplier firm whose stock was sold
+    await client.query(`ALTER TABLE payments ADD COLUMN IF NOT EXISTS wallet_supplier_id INTEGER REFERENCES parties(id)`);
+    await client.query(`CREATE INDEX IF NOT EXISTS idx_payments_wallet ON payments(wallet_supplier_id) WHERE wallet_supplier_id IS NOT NULL`);
 
     // --- Unified cash_handler column for every cash-capable table ---
     // Pre-existing rows stored the handler name in `bank_name`; this migrates them.

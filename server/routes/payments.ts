@@ -31,7 +31,9 @@ async function getOutstanding(partyId: number): Promise<number> {
 router.get('/', async (req, res) => {
   try {
     const { start_date, end_date, party_id } = req.query;
-    let sql = `SELECT pm.*, p.name as party_name, p.type as party_type FROM payments pm JOIN parties p ON pm.party_id = p.id WHERE 1=1`;
+    let sql = `SELECT pm.*, p.name as party_name, p.type as party_type, w.name as wallet_name
+               FROM payments pm JOIN parties p ON pm.party_id = p.id
+               LEFT JOIN parties w ON pm.wallet_supplier_id = w.id WHERE 1=1`;
     const params: any[] = [];
     let idx = 1;
 
@@ -82,7 +84,7 @@ router.get('/parties-with-dues', async (_req, res) => {
 });
 
 router.post('/', async (req, res) => {
-  const { date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction } = req.body;
+  const { date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction, wallet_supplier_id } = req.body;
   const dir = direction === 'pay' ? 'pay' : 'receive';
   try {
     // All non-admin entries — present or past — go through admin approval.
@@ -108,10 +110,18 @@ router.post('/', async (req, res) => {
       if (Number(susId) === Number(party_id)) return res.status(400).json({ error: 'Suspense and party must differ' });
     }
 
+    // Firm wallet tag (optional): attribute this payment to the supplier firm whose stock it settles
+    let walletId = Number(wallet_supplier_id) || null;
+    if (walletId) {
+      const firm = await getOne(`SELECT type FROM parties WHERE id=$1`, [walletId]);
+      if (!firm || firm.type !== 'supplier') return res.status(400).json({ error: 'Firm wallet must be a supplier party' });
+      if (walletId === Number(party_id)) walletId = null; // redundant — the party itself is the firm
+    }
+
     const result = await getOne(
-      `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction)
-       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
-      [date, party_id, amount, normalizedMode, bank, handler, susId, remarks, dir]
+      `INSERT INTO payments (date, party_id, amount, mode, bank_name, cash_handler, suspense_party_id, remarks, direction, wallet_supplier_id)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10) RETURNING *`,
+      [date, party_id, amount, normalizedMode, bank, handler, susId, remarks, dir, walletId]
     );
 
     const party = await getOne(`SELECT name FROM parties WHERE id=$1`, [party_id]);

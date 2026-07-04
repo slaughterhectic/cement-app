@@ -122,6 +122,10 @@ export const api = {
     delete: (id: number) => request<any>(`/payments/${id}`, { method: 'DELETE' }),
     partiesWithDues: () => request<any[]>('/payments/parties-with-dues'),
   },
+  firmWallets: {
+    list: () => request<{ wallets: { id: number; name: string; purchases_total: number; cash_in: number; cash_out: number; net: number }[]; unassigned_inflow: number; unassigned_count: number }>('/firm-wallets'),
+    ledger: (id: number) => request<any>(`/firm-wallets/${id}/ledger`),
+  },
   expenses: {
     list: (params?: Record<string, string>) => {
       const q = params ? '?' + new URLSearchParams(params).toString() : '';
@@ -227,7 +231,7 @@ export const api = {
   brands: {
     list: () => request<any[]>('/brands'),
     all: () => request<any[]>('/brands/all'),
-    truckBatches: () => request<{ brand_id: number; truck_number: string; purchased_bags: number; landed_rate: number; available_bags: number; last_date: string }[]>('/brands/truck-batches'),
+    truckBatches: () => request<{ brand_id: number; truck_number: string; purchased_bags: number; landed_rate: number; available_bags: number; last_date: string; supplier_names: string | null }[]>('/brands/truck-batches'),
     create: (data: { name: string; type: string; manufacturer: string }) =>
       request<any>('/brands', { method: 'POST', body: JSON.stringify(data) }),
     update: (id: number, data: any) =>

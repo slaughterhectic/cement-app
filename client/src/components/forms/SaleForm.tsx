@@ -54,7 +54,7 @@ export interface SaleFormProps {
 type Brand = { id: number; name: string; type?: string; stock: number };
 type Party = { id: number; name: string; type?: string };
 type Godown = { id: number; name: string };
-type TruckBatch = { brand_id: number; truck_number: string; purchased_bags: number; landed_rate: number; available_bags: number; last_date: string };
+type TruckBatch = { brand_id: number; truck_number: string; purchased_bags: number; landed_rate: number; available_bags: number; last_date: string; supplier_names: string | null };
 
 export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId }: SaleFormProps) {
   const addToast = useToastStore((s) => s.addToast);
@@ -507,11 +507,17 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
               <option value="">All / unspecified</option>
               {sourceTruckOptions.map((tb) => (
                 <option key={tb.truck_number} value={tb.truck_number}>
-                  {tb.truck_number} — {tb.available_bags} bags @ ₹{Number(tb.landed_rate).toFixed(0)}/bag
+                  {tb.truck_number} — {tb.available_bags} bags @ ₹{Number(tb.landed_rate).toFixed(0)}/bag{tb.supplier_names ? ` — ${tb.supplier_names}` : ''}
                 </option>
               ))}
             </select>
-            <p className="mt-1 text-[11px] text-heading/60">Pick the truck this stock came in on — shown on the party ledger.</p>
+            {selectedTruckBatch?.supplier_names ? (
+              <p className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">
+                Purchased from: {selectedTruckBatch.supplier_names}
+              </p>
+            ) : (
+              <p className="mt-1 text-[11px] text-heading/60">Pick the truck this stock came in on — shown on the party ledger.</p>
+            )}
           </div>
 
           <div>
