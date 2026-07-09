@@ -19,63 +19,70 @@ router.get('/', async (_req, res) => {
 });
 
 // GET /api/brands/truck-batches — per (brand, source truck) breakdown for the SaleForm.
-// available_bags = purchased on that truck − sales already attributed to that truck (direct)
-//                  − unattributed sales spread across trucks FIFO (oldest purchase date first)
+// FIFO runs per purchase ROW (load), not per truck: truck numbers are reused for months,
+// so a fresh load on an old truck number must not be swallowed by that truck's history.
+// Per row: bags − direct sales on that truck (consuming its oldest rows first)
+//          − unattributed sales spread brand-wide across rows FIFO (oldest date first).
+// A truck is listed while any of its rows still has bags; landed_rate/suppliers reflect the remaining rows.
 router.get('/truck-batches', async (_req, res) => {
   try {
     const rows = await getAll(`
-      WITH per_truck AS (
-        SELECT brand_id, COALESCE(NULLIF(TRIM(truck_number), ''), '—') AS truck_number,
-               SUM(bags)::int AS purchased_bags,
-               SUM(bags * (purchase_rate + COALESCE(freight_rate,0)))::float / NULLIF(SUM(bags),0) AS landed_rate,
-               MIN(date) AS first_date,
-               MAX(date) AS last_date,
-               STRING_AGG(DISTINCT NULLIF(TRIM(supplier_name), ''), ', ') AS supplier_names
+      WITH prow AS (
+        SELECT id, brand_id, COALESCE(NULLIF(TRIM(truck_number), ''), '—') AS truck_number,
+               date, bags::numeric AS bags,
+               (purchase_rate + COALESCE(freight_rate,0))::numeric AS landed_rate,
+               NULLIF(TRIM(supplier_name), '') AS supplier_name
         FROM purchases
-        GROUP BY brand_id, COALESCE(NULLIF(TRIM(truck_number), ''), '—')
       ),
       direct_sold AS (
         SELECT brand_id, COALESCE(NULLIF(TRIM(source_truck_number), ''), '—') AS truck_number,
-               SUM(bags)::int AS bags_sold
+               SUM(bags)::numeric AS bags_sold
         FROM sales
         WHERE source_truck_number IS NOT NULL AND TRIM(source_truck_number) <> ''
         GROUP BY brand_id, COALESCE(NULLIF(TRIM(source_truck_number), ''), '—')
       ),
       unattr_per_brand AS (
-        SELECT brand_id, COALESCE(SUM(bags), 0)::int AS total_unattr
+        SELECT brand_id, COALESCE(SUM(bags), 0)::numeric AS total_unattr
         FROM sales
         WHERE source_truck_number IS NULL OR TRIM(source_truck_number) = ''
         GROUP BY brand_id
       ),
+      tcum AS (
+        SELECT p.*, COALESCE(SUM(p.bags) OVER (
+          PARTITION BY p.brand_id, p.truck_number ORDER BY p.date, p.id
+          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ), 0) AS truck_cum
+        FROM prow p
+      ),
       after_direct AS (
-        SELECT pt.*, GREATEST(0, pt.purchased_bags - COALESCE(ds.bags_sold, 0)) AS remaining_after_direct
-        FROM per_truck pt
+        SELECT t.*, GREATEST(0, t.bags - GREATEST(0, LEAST(COALESCE(ds.bags_sold, 0) - t.truck_cum, t.bags))) AS rem_direct
+        FROM tcum t
         LEFT JOIN direct_sold ds USING (brand_id, truck_number)
       ),
       fifo AS (
-        SELECT ad.*,
-          COALESCE(SUM(ad.remaining_after_direct) OVER (
-            PARTITION BY ad.brand_id
-            ORDER BY ad.first_date, ad.truck_number
-            ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-          ), 0) AS cum_start
+        SELECT ad.*, COALESCE(SUM(ad.rem_direct) OVER (
+          PARTITION BY ad.brand_id ORDER BY ad.date, ad.id
+          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
+        ), 0) AS cum_start
         FROM after_direct ad
+      ),
+      final AS (
+        SELECT f.*, GREATEST(0, f.rem_direct - GREATEST(0,
+          LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.rem_direct)
+        )) AS avail
+        FROM fifo f
+        LEFT JOIN unattr_per_brand u USING (brand_id)
       )
-      SELECT
-        f.brand_id, f.truck_number, f.purchased_bags, f.landed_rate, f.last_date, f.supplier_names,
-        GREATEST(0,
-          f.remaining_after_direct - GREATEST(0,
-            LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.remaining_after_direct)
-          )
-        )::int AS available_bags
-      FROM fifo f
-      LEFT JOIN unattr_per_brand u ON u.brand_id = f.brand_id
-      WHERE GREATEST(0,
-        f.remaining_after_direct - GREATEST(0,
-          LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.remaining_after_direct)
-        )
-      ) > 0
-      ORDER BY f.brand_id, f.first_date, f.truck_number
+      SELECT brand_id, truck_number,
+        SUM(bags)::int AS purchased_bags,
+        SUM(avail)::int AS available_bags,
+        (SUM(landed_rate * avail) / NULLIF(SUM(avail), 0))::float AS landed_rate,
+        MAX(date) FILTER (WHERE avail > 0) AS last_date,
+        STRING_AGG(DISTINCT supplier_name, ', ') FILTER (WHERE avail > 0) AS supplier_names
+      FROM final
+      GROUP BY brand_id, truck_number
+      HAVING SUM(avail) > 0
+      ORDER BY brand_id, MIN(date) FILTER (WHERE avail > 0), truck_number
     `);
     res.json(rows.map((r: any) => ({
       brand_id: Number(r.brand_id),

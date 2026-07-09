@@ -172,13 +172,13 @@ router.post('/:id/approve', async (req, res) => {
         return res.status(400).json({ error: `Insufficient stock: only ${stock} bags available. Cannot approve.` });
       }
       result = await getOne(
-        `INSERT INTO sales (date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, godown_id, remarks)
-         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16) RETURNING *`,
+        `INSERT INTO sales (date, party_id, brand_id, cement_type, bags, sale_rate, cost_rate, destination, invoice_number, billed_party, billed_quantity, billed_rate, billed_amount, truck_number, source_truck_number, godown_id, remarks)
+         VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17) RETURNING *`,
         [
           data.date, data.party_id, data.brand_id, data.cement_type, data.bags, data.sale_rate,
           data.cost_rate || 0, data.destination, data.invoice_number, data.billed_party,
           data.billed_quantity || null, data.billed_rate || null, data.billed_amount || null,
-          data.truck_number, data.godown_id || null, data.remarks,
+          data.truck_number, data.source_truck_number || null, data.godown_id || null, data.remarks,
         ]
       );
     } else if (pending.entry_type === 'purchase') {

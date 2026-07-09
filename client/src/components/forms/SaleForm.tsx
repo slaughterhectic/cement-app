@@ -510,6 +510,10 @@ export function SaleForm({ isOpen, onClose, onSuccess, editData, defaultPartyId 
                   {tb.truck_number} — {tb.available_bags} bags @ ₹{Number(tb.landed_rate).toFixed(0)}/bag{tb.supplier_names ? ` — ${tb.supplier_names}` : ''}
                 </option>
               ))}
+              {/* Keep the sale's saved source truck selectable even when that batch is fully consumed (it won't be in the available list). */}
+              {sourceTruckNumber && !sourceTruckOptions.some((tb) => tb.truck_number === sourceTruckNumber) && (
+                <option value={sourceTruckNumber}>{sourceTruckNumber} — current selection</option>
+              )}
             </select>
             {selectedTruckBatch?.supplier_names ? (
               <p className="mt-1 text-[11px] font-medium text-indigo-600 dark:text-indigo-400">

@@ -26,6 +26,7 @@ export type SaleRow = {
   godown_id: number | null;
   godown_name: string | null;
   truck_number: string | null;
+  source_truck_number: string | null;
   billed_party: string | null;
   billed_quantity: number | null;
   billed_rate: number | null;
@@ -154,6 +155,7 @@ export default function Sales() {
       destination: row.destination ?? '',
       godown_id: row.godown_id ?? undefined,
       truck_number: row.truck_number ?? '',
+      source_truck_number: row.source_truck_number ?? '',
       invoice_number: row.invoice_number ?? '',
       billed_party: row.billed_party ?? '',
       billed_quantity: row.billed_quantity ?? undefined,
