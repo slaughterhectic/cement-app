@@ -37,6 +37,10 @@ interface PendingEntry {
 
 type FilterStatus = 'all' | 'pending' | 'approved' | 'rejected';
 
+// Rows fetched per view — history can run to thousands of entries, so the page
+// loads only the most recent slice (stat cards still show full counts).
+const LIST_LIMIT = 200;
+
 const TYPE_META: Record<string, { label: string; icon: any; color: string; bg: string }> = {
   sale:     { label: 'Sale',     icon: TrendingUp,  color: 'text-blue-700 dark:text-blue-300',   bg: 'bg-blue-100 dark:bg-blue-900/40' },
   purchase: { label: 'Purchase', icon: ShoppingCart, color: 'text-violet-700', bg: 'bg-violet-100' },
@@ -190,6 +194,7 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
   const canApprove = isAdmin || (source === 'transportbook' && hasPermission('tb_approve'));
 
   const [rows, setRows] = useState<PendingEntry[]>([]);
+  const [counts, setCounts] = useState({ pending: 0, approved: 0, rejected: 0, total: 0 });
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState<FilterStatus>('pending');
 
@@ -201,13 +206,15 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
   const load = useCallback(async () => {
     setLoading(true);
     try {
-      setRows(await api.pendingEntries.list(source));
+      const res = await api.pendingEntries.list(source, filter === 'all' ? undefined : filter, LIST_LIMIT);
+      setRows(res.rows);
+      setCounts(res.counts);
     } catch (e) {
       addToast(e instanceof Error ? e.message : 'Failed to load', 'error');
     } finally {
       setLoading(false);
     }
-  }, [addToast, source]);
+  }, [addToast, source, filter]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -245,9 +252,6 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
   };
 
   const filtered = rows.filter((r) => filter === 'all' || r.status === filter);
-  const pendingCount = rows.filter((r) => r.status === 'pending').length;
-  const approvedCount = rows.filter((r) => r.status === 'approved').length;
-  const rejectedCount = rows.filter((r) => r.status === 'rejected').length;
 
   return (
     <div className="flex flex-col gap-6">
@@ -265,10 +269,10 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
       <div className="grid grid-cols-4 gap-4">
         {(
           [
-            { key: 'all',      label: 'Total',    count: rows.length,    color: 'text-heading/70',   ring: 'ring-gray-400' },
-            { key: 'pending',  label: 'Pending',  count: pendingCount,   color: 'text-amber-600 dark:text-amber-400',  ring: 'ring-amber-400' },
-            { key: 'approved', label: 'Approved', count: approvedCount,  color: 'text-green-600 dark:text-green-400',  ring: 'ring-green-500' },
-            { key: 'rejected', label: 'Rejected', count: rejectedCount,  color: 'text-red-600 dark:text-red-400',    ring: 'ring-red-400' },
+            { key: 'all',      label: 'Total',    count: counts.total,    color: 'text-heading/70',   ring: 'ring-gray-400' },
+            { key: 'pending',  label: 'Pending',  count: counts.pending,  color: 'text-amber-600 dark:text-amber-400',  ring: 'ring-amber-400' },
+            { key: 'approved', label: 'Approved', count: counts.approved, color: 'text-green-600 dark:text-green-400',  ring: 'ring-green-500' },
+            { key: 'rejected', label: 'Rejected', count: counts.rejected, color: 'text-red-600 dark:text-red-400',    ring: 'ring-red-400' },
           ] as const
         ).map(({ key, label, count, color, ring }) => (
           <button
@@ -392,6 +396,11 @@ export default function PendingApprovals({ source = 'cementbook' }: { source?: '
                 </li>
               );
             })}
+            {filtered.length < (filter === 'all' ? counts.total : counts[filter]) && (
+              <li className="px-5 py-3 text-center text-xs text-heading/50">
+                Showing the latest {filtered.length} of {filter === 'all' ? counts.total : counts[filter]} entries
+              </li>
+            )}
           </ul>
         )}
       </div>

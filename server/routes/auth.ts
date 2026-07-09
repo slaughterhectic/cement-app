@@ -3,7 +3,7 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import crypto from 'crypto';
 import { getOne, getAll, query } from '../db/database';
-import { authMiddleware, JWT_SECRET } from '../middleware/auth';
+import { authMiddleware, invalidatePermissionCache, JWT_SECRET } from '../middleware/auth';
 import { sendPasswordResetEmail, sendPasswordChangedEmail } from '../lib/mailer';
 
 const router = Router();
@@ -65,11 +65,14 @@ router.get('/me', authMiddleware, async (req, res) => {
 router.get('/users', authMiddleware, async (req, res) => {
   try {
     if (req.user!.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-    const users = await getAll('SELECT id, username, role, display_name, email, created_at FROM users ORDER BY id');
-    for (const u of users) {
-      const perms = await getAll('SELECT permission_name FROM user_permissions WHERE user_id = $1', [u.id]);
-      u.permissions = perms.map((r: any) => r.permission_name);
-    }
+    const users = await getAll(`
+      SELECT u.id, u.username, u.role, u.display_name, u.email, u.created_at,
+        COALESCE(ARRAY_AGG(up.permission_name) FILTER (WHERE up.permission_name IS NOT NULL), '{}') AS permissions
+      FROM users u
+      LEFT JOIN user_permissions up ON up.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.id
+    `);
     res.json(users);
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -112,9 +115,10 @@ router.put('/users/:id/email', authMiddleware, async (req, res) => {
 router.delete('/users/:id', authMiddleware, async (req, res) => {
   try {
     if (req.user!.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     if (id === req.user!.id) return res.status(400).json({ error: 'Cannot delete yourself' });
     await query('DELETE FROM users WHERE id = $1', [id]);
+    invalidatePermissionCache(id);
     res.json({ success: true });
   } catch (e: any) {
     res.status(500).json({ error: e.message });
@@ -125,12 +129,16 @@ router.delete('/users/:id', authMiddleware, async (req, res) => {
 router.put('/users/:id/permissions', authMiddleware, async (req, res) => {
   try {
     if (req.user!.role !== 'admin') return res.status(403).json({ error: 'Admin only' });
-    const id = parseInt(req.params.id);
+    const id = parseInt(String(req.params.id));
     const { permissions } = req.body as { permissions: string[] };
     await query('DELETE FROM user_permissions WHERE user_id = $1', [id]);
-    for (const perm of permissions) {
-      await query('INSERT INTO user_permissions (user_id, permission_name) VALUES ($1, $2)', [id, perm]);
+    if (permissions.length > 0) {
+      await query(
+        'INSERT INTO user_permissions (user_id, permission_name) SELECT $1, UNNEST($2::text[])',
+        [id, permissions]
+      );
     }
+    invalidatePermissionCache(id);
     res.json({ success: true, permissions });
   } catch (e: any) {
     res.status(500).json({ error: e.message });

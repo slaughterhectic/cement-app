@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction, RequestHandler } from 'express';
 import jwt from 'jsonwebtoken';
-import { getOne } from '../db/database';
+import { getAll } from '../db/database';
 
 const JWT_SECRET = process.env.JWT_SECRET || 'cementbook-dev-secret';
 
@@ -26,15 +26,32 @@ export function authMiddleware(req: Request, res: Response, next: NextFunction) 
   }
 }
 
+// Short-lived per-user permission cache: saves a DB round-trip on every
+// permission-gated request. Invalidated when an admin edits permissions;
+// the TTL bounds staleness if that signal is ever missed.
+const PERM_CACHE_TTL_MS = 60_000;
+const permCache = new Map<number, { perms: Set<string>; at: number }>();
+
+export function invalidatePermissionCache(userId?: number) {
+  if (userId != null) permCache.delete(userId);
+  else permCache.clear();
+}
+
+async function getUserPermissions(userId: number): Promise<Set<string>> {
+  const hit = permCache.get(userId);
+  if (hit && Date.now() - hit.at < PERM_CACHE_TTL_MS) return hit.perms;
+  const rows = await getAll('SELECT permission_name FROM user_permissions WHERE user_id = $1', [userId]);
+  const perms = new Set<string>(rows.map((r: any) => r.permission_name));
+  permCache.set(userId, { perms, at: Date.now() });
+  return perms;
+}
+
 export function requirePermission(permissionName: string): RequestHandler {
   return async (req: Request, res: Response, next: NextFunction) => {
     if (!req.user) { res.status(401).json({ error: 'Unauthorized' }); return; }
     if (req.user.role === 'admin') { next(); return; }
-    const row = await getOne(
-      'SELECT 1 FROM user_permissions WHERE user_id = $1 AND permission_name = $2',
-      [req.user.id, permissionName]
-    );
-    if (row) { next(); return; }
+    const perms = await getUserPermissions(req.user.id);
+    if (perms.has(permissionName)) { next(); return; }
     res.status(403).json({ error: 'Permission denied' });
   };
 }

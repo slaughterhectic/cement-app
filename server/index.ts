@@ -1,5 +1,6 @@
 import express from 'express';
 import cors from 'cors';
+import compression from 'compression';
 import path from 'path';
 import { initializeDatabase, getOne, getAll, query } from './db/database';
 import { authMiddleware } from './middleware/auth';
@@ -59,6 +60,7 @@ const allowedOrigins = process.env.FRONTEND_URL
   : ['http://localhost:5173'];
 
 app.use(cors({ origin: allowedOrigins, credentials: true }));
+app.use(compression());
 app.use(express.json({ limit: '50mb' }));
 
 // Health check — no auth, used by keep-alive ping

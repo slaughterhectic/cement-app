@@ -31,36 +31,51 @@ async function getStock(brandId: number, godownId?: number): Promise<number> {
   return Number(r.stock);
 }
 
-// GET /api/pending-entries
-// Admin: all entries; tb_approve users: all transportbook entries; others: own entries only
+// GET /api/pending-entries?source=&status=&limit=
+// Admin: all entries; tb_approve users: all transportbook entries; others: own entries only.
+// Returns { rows, counts } — rows are filtered by status (default: all) and capped by limit
+// so the approvals page doesn't download the entire approval history on every load.
 router.get('/', async (req, res) => {
   try {
     const source = (req.query.source as string) || 'cementbook';
-    let rows: any[];
+    const status = (req.query.status as string) || 'all';
+    const limit = Math.min(Math.max(parseInt(req.query.limit as string) || 200, 1), 1000);
     const isAdmin = req.user!.role === 'admin';
     const tbApprover = !isAdmin && source === 'transportbook' && await hasTbApprove(req.user!.id);
-    if (isAdmin || tbApprover) {
-      rows = await getAll(`
-        SELECT pe.*, u.display_name as created_by_name, rv.display_name as reviewed_by_name
-        FROM pending_entries pe
-        LEFT JOIN users u ON pe.created_by = u.id
-        LEFT JOIN users rv ON pe.reviewed_by = rv.id
-        WHERE pe.source = $1
-        ORDER BY
-          CASE pe.status WHEN 'pending' THEN 0 ELSE 1 END,
-          pe.created_at DESC
-      `, [source]);
-    } else {
-      rows = await getAll(`
-        SELECT pe.*, u.display_name as created_by_name, rv.display_name as reviewed_by_name
-        FROM pending_entries pe
-        LEFT JOIN users u ON pe.created_by = u.id
-        LEFT JOIN users rv ON pe.reviewed_by = rv.id
-        WHERE pe.created_by = $1 AND pe.source = $2
-        ORDER BY
-          CASE pe.status WHEN 'pending' THEN 0 ELSE 1 END,
-          pe.created_at DESC
-      `, [req.user!.id, source]);
+
+    const params: any[] = [source];
+    let where = 'pe.source = $1';
+    if (!isAdmin && !tbApprover) {
+      params.push(req.user!.id);
+      where += ` AND pe.created_by = $${params.length}`;
+    }
+    const countsPromise = getAll(
+      `SELECT status, COUNT(*)::int AS count FROM pending_entries pe WHERE ${where} GROUP BY status`,
+      params
+    );
+    const rowParams = [...params];
+    let statusFilter = '';
+    if (['pending', 'approved', 'rejected'].includes(status)) {
+      rowParams.push(status);
+      statusFilter = ` AND pe.status = $${rowParams.length}`;
+    }
+    rowParams.push(limit);
+    const rowsPromise = getAll(`
+      SELECT pe.*, u.display_name as created_by_name, rv.display_name as reviewed_by_name
+      FROM pending_entries pe
+      LEFT JOIN users u ON pe.created_by = u.id
+      LEFT JOIN users rv ON pe.reviewed_by = rv.id
+      WHERE ${where}${statusFilter}
+      ORDER BY
+        CASE pe.status WHEN 'pending' THEN 0 ELSE 1 END,
+        pe.created_at DESC
+      LIMIT $${rowParams.length}
+    `, rowParams);
+    const [countRows, rows] = await Promise.all([countsPromise, rowsPromise]);
+    const counts = { pending: 0, approved: 0, rejected: 0, total: 0 };
+    for (const c of countRows) {
+      if (c.status in counts) (counts as any)[c.status] = c.count;
+      counts.total += c.count;
     }
 
     // Enrich entry_data with display names (batched — avoids N+1 round-trips to the DB)
@@ -87,14 +102,12 @@ router.get('/', async (req, res) => {
     const partyNames = new Map<number, string>();
     const brandNames = new Map<number, string>();
     try {
-      if (partyIds.size > 0) {
-        const pr = await getAll(`SELECT id, name FROM parties WHERE id = ANY($1::int[])`, [Array.from(partyIds)]);
-        for (const p of pr) partyNames.set(Number(p.id), p.name);
-      }
-      if (brandIds.size > 0) {
-        const br = await getAll(`SELECT id, name FROM cement_brands WHERE id = ANY($1::int[])`, [Array.from(brandIds)]);
-        for (const b of br) brandNames.set(Number(b.id), b.name);
-      }
+      const [pr, br] = await Promise.all([
+        partyIds.size > 0 ? getAll(`SELECT id, name FROM parties WHERE id = ANY($1::int[])`, [Array.from(partyIds)]) : Promise.resolve([]),
+        brandIds.size > 0 ? getAll(`SELECT id, name FROM cement_brands WHERE id = ANY($1::int[])`, [Array.from(brandIds)]) : Promise.resolve([]),
+      ]);
+      for (const p of pr) partyNames.set(Number(p.id), p.name);
+      for (const b of br) brandNames.set(Number(b.id), b.name);
     } catch (_) { /* enrich below with nulls if batch lookup fails */ }
 
     for (const pe of rows) {
@@ -126,7 +139,7 @@ router.get('/', async (req, res) => {
       } catch (_) { /* leave as-is if merge fails */ }
     }
 
-    res.json(rows);
+    res.json({ rows, counts });
   } catch (e: any) {
     res.status(500).json({ error: friendlyError(e) });
   }

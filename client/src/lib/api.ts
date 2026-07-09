@@ -349,7 +349,14 @@ export const api = {
     delete: (id: number) => request<any>(`/requests/${id}`, { method: 'DELETE' }),
   },
   pendingEntries: {
-    list: (source?: string) => request<any[]>(`/pending-entries${source ? `?source=${source}` : ''}`),
+    list: (source?: string, status?: string, limit?: number) => {
+      const qs = new URLSearchParams();
+      if (source) qs.set('source', source);
+      if (status) qs.set('status', status);
+      if (limit) qs.set('limit', String(limit));
+      const q = qs.toString();
+      return request<{ rows: any[]; counts: { pending: number; approved: number; rejected: number; total: number } }>(`/pending-entries${q ? `?${q}` : ''}`);
+    },
     count: (source?: string) => request<{ count: number }>(`/pending-entries/count${source ? `?source=${source}` : ''}`),
     approve: (id: number, admin_note?: string) =>
       request<any>(`/pending-entries/${id}/approve`, { method: 'POST', body: JSON.stringify({ admin_note }) }),
