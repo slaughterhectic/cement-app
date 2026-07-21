@@ -21,8 +21,12 @@ router.get('/', async (_req, res) => {
 // GET /api/brands/truck-batches — per (brand, source truck) breakdown for the SaleForm.
 // FIFO runs per purchase ROW (load), not per truck: truck numbers are reused for months,
 // so a fresh load on an old truck number must not be swallowed by that truck's history.
-// Per row: bags − direct sales on that truck (consuming its oldest rows first)
-//          − unattributed sales spread brand-wide across rows FIFO (oldest date first).
+// Per row: bags − direct sales tagged to that truck (consuming its own oldest rows first).
+// Deliberately does NOT also subtract brand-wide untagged/legacy sales against every
+// truck's history — for brands with a lot of untagged historical sales that FIFO
+// assumption zeroed out trucks that still physically have stock. The authoritative
+// cap on how much can actually be sold is the brand-level stock guard in sales.ts;
+// this endpoint only has to be a reasonable, non-misleading picker.
 // A truck is listed while any of its rows still has bags; landed_rate/suppliers reflect the remaining rows.
 router.get('/truck-batches', async (_req, res) => {
   try {
@@ -41,12 +45,6 @@ router.get('/truck-batches', async (_req, res) => {
         WHERE source_truck_number IS NOT NULL AND TRIM(source_truck_number) <> ''
         GROUP BY brand_id, COALESCE(NULLIF(TRIM(source_truck_number), ''), '—')
       ),
-      unattr_per_brand AS (
-        SELECT brand_id, COALESCE(SUM(bags), 0)::numeric AS total_unattr
-        FROM sales
-        WHERE source_truck_number IS NULL OR TRIM(source_truck_number) = ''
-        GROUP BY brand_id
-      ),
       tcum AS (
         SELECT p.*, COALESCE(SUM(p.bags) OVER (
           PARTITION BY p.brand_id, p.truck_number ORDER BY p.date, p.id
@@ -54,24 +52,10 @@ router.get('/truck-batches', async (_req, res) => {
         ), 0) AS truck_cum
         FROM prow p
       ),
-      after_direct AS (
-        SELECT t.*, GREATEST(0, t.bags - GREATEST(0, LEAST(COALESCE(ds.bags_sold, 0) - t.truck_cum, t.bags))) AS rem_direct
+      final AS (
+        SELECT t.*, GREATEST(0, t.bags - GREATEST(0, LEAST(COALESCE(ds.bags_sold, 0) - t.truck_cum, t.bags))) AS avail
         FROM tcum t
         LEFT JOIN direct_sold ds USING (brand_id, truck_number)
-      ),
-      fifo AS (
-        SELECT ad.*, COALESCE(SUM(ad.rem_direct) OVER (
-          PARTITION BY ad.brand_id ORDER BY ad.date, ad.id
-          ROWS BETWEEN UNBOUNDED PRECEDING AND 1 PRECEDING
-        ), 0) AS cum_start
-        FROM after_direct ad
-      ),
-      final AS (
-        SELECT f.*, GREATEST(0, f.rem_direct - GREATEST(0,
-          LEAST(COALESCE(u.total_unattr, 0) - f.cum_start, f.rem_direct)
-        )) AS avail
-        FROM fifo f
-        LEFT JOIN unattr_per_brand u USING (brand_id)
       )
       SELECT brand_id, truck_number,
         SUM(bags)::int AS purchased_bags,

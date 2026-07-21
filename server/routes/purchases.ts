@@ -113,10 +113,14 @@ router.get('/rates/:brandId', async (req, res) => {
         WHERE brand_id = $1
         GROUP BY purchase_rate, freight_rate
       ),
+      matched_rates AS (
+        SELECT DISTINCT landed_rate FROM purchase_rates
+      ),
       direct_sold AS (
         SELECT cost_rate, SUM(bags) AS bags_sold
         FROM sales
         WHERE brand_id = $1 AND COALESCE(cost_rate, 0) > 0
+          AND cost_rate IN (SELECT landed_rate FROM matched_rates)
         GROUP BY cost_rate
       ),
       after_direct AS (
@@ -126,9 +130,17 @@ router.get('/rates/:brandId', async (req, res) => {
         LEFT JOIN direct_sold ds ON ds.cost_rate = pr.landed_rate
       ),
       unattributed AS (
+        -- cost_rate=0 (legacy) plus any cost_rate that doesn't exactly match a
+        -- current purchase rate (e.g. a blended multi-lot rate from a reused
+        -- truck number) — both fall back to brand-wide FIFO instead of being
+        -- silently dropped from the depletion math.
         SELECT COALESCE(SUM(bags), 0) AS total_unattr
         FROM sales
-        WHERE brand_id = $1 AND COALESCE(cost_rate, 0) = 0
+        WHERE brand_id = $1
+          AND (
+            COALESCE(cost_rate, 0) = 0
+            OR cost_rate NOT IN (SELECT landed_rate FROM matched_rates)
+          )
       ),
       fifo AS (
         SELECT ad.*,
